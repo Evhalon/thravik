@@ -1,0 +1,38 @@
+name: Release Redent
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: redent-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run quality gates
+        run: make verify
+
+      - name: Build release
+        env:
+          CODESIGN_IDENTITY: '-'
+        run: |
+          version="0.1.${GITHUB_RUN_NUMBER}"
+          sh scripts/set-version.sh "$version" "$GITHUB_RUN_NUMBER"
+          make release
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${VERSION}" dist/Redent-macOS.dmg \
+            --target "$GITHUB_SHA" --title "Redent ${VERSION}" --generate-notes
