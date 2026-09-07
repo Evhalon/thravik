@@ -62,7 +62,7 @@ public struct KeychainTOTPStore: TOTPAccountStoring {
         do {
             let item = try await vault.loadOrUnlock(
                 account: Self.vaultAccount,
-                label: "Redent Authenticator Vault"
+                label: "Thravik Authenticator Vault"
             )
             return try TOTPVaultCodec.decode(item.valueData)
         } catch VaultError.itemNotFound {
@@ -73,7 +73,7 @@ public struct KeychainTOTPStore: TOTPAccountStoring {
     private func write(_ accounts: [TOTPAccount]) async throws {
         try await vault.upsert(
             account: Self.vaultAccount,
-            label: "Redent Authenticator Vault",
+            label: "Thravik Authenticator Vault",
             valueData: try TOTPVaultCodec.encode(accounts)
         )
     }

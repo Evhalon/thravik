@@ -1,4 +1,4 @@
-name: Release Redent
+name: Release Thravik
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: redent-release
+  group: thravik-release
   cancel-in-progress: false
 
 jobs:
@@ -34,5 +34,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v${VERSION}" dist/Redent-macOS.dmg \
-            --target "$GITHUB_SHA" --title "Redent ${VERSION}" --generate-notes
+          gh release create "v${VERSION}" dist/Thravik-macOS.dmg \
+            --target "$GITHUB_SHA" --title "Thravik ${VERSION}" --generate-notes

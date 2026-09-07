@@ -35,9 +35,9 @@ struct CameraPermissionView: View {
     private var message: String {
         switch status {
         case .denied, .restricted:
-            "Redent needs the camera to scan the QR code from Google Authenticator's export screen. Turn it on in System Settings."
+            "Thravik needs the camera to scan the QR code from Google Authenticator's export screen. Turn it on in System Settings."
         default:
-            "Redent needs the camera to scan the QR code from Google Authenticator's export screen."
+            "Thravik needs the camera to scan the QR code from Google Authenticator's export screen."
         }
     }
 

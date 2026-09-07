@@ -71,7 +71,7 @@ public final class VaultListModel {
         do {
             credentials = try await credentialStore.allCredentials()
         } catch {
-            credentialError = "Redent could not open the password vault. Your Keychain data was not deleted."
+            credentialError = "Thravik could not open the password vault. Your Keychain data was not deleted."
         }
     }
 
@@ -79,7 +79,7 @@ public final class VaultListModel {
         do {
             accounts = try await totpStore.allAccounts()
         } catch {
-            authenticatorError = "Redent could not open the authenticator vault. Your Keychain data was not deleted."
+            authenticatorError = "Thravik could not open the authenticator vault. Your Keychain data was not deleted."
         }
     }
 }

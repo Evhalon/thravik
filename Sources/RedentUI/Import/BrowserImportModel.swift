@@ -97,7 +97,7 @@ public final class BrowserImportModel {
 
     static func message(for failures: [String]) -> String {
         if failures.contains("passwords-key") {
-            return "Passwords need permission: macOS must allow Redent to read the other browser's encryption key from your Keychain. Try again and choose Allow."
+            return "Passwords need permission: macOS must allow Thravik to read the other browser's encryption key from your Keychain. Try again and choose Allow."
         }
         if failures.contains("passwords-save") {
             return "Passwords were read but could not be saved to the Keychain."

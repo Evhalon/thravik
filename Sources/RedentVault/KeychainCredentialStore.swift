@@ -57,7 +57,7 @@ public actor KeychainCredentialStore: CredentialStoring {
         do {
             let item = try await vault.loadOrUnlock(
                 account: Self.vaultAccount,
-                label: "Redent Password Vault"
+                label: "Thravik Password Vault"
             )
             return try CredentialVaultCodec.decode(item.valueData)
         } catch VaultError.itemNotFound {
@@ -68,7 +68,7 @@ public actor KeychainCredentialStore: CredentialStoring {
     private func write(_ credentials: [Credential]) async throws {
         try await vault.upsert(
             account: Self.vaultAccount,
-            label: "Redent Password Vault",
+            label: "Thravik Password Vault",
             valueData: try CredentialVaultCodec.encode(Self.dedupe(credentials))
         )
     }

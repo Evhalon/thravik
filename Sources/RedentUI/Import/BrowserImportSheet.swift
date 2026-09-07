@@ -40,7 +40,7 @@ public struct BrowserImportSheet: View {
         VStack(alignment: .leading, spacing: 3) {
             Text("Import from another browser")
                 .font(.system(size: 16, weight: .semibold))
-            Text("Nothing leaves your Mac. Everything is written straight into Redent's own storage.")
+            Text("Nothing leaves your Mac. Everything is written straight into Thravik's own storage.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(Palette.chromeSecondaryText)
         }

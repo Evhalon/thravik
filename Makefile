@@ -1,4 +1,5 @@
-APP        := Redent
+APP        := Thravik
+EXECUTABLE := Redent
 BUNDLE_ID  := app.redent.browser
 CONFIG     ?= release
 BUILD_DIR  := .build/$(CONFIG)
@@ -22,7 +23,7 @@ test:
 app: build
 	@mkdir -p "$(APP_DIR)/Contents/MacOS" "$(APP_DIR)/Contents/Resources"
 	@rm -rf "$(APP_DIR)/Contents/MacOS/$(APP)" "$(APP_DIR)/Contents/Resources/"*.bundle
-	@cp "$(BUILD_DIR)/$(APP)" "$(APP_DIR)/Contents/MacOS/$(APP)"
+	@cp "$(BUILD_DIR)/$(EXECUTABLE)" "$(APP_DIR)/Contents/MacOS/$(APP)"
 	@cp Resources/Info.plist "$(APP_DIR)/Contents/Info.plist"
 	@if [ -f Resources/AppIcon.icns ]; then cp Resources/AppIcon.icns "$(APP_DIR)/Contents/Resources/"; fi
 	@for b in $(BUILD_DIR)/*.bundle; do [ -e "$$b" ] && cp -R "$$b" "$(APP_DIR)/Contents/Resources/" || true; done
@@ -33,7 +34,7 @@ run: app
 	@open "$(APP_DIR)"
 
 release: verify app
-	@sh scripts/package-release.sh "$(APP_DIR)" dist/Redent-macOS.dmg
+	@sh scripts/package-release.sh "$(APP_DIR)" dist/Thravik-macOS.dmg
 
 clean:
 	@rm -rf .build dist

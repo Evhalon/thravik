@@ -46,7 +46,7 @@ struct PasswordSaveBar: View {
 
     private func title(for kind: CredentialSaveRequest.Kind) -> String {
         switch kind {
-        case .new: "Save this password in Redent?"
+        case .new: "Save this password in Thravik?"
         case .updatedPassword: "Update the saved password?"
         }
     }

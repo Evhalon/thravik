@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sign dist/Redent.app with a stable identity. Ad-hoc is last resort:
+# Sign the Thravik app with a stable identity. Ad-hoc is last resort:
 # its designated requirement becomes a unique cdhash, so the next
 # `make app` looks like a different browser to Keychain and WebKit.
 set -e

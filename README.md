@@ -1,4 +1,4 @@
-# Redent
+# Thravik
 
 A native macOS browser. Glass chrome, Dia-style tabs, saved passwords, and a
 floating button that fills your Google Authenticator code when a site asks for it.
@@ -9,7 +9,7 @@ is a few megabytes, and a background tab costs nothing once it hibernates.
 
 ## Why not Chromium
 
-| | Chromium-based (Electron/CEF) | Redent |
+| | Chromium-based (Electron/CEF) | Thravik |
 |---|---|---|
 | Engine in the bundle | ~150–250 MB | 0 — uses the system's |
 | Cold app footprint | Hundreds of MB | Single-digit MB |
@@ -46,7 +46,7 @@ is a few megabytes, and a background tab costs nothing once it hibernates.
 ## Build
 
 ```
-make app     # builds and bundles dist/Redent.app
+make app     # builds and bundles dist/Thravik.app
 make run     # builds, bundles, launches
 make verify  # line limits + architecture rules + build + tests
 ```

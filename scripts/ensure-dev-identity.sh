@@ -1,7 +1,7 @@
 #!/bin/sh
 # One stable codesign identity in the login keychain. Ad-hoc cdhash
 # changes every rebuild; this certificate hash does not, so Keychain ACL,
-# TCC, and WebKit keep treating Redent as the same app.
+# TCC, WebKit, and the legacy Keychain ACL keep treating Thravik as the same app.
 set -e
 CERT_NAME="Redent Development"
 if security find-certificate -c "$CERT_NAME" >/dev/null 2>&1; then
