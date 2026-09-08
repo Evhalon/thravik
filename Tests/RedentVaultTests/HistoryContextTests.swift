@@ -65,6 +65,26 @@ struct HistoryContextTests {
         #expect((await store.search("example", limit: 5)).first?.visitCount == 2)
     }
 
+    @Test("the most-visited grid counts only the Space it is opened in")
+    func mostVisitedIsScopedToSpace() async throws {
+        let store = makeStore()
+        let work = UUID()
+        let personal = UUID()
+        let tracker = try page("https://tracker.work/board")
+        for _ in 0..<3 {
+            await store.record(HistoryVisit(url: tracker, title: "Board", context:
+                HistoryVisitContext(navigationID: UUID(), spaceID: work)))
+        }
+        await store.record(HistoryVisit(url: try page("https://forum.home/latest"), title: "Forum",
+            context: HistoryVisitContext(navigationID: UUID(), spaceID: personal)))
+
+        let query = HistoryQuery(scope: HistoryScope(spaceID: work), limit: 12, sort: .mostVisited)
+        let workGrid = await store.query(query)
+        #expect(workGrid.map(\.url) == [tracker])
+        #expect(workGrid.first?.visitCount == 3)
+        #expect((await store.mostVisited(limit: 12)).count == 2)
+    }
+
     @Test("a strong match after the old 200 candidate boundary still wins")
     func searchesAllCandidates() async throws {
         let store = makeStore()
