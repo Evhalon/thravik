@@ -15,7 +15,7 @@ struct PagePane: View {
             .background(Palette.canvas)
             .overlay(alignment: .top) { activeEdge }
             .contentShape(.rect)
-            .onTapGesture { model.split.focus(pane) }
+            .onTapGesture { focusIfNeeded() }
     }
 
     @ViewBuilder
@@ -30,6 +30,13 @@ struct PagePane: View {
         } else {
             Color.clear
         }
+    }
+
+    /// A no-op tap still mutates `split` and SwiftUI rebuilds the page card,
+    /// which is enough to send a live video layer black.
+    private func focusIfNeeded() {
+        guard model.split.isSplit, model.split.activePane != pane else { return }
+        model.split.focus(pane)
     }
 
     /// Only drawn while the window is actually split: with one pane there is

@@ -7,6 +7,7 @@ import SwiftUI
 /// around it, so the chrome reads as holding it rather than abutting it.
 private struct PageCard: ViewModifier {
     let isInset: Bool
+    @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(
@@ -14,21 +15,43 @@ private struct PageCard: ViewModifier {
             style: .continuous
         )
         return content
-            .clipShape(shape)
-            .overlay {
-                // A lit top edge over a dark bottom edge is what separates the
-                // card from the chrome; a single flat stroke reads as a border.
-                shape.strokeBorder(
-                    LinearGradient(
-                        colors: [.white.opacity(isInset ? 0.22 : 0), .white.opacity(isInset ? 0.04 : 0)],
-                        startPoint: .top, endPoint: .bottom
-                    ),
-                    lineWidth: Metric.hairWidth * 1.5
-                )
-            }
+            .overlay { cornerCover }
+            .overlay { edgeStroke(shape) }
             .background { shadowPlate(shape) }
             .padding(isInset ? Metric.pageInset : 0)
             .animation(.spring(duration: 0.3), value: isInset)
+    }
+
+    /// Paints the four spandrels so the card still reads round. `clipShape`
+    /// would mask the WKWebView underneath; hardware video then goes black.
+    @ViewBuilder
+    private var cornerCover: some View {
+        if isInset {
+            Canvas { context, size in
+                let bounds = CGRect(origin: .zero, size: size)
+                var path = Path(bounds)
+                path.addPath(
+                    RoundedRectangle(cornerRadius: Metric.pageRadius, style: .continuous)
+                        .path(in: bounds)
+                )
+                context.fill(path, with: .color(chromeFill), style: FillStyle(eoFill: true))
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    private var chromeFill: Color {
+        scheme == .dark ? Color(white: 0.09) : Color(white: 0.935)
+    }
+
+    private func edgeStroke(_ shape: RoundedRectangle) -> some View {
+        shape.strokeBorder(
+            LinearGradient(
+                colors: [.white.opacity(isInset ? 0.22 : 0), .white.opacity(isInset ? 0.04 : 0)],
+                startPoint: .top, endPoint: .bottom
+            ),
+            lineWidth: Metric.hairWidth * 1.5
+        )
     }
 
     /// The shadow belongs to a shape *behind* the card, not to the card itself.

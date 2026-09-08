@@ -14,6 +14,7 @@ struct ContentBlockerTests {
         let top = try #require(trigger["if-top-url"] as? [String])
         #expect(action["type"] == "ignore-previous-rules")
         #expect(top.contains { $0.contains("youtube\\.com") })
+        #expect(top.contains { $0.contains("netflix\\.com") })
     }
 
     @Test("Ad networks are listed before the exception")

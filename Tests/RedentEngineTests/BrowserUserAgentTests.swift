@@ -1,4 +1,5 @@
 import Foundation
+import RedentKit
 import Testing
 import WebKit
 @testable import RedentEngine
@@ -6,46 +7,27 @@ import WebKit
 @Suite("Browser user agent")
 @MainActor
 struct BrowserUserAgentTests {
-    @Test("YouTube uses the system WebKit identity, not a Chrome label")
-    func youtubeDropsChromeLabel() throws {
-        let url = try #require(URL(string: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
-        #expect(BrowserUserAgent.needsWebKitIdentity(url))
-        #expect(BrowserUserAgent.string(for: url) == nil)
+    @Test("Every page uses the system WebKit identity, not a Chrome label")
+    func everyPageUsesSafariIdentity() throws {
+        let github = try #require(URL(string: "https://github.com"))
+        let video = try #require(URL(string: "https://example.com/watch"))
+        let netflix = try #require(URL(string: "https://www.netflix.com/watch/123"))
+        #expect(BrowserUserAgent.string(for: github) == nil)
+        #expect(BrowserUserAgent.string(for: video) == nil)
+        #expect(BrowserUserAgent.string(for: netflix) == nil)
     }
 
-    @Test("YouTube short links and Music share the same identity")
-    func youtubeFamily() throws {
-        let music = try #require(URL(string: "https://music.youtube.com/watch?v=abc"))
-        let short = try #require(URL(string: "https://youtu.be/abc"))
-        #expect(BrowserUserAgent.needsWebKitIdentity(music))
-        #expect(BrowserUserAgent.needsWebKitIdentity(short))
+    @Test("YouTube short links and Music share the media exception")
+    func youtubeFamilyIsMedia() throws {
+        #expect(BrowserUserAgent.mediaDomains.contains("youtube.com"))
+        #expect(BrowserUserAgent.mediaDomains.contains("youtu.be"))
     }
 
-    @Test("Google sign-in is served the engine's own identity")
-    func googleAccountsDropsChromeLabel() throws {
-        let accounts = try #require(URL(string: "https://accounts.google.com/v3/signin/identifier"))
-        let mail = try #require(URL(string: "https://mail.google.com/mail/u/0/"))
-        let gmail = try #require(URL(string: "https://gmail.com"))
-        #expect(BrowserUserAgent.string(for: accounts) == nil)
-        #expect(BrowserUserAgent.string(for: mail) == nil)
-        #expect(BrowserUserAgent.string(for: gmail) == nil)
-    }
-
-    @Test("A lookalike host does not inherit an identity domain")
-    func lookalikeStaysChrome() throws {
+    @Test("A lookalike host does not inherit a media exception")
+    func lookalikeKeepsTheBlocker() throws {
         let youtube = try #require(URL(string: "https://evil-youtube.com/watch"))
-        let google = try #require(URL(string: "https://accounts.google.com.evil.example/signin"))
-        #expect(!BrowserUserAgent.needsWebKitIdentity(youtube))
-        #expect(!BrowserUserAgent.needsWebKitIdentity(google))
-        #expect(BrowserUserAgent.string(for: google) == BrowserUserAgent.compatibility)
-    }
-
-    @Test("Other sites keep a current Chrome compatibility string")
-    func defaultIsCurrentChrome() throws {
-        let url = try #require(URL(string: "https://github.com"))
-        let ua = try #require(BrowserUserAgent.string(for: url))
-        #expect(ua.contains("Chrome/152"))
-        #expect(!ua.contains("Chrome/131"))
+        let origin = try #require(Origin(url: youtube))
+        #expect(!BrowserUserAgent.mediaDomains.contains(origin.registrableDomain))
     }
 
     /// The truncated agent WebKit ships by default is what Google reads as an
@@ -59,23 +41,25 @@ struct BrowserUserAgentTests {
             store: .nonPersistent(), blocksTrackers: false, contentBlocker: nil
         ))
         #expect(view.configuration.applicationNameForUserAgent == name)
-    }
-
-    @Test("Applying a YouTube URL clears a previous Chrome agent")
-    func applyClearsChromeOnYouTube() throws {
-        let view = WKWebView()
-        view.customUserAgent = BrowserUserAgent.compatibility
-        let youtube = try #require(URL(string: "https://youtube.com"))
-        BrowserUserAgent.apply(to: view, for: youtube)
         #expect(BrowserUserAgent.normalized(view.customUserAgent) == nil)
     }
 
-    /// The blocker steps aside for the video properties only: a sign-in domain
-    /// joining the identity set must not switch ad blocking off for Search.
+    @Test("A leftover Chrome agent is cleared on the next navigation")
+    func applyClearsChrome() throws {
+        let view = WKWebView()
+        view.customUserAgent = "Mozilla/5.0 Chrome/152.0.0.0"
+        let any = try #require(URL(string: "https://example.com"))
+        BrowserUserAgent.apply(to: view, for: any)
+        #expect(BrowserUserAgent.normalized(view.customUserAgent) == nil)
+    }
+
+    /// The blocker steps aside for the video properties only: Search must not
+    /// lose ad blocking just because Google's accounts need a real engine.
     @Test("The content-blocker exception covers media, not identity")
     func blockerExceptionStaysOnMedia() {
         let filters = BrowserUserAgent.mediaTopURLFilters
         #expect(filters.contains { $0.contains("youtube\\.com") })
+        #expect(filters.contains { $0.contains("netflix\\.com") })
         #expect(!filters.contains { $0.contains("google\\.com") })
     }
 }

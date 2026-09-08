@@ -56,8 +56,10 @@ enum WebViewFactory {
         view.allowsBackForwardNavigationGestures = true
         view.isInspectable = true
         view.allowsMagnification = true
-        view.customUserAgent = BrowserUserAgent.compatibility
-        view.underPageBackgroundColor = .clear
+        view.customUserAgent = nil
+        // A clear page in a non-opaque window makes hardware video composite
+        // as a black rectangle the moment the player adds an overlay.
+        view.underPageBackgroundColor = .windowBackgroundColor
         return view
     }
 

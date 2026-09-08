@@ -6,6 +6,12 @@ import WebKit
 @Suite("Web view container")
 @MainActor
 struct WebViewContainerTests {
+    @Test("The container does not clip, so a video layer is not masked off")
+    func containerDoesNotClipHostedView() {
+        let container = WebViewContainer(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        #expect(container.clipsToBounds == false)
+    }
+
     @Test("A hosted view fills the container, then shrinks with it")
     func hostedViewFillsThenShrinks() {
         let container = WebViewContainer(frame: NSRect(x: 0, y: 0, width: 1200, height: 800))

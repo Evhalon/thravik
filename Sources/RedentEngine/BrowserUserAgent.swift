@@ -2,33 +2,23 @@ import Foundation
 import RedentKit
 import WebKit
 
-/// WebKit is not Chrome. A Chrome label on this engine makes YouTube serve a
-/// Blink player that later dies with a "browser error", and makes Google's
-/// sign-in refuse the browser outright — "this browser or app may not be
-/// secure". Corporate allow-lists still demand that label, so it stays the
-/// default; the properties that check the engine behind it get the system
-/// Safari string instead.
+/// WebKit is not Chrome. A Chrome label makes a site serve a Blink player —
+/// YouTube dies, Netflix paints black, any `<video>` can. The honest Safari
+/// identity is therefore the default for every page. The content blocker still
+/// steps aside on known media properties: those players take themselves down
+/// when their own scripts are filtered, which is a different problem.
 @MainActor
 enum BrowserUserAgent {
-    static let compatibility =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36"
 
-    /// Properties whose player needs the real engine — and the only ones the
-    /// content blocker steps aside for.
+    /// Pages whose player dies if the content blocker stays on. Identity is
+    /// already Safari everywhere; this list only lifts the blocker.
     static let mediaDomains: Set<String> = [
-        "youtube.com", "youtu.be", "youtube-nocookie.com", "youtubekids.com"
+        "youtube.com", "youtu.be", "youtube-nocookie.com", "youtubekids.com",
+        "netflix.com", "disneyplus.com", "hulu.com", "max.com", "hbomax.com",
+        "primevideo.com", "twitch.tv", "vimeo.com", "dailymotion.com",
+        "crunchyroll.com", "paramountplus.com", "peacocktv.com", "dazn.com",
+        "tiktok.com", "plex.tv", "raiplay.it", "mediaset.it",
     ]
-
-    /// Sign-in surfaces that check the engine behind the label. Google reads a
-    /// Chrome string on WebKit as an embedded web view and refuses the login,
-    /// so its whole family — search, Gmail, the OAuth consent screen — is
-    /// served the honest identity, and so are the popups those flows open.
-    static let identityDomains: Set<String> = [
-        "google.com", "gmail.com", "googlemail.com"
-    ]
-
-    static var webKitIdentityDomains: Set<String> { mediaDomains.union(identityDomains) }
 
     /// `WKWebView`'s own agent stops at `(KHTML, like Gecko)` unless the app
     /// names itself, and Google reads that truncated string as an embedded web
@@ -47,10 +37,8 @@ enum BrowserUserAgent {
         }
     }
 
-    /// `nil` restores WebKit's own Safari string, which tracks the OS.
-    static func string(for url: URL?) -> String? {
-        needsWebKitIdentity(url) ? nil : compatibility
-    }
+    /// Always `nil`: WebKit's own Safari string, which tracks the OS.
+    static func string(for _: URL?) -> String? { nil }
 
     static func apply(to webView: WKWebView, for url: URL?) {
         webView.customUserAgent = string(for: url)
@@ -70,10 +58,5 @@ enum BrowserUserAgent {
     static func normalized(_ ua: String?) -> String? {
         guard let ua, !ua.isEmpty else { return nil }
         return ua
-    }
-
-    static func needsWebKitIdentity(_ url: URL?) -> Bool {
-        guard let url, let origin = Origin(url: url) else { return false }
-        return webKitIdentityDomains.contains(origin.registrableDomain)
     }
 }

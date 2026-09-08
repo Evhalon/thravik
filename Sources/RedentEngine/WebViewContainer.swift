@@ -17,7 +17,9 @@ import WebKit
 final class WebViewContainer: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        clipsToBounds = true
+        // Clipping here also clips WebKit's video layer. Fullscreen and
+        // in-page players then go black the moment they composite a new frame.
+        clipsToBounds = false
         setContentHuggingPriority(.defaultLow, for: .horizontal)
         setContentHuggingPriority(.defaultLow, for: .vertical)
         setContentCompressionResistancePriority(.fittingSizeCompression, for: .horizontal)

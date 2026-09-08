@@ -52,6 +52,13 @@ struct WebViewConfigurationTests {
         #expect(configuration.mediaTypesRequiringUserActionForPlayback.isEmpty)
     }
 
+    @Test("The web view stays opaque so hardware video can composite")
+    func webViewBackgroundIsOpaque() {
+        let view = makeView()
+        #expect(view.underPageBackgroundColor != .clear)
+        #expect(view.underPageBackgroundColor.alphaComponent == 1)
+    }
+
     /// Polls a condition in the page. `document.readyState` is no use here: for
     /// a moment after a load starts it still describes the previous, empty
     /// document and reports "complete".
