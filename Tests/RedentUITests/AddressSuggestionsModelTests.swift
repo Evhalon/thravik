@@ -22,7 +22,7 @@ struct AddressSuggestionsModelTests {
     @Test("A list opened by one field does not appear under the other")
     func openListBelongsToOneFieldOnly() async throws {
         let model = makeModel()
-        model.update(query: "example.com", from: .newTab, searchEngine: .duckduckgo)
+        model.update(query: "example.com", from: .newTab, searchEngine: .duckduckgo, spaceID: nil)
         await settle(model)
 
         #expect(!model.rows.isEmpty)
@@ -33,9 +33,9 @@ struct AddressSuggestionsModelTests {
     @Test("Typing in the other field hands the list over")
     func typingElsewhereTakesOwnership() async throws {
         let model = makeModel()
-        model.update(query: "example.com", from: .newTab, searchEngine: .duckduckgo)
+        model.update(query: "example.com", from: .newTab, searchEngine: .duckduckgo, spaceID: nil)
         await settle(model)
-        model.update(query: "swift.org", from: .addressBar, searchEngine: .duckduckgo)
+        model.update(query: "swift.org", from: .addressBar, searchEngine: .duckduckgo, spaceID: nil)
         await settle(model)
 
         #expect(model.isOpen(for: .addressBar))
@@ -45,7 +45,7 @@ struct AddressSuggestionsModelTests {
     @Test("A field losing focus leaves the other field's list standing")
     func scopedCloseIgnoresForeignLists() async throws {
         let model = makeModel()
-        model.update(query: "example.com", from: .newTab, searchEngine: .duckduckgo)
+        model.update(query: "example.com", from: .newTab, searchEngine: .duckduckgo, spaceID: nil)
         await settle(model)
 
         model.close(from: .addressBar)
@@ -59,7 +59,7 @@ struct AddressSuggestionsModelTests {
     @Test("A blur cancels a query that has not landed yet")
     func scopedCloseCancelsOwnPendingQuery() async throws {
         let model = makeModel()
-        model.update(query: "example.com", from: .addressBar, searchEngine: .duckduckgo)
+        model.update(query: "example.com", from: .addressBar, searchEngine: .duckduckgo, spaceID: nil)
         model.close(from: .addressBar)
         await settle(model)
 
@@ -70,7 +70,7 @@ struct AddressSuggestionsModelTests {
     @Test("Vertical arrows walk the open list and wrap")
     func arrowsWalkAndWrap() async throws {
         let model = makeModel()
-        model.update(query: "example.com", from: .newTab, searchEngine: .duckduckgo)
+        model.update(query: "example.com", from: .newTab, searchEngine: .duckduckgo, spaceID: nil)
         await settle(model)
 
         let count = model.rows.count
@@ -106,10 +106,10 @@ private struct EmptyHistoryStore: HistoryStoring {
 }
 
 private struct EmptyBookmarkStore: BookmarkStoring {
-    func all() async -> [Bookmark] { [] }
-    func favorites() async -> [Bookmark] { [] }
-    func search(_ query: String, limit: Int) async -> [Bookmark] { [] }
-    func bookmark(for url: URL) async -> Bookmark? { nil }
+    func all(in spaceID: UUID?) async -> [Bookmark] { [] }
+    func favorites(in spaceID: UUID?) async -> [Bookmark] { [] }
+    func search(_ query: String, in spaceID: UUID?, limit: Int) async -> [Bookmark] { [] }
+    func bookmark(for url: URL, in spaceID: UUID?) async -> Bookmark? { nil }
     func save(_ bookmark: Bookmark) async {}
     func merge(_ bookmarks: [Bookmark]) async -> Int { 0 }
     func delete(_ id: UUID) async {}

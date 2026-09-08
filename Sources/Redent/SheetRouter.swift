@@ -23,9 +23,12 @@ struct SheetRouter: View {
 
             case .passwords, .authenticator:
                 VaultWindowView(
-                    credentialStore: container.credentials,
-                    totpStore: container.authenticator,
-                    generator: container.generator,
+                    sources: VaultSources(
+                        credentials: container.credentials,
+                        totp: container.authenticator,
+                        generator: container.generator,
+                        spaceNames: container.model.spaceNames
+                    ),
                     initialTab: route == .authenticator ? .authenticator : .passwords,
                     onImportAuthenticator: { container.model.sheet = .importAuthenticator }
                 )
@@ -57,7 +60,11 @@ struct SheetRouter: View {
                 }
 
             case .bookmarks:
-                BookmarksSheet(model: BookmarksModel(store: container.bookmarks)) { url in
+                BookmarksSheet(model: BookmarksModel(
+                    store: container.bookmarks,
+                    spaces: container.model.tabs.session.spaces,
+                    spaceID: container.model.currentSpaceID
+                )) { url in
                     container.model.navigate(to: url)
                 }
 
@@ -66,7 +73,11 @@ struct SheetRouter: View {
                     importer: container.browserImporter,
                     history: container.history,
                     bookmarks: container.bookmarks,
-                    credentials: container.credentials
+                    credentials: container.credentials,
+                    destination: ImportDestination(
+                        spaces: container.model.tabs.session.spaces,
+                        spaceID: container.model.currentSpaceID
+                    )
                 ))
 
             case .importAuthenticator:

@@ -14,7 +14,9 @@ struct PreviewCredentialStore: CredentialStoring {
         Credential(origin: Origin(scheme: "https", host: "example.com"), username: "jane@example.com", password: "swordfish")
     ]
 
-    func credentials(for origin: Origin) async throws -> [Credential] { sample.filter { $0.origin.matches(origin) } }
+    func credentials(for origin: Origin, in spaceID: UUID?) async throws -> [Credential] {
+        sample.filter { $0.origin.matches(origin) }
+    }
     func allCredentials() async throws -> [Credential] { sample }
     func save(_ credential: Credential) async throws {}
     func markUsed(_ id: UUID) async throws {}
@@ -43,10 +45,10 @@ struct PreviewVaultTOTPGenerator: TOTPGenerating {
 }
 
 #Preview("Vault") {
-    VaultWindowView(
-        credentialStore: PreviewCredentialStore(),
-        totpStore: PreviewVaultTOTPStore(),
+    VaultWindowView(sources: VaultSources(
+        credentials: PreviewCredentialStore(),
+        totp: PreviewVaultTOTPStore(),
         generator: PreviewVaultTOTPGenerator()
-    )
+    ))
 }
 #endif

@@ -65,10 +65,10 @@ actor RecordingHistoryStore: HistoryStoring {
 actor RecordingBookmarkStore: BookmarkStoring {
     private(set) var merged: [Bookmark] = []
 
-    func all() async -> [Bookmark] { merged }
-    func favorites() async -> [Bookmark] { [] }
-    func search(_ query: String, limit: Int) async -> [Bookmark] { [] }
-    func bookmark(for url: URL) async -> Bookmark? { nil }
+    func all(in spaceID: UUID?) async -> [Bookmark] { merged }
+    func favorites(in spaceID: UUID?) async -> [Bookmark] { [] }
+    func search(_ query: String, in spaceID: UUID?, limit: Int) async -> [Bookmark] { [] }
+    func bookmark(for url: URL, in spaceID: UUID?) async -> Bookmark? { nil }
     func save(_ bookmark: Bookmark) async { merged.append(bookmark) }
     func merge(_ bookmarks: [Bookmark]) async -> Int {
         let fresh = bookmarks.filter { candidate in !merged.contains { $0.url == candidate.url } }

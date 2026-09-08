@@ -21,18 +21,19 @@ struct BookmarkToggleButton: View {
 
     private func refresh() async {
         guard let url = model.selectedTab?.url else { return existing = nil }
-        existing = await model.bookmarks.bookmark(for: url)
+        existing = await model.bookmarks.bookmark(for: url, in: model.currentSpaceID)
     }
 
     private func toggle() {
         guard let tab = model.selectedTab, let url = tab.url else { return }
         let title = tab.title
+        let spaceID = model.currentSpaceID
         Task {
             if let existing {
                 await model.bookmarks.delete(existing.id)
             } else {
                 await model.bookmarks.save(
-                    Bookmark(url: url, title: title, isFavorite: true)
+                    Bookmark(url: url, title: title, spaceID: spaceID, isFavorite: true)
                 )
             }
             await refresh()

@@ -16,6 +16,9 @@ public final class BrowserImportModel {
     /// Set when part of the import failed. The rest still went through.
     public private(set) var problem: String?
 
+    /// Which Space receives the bookmarks and logins.
+    public var destination: ImportDestination
+
     private let importer: any BrowserImporting
     private let run: BrowserImportRun
 
@@ -23,9 +26,11 @@ public final class BrowserImportModel {
         importer: any BrowserImporting,
         history: any HistoryStoring,
         bookmarks: any BookmarkStoring,
-        credentials: any CredentialStoring
+        credentials: any CredentialStoring,
+        destination: ImportDestination
     ) {
         self.importer = importer
+        self.destination = destination
         run = BrowserImportRun(
             importer: importer,
             history: history,
@@ -81,7 +86,7 @@ public final class BrowserImportModel {
         var failures: [String] = []
         for browser in targets {
             runningBrowserName = browser.name
-            let outcome = await run.perform(on: browser, kinds: kinds)
+            let outcome = await run.perform(on: browser, kinds: kinds, spaceID: destination.spaceID)
             total.add(outcome.summary)
             failures.append(contentsOf: outcome.failures)
         }

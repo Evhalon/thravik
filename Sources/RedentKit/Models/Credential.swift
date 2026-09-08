@@ -7,6 +7,9 @@ public struct Credential: Identifiable, Hashable, Sendable {
     public let origin: Origin
     public let username: String
     public let password: String
+    /// The Space this login belongs to. Logins saved before Spaces became
+    /// profiles decode as nil and are adopted by the Work Space.
+    public var spaceID: UUID?
     public let createdAt: Date
     public var lastUsedAt: Date?
     /// Bumped whenever the user picks this entry, to rank the autofill list.
@@ -17,6 +20,7 @@ public struct Credential: Identifiable, Hashable, Sendable {
         origin: Origin,
         username: String,
         password: String,
+        spaceID: UUID? = nil,
         createdAt: Date = .now,
         lastUsedAt: Date? = nil,
         useCount: Int = 0
@@ -25,6 +29,7 @@ public struct Credential: Identifiable, Hashable, Sendable {
         self.origin = origin
         self.username = username
         self.password = password
+        self.spaceID = spaceID
         self.createdAt = createdAt
         self.lastUsedAt = lastUsedAt
         self.useCount = useCount

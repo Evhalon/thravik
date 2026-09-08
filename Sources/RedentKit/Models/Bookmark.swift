@@ -8,6 +8,9 @@ public struct Bookmark: Identifiable, Hashable, Sendable, Codable {
     public var title: String
     /// `["Bookmarks Bar", "Work"]`. Empty means top level.
     public var folderPath: [String]
+    /// The Space this page belongs to. Bookmarks saved before Spaces became
+    /// profiles decode as nil and are adopted by the Work Space on load.
+    public var spaceID: UUID?
     public var addedAt: Date
     /// Bookmarks the user pinned to the new-tab grid.
     public var isFavorite: Bool
@@ -18,6 +21,7 @@ public struct Bookmark: Identifiable, Hashable, Sendable, Codable {
         url: URL,
         title: String = "",
         folderPath: [String] = [],
+        spaceID: UUID? = nil,
         addedAt: Date = .now,
         isFavorite: Bool = false,
         faviconData: Data? = nil
@@ -26,6 +30,7 @@ public struct Bookmark: Identifiable, Hashable, Sendable, Codable {
         self.url = url
         self.title = title
         self.folderPath = folderPath
+        self.spaceID = spaceID
         self.addedAt = addedAt
         self.isFavorite = isFavorite
         self.faviconData = faviconData

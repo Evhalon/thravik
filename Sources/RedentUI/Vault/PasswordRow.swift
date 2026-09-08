@@ -6,6 +6,8 @@ import SwiftUI
 /// request, and copy/delete actions.
 struct PasswordRow: View {
     let credential: Credential
+    /// Which profile saved it, so two accounts on one site are legible.
+    let spaceName: String?
     let onCopyUsername: () -> Void
     let onCopyPassword: () -> Void
     let onDelete: () -> Void
@@ -16,7 +18,14 @@ struct PasswordRow: View {
         HStack(spacing: Metric.gutter) {
             FaviconView(data: nil, host: credential.origin.displayHost, size: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(credential.username).font(.body)
+                HStack(spacing: 6) {
+                    Text(credential.username).font(.body)
+                    if let spaceName {
+                        Text(spaceName)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Palette.chromeSecondaryText)
+                    }
+                }
                 Text(isRevealed ? credential.password : maskedPassword)
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(Palette.chromeSecondaryText)

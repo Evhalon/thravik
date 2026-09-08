@@ -14,9 +14,13 @@ public final class AutofillCoordinator {
     public private(set) var lastUsername = ""
     public var pendingSave: CredentialSaveRequest?
 
-    private let store: any CredentialStoring
-    private let logger: any EventLogging
-    private var isEnabled: Bool
+    /// `internal` rather than `private`: the save-decision half lives in a
+    /// sibling file to stay under the line limit, and reads these.
+    let store: any CredentialStoring
+    let logger: any EventLogging
+    var isEnabled: Bool
+    /// The profile the window is in. Logins never cross it.
+    private(set) var spaceID: UUID?
     private var lastObservedOrigin: Origin??
 
     public init(store: any CredentialStoring, logger: any EventLogging, isEnabled: Bool = true) {
@@ -31,6 +35,16 @@ public final class AutofillCoordinator {
         lastUsername.isEmpty ? (suggestions.first?.username ?? "") : lastUsername
     }
     public var shouldOfferFill: Bool { isLoginFormPresent && hasSuggestions && pendingSave == nil }
+
+    /// Switching Space switches vaults, so anything on offer from the old one
+    /// has to go before the next page can be filled.
+    public func setSpace(_ id: UUID?) {
+        guard spaceID != id else { return }
+        spaceID = id
+        suggestions = []
+        pendingSave = nil
+        lastObservedOrigin = nil
+    }
 
     public func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
@@ -81,53 +95,15 @@ public final class AutofillCoordinator {
         lastUsername = trimmed
     }
 
-    /// The page submitted a login, or changed a password. Offer to save it
-    /// unless we already hold exactly that entry.
-    public func credentialSubmitted(_ candidate: CredentialCandidate) async {
-        guard isEnabled else { return }
-        captureIdentity(candidate.username)
-        let stored = (try? await store.credentials(for: candidate.origin)) ?? []
-        let outcome = CredentialSaveDecider.outcome(
-            for: candidate, stored: stored, identityHint: lastUsername
-        )
-        switch outcome {
-        case nil:
-            return
-        case .alreadyStored(let id):
-            try? await store.markUsed(id)
-        case .save(let resolved):
-            pendingSave = CredentialSaveRequest(candidate: resolved, kind: .new, existing: nil)
-        case .update(let existing, let resolved):
-            pendingSave = CredentialSaveRequest(
-                candidate: resolved, kind: .updatedPassword, existing: existing
-            )
-        }
-    }
-
-    public func confirmPendingSave() async {
-        guard let request = pendingSave else { return }
-        pendingSave = nil
-        let credential = request.resolvedCredential
-        do {
-            try await store.save(credential)
-            logger.notice("autofill: saved \(credential.redactedDescription)")
-            await refreshSuggestions(for: credential.origin)
-        } catch {
-            logger.error("autofill: save failed — \(String(describing: error))")
-        }
-    }
-
-    public func dismissPendingSave() { pendingSave = nil }
-
     public func credentialFilled(_ credential: Credential) async {
         isLoginFormPresent = false
         captureIdentity(credential.username)
         try? await store.markUsed(credential.id)
     }
 
-    private func refreshSuggestions(for origin: Origin) async {
+    func refreshSuggestions(for origin: Origin) async {
         do {
-            suggestions = try await store.credentials(for: origin)
+            suggestions = try await store.credentials(for: origin, in: spaceID)
             logger.debug("autofill: \(suggestions.count) credential(s) for \(origin.registrableDomain)")
         } catch {
             suggestions = []

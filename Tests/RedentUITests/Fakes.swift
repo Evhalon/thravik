@@ -10,9 +10,9 @@ actor FakeCredentialStore: CredentialStoring {
         for item in seed { items[item.id] = item }
     }
 
-    func credentials(for origin: Origin) async throws -> [Credential] {
+    func credentials(for origin: Origin, in spaceID: UUID?) async throws -> [Credential] {
         items.values
-            .filter { $0.origin.matches(origin) }
+            .filter { $0.origin.matches(origin) && (spaceID == nil || $0.spaceID == spaceID) }
             .sorted { $0.useCount > $1.useCount }
     }
 

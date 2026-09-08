@@ -14,26 +14,31 @@ actor BookmarkFileStore {
         self.fileURL = fileURL
     }
 
-    func all() -> [Bookmark] {
-        loaded()
+    func all(in spaceID: UUID?) -> [Bookmark] {
+        scoped(to: spaceID)
     }
 
-    func favorites() -> [Bookmark] {
-        loaded().filter(\.isFavorite).sorted { $0.addedAt > $1.addedAt }
+    func favorites(in spaceID: UUID?) -> [Bookmark] {
+        scoped(to: spaceID).filter(\.isFavorite).sorted { $0.addedAt > $1.addedAt }
     }
 
-    func search(_ query: String, limit: Int) -> [Bookmark] {
+    func search(_ query: String, in spaceID: UUID?, limit: Int) -> [Bookmark] {
         guard !query.isEmpty else { return [] }
         let needle = query.lowercased()
-        return loaded()
+        return scoped(to: spaceID)
             .filter { matches($0, needle: needle) }
             .prefix(limit)
             .map { $0 }
     }
 
-    func bookmark(for url: URL) -> Bookmark? {
+    func bookmark(for url: URL, in spaceID: UUID?) -> Bookmark? {
         let key = BookmarkKey.normalized(url)
-        return loaded().first { BookmarkKey.normalized($0.url) == key }
+        return scoped(to: spaceID).first { BookmarkKey.normalized($0.url) == key }
+    }
+
+    private func scoped(to spaceID: UUID?) -> [Bookmark] {
+        guard let spaceID else { return loaded() }
+        return loaded().filter { $0.spaceID == spaceID }
     }
 
     func save(_ bookmark: Bookmark) {
@@ -49,10 +54,10 @@ actor BookmarkFileStore {
     @discardableResult
     func merge(_ bookmarks: [Bookmark]) -> Int {
         var entries = loaded()
-        var existingKeys = Set(entries.map { BookmarkKey.normalized($0.url) })
+        var existingKeys = Set(entries.map(Self.dedupeKey))
         var addedCount = 0
         for bookmark in bookmarks {
-            let key = BookmarkKey.normalized(bookmark.url)
+            let key = Self.dedupeKey(bookmark)
             guard !existingKeys.contains(key) else { continue }
             existingKeys.insert(key)
             entries.append(bookmark)
@@ -64,6 +69,12 @@ actor BookmarkFileStore {
 
     func delete(_ id: UUID) {
         persist(loaded().filter { $0.id != id })
+    }
+
+    /// The same page in two Spaces is two bookmarks, so the Space is part of
+    /// the key: importing into Personal must not be swallowed by Work.
+    private static func dedupeKey(_ bookmark: Bookmark) -> String {
+        "\(bookmark.spaceID?.uuidString ?? "-")|\(BookmarkKey.normalized(bookmark.url))"
     }
 
     private func matches(_ bookmark: Bookmark, needle: String) -> Bool {
@@ -88,10 +99,17 @@ actor BookmarkFileStore {
         try? data.write(to: fileURL, options: .atomic)
     }
 
+    /// Bookmarks written before Spaces became profiles carry no Space. They
+    /// join Work, which is also the Space that kept the existing cookies.
     private static func readFromDisk(_ fileURL: URL) -> [Bookmark] {
         guard let data = try? Data(contentsOf: fileURL),
               let entries = try? JSONDecoder().decode([Bookmark].self, from: data)
         else { return [] }
-        return entries
+        return entries.map { bookmark in
+            guard bookmark.spaceID == nil else { return bookmark }
+            var adopted = bookmark
+            adopted.spaceID = BrowserSpace.workID
+            return adopted
+        }
     }
 }

@@ -36,13 +36,16 @@ public extension HistoryStoring {
 }
 
 /// Saved pages and the favorites subset shown on the new-tab page.
+///
+/// Bookmarks belong to a Space. Every read takes the Space to read from;
+/// `nil` means every Space, which only the manager's "All Spaces" view wants.
 public protocol BookmarkStoring: Sendable {
-    func all() async -> [Bookmark]
-    func favorites() async -> [Bookmark]
-    func search(_ query: String, limit: Int) async -> [Bookmark]
-    func bookmark(for url: URL) async -> Bookmark?
+    func all(in spaceID: UUID?) async -> [Bookmark]
+    func favorites(in spaceID: UUID?) async -> [Bookmark]
+    func search(_ query: String, in spaceID: UUID?, limit: Int) async -> [Bookmark]
+    func bookmark(for url: URL, in spaceID: UUID?) async -> Bookmark?
     func save(_ bookmark: Bookmark) async
-    /// Adds anything not already present, matched on URL.
+    /// Adds anything not already present, matched on URL within its Space.
     /// - Returns: how many were new.
     @discardableResult
     func merge(_ bookmarks: [Bookmark]) async -> Int

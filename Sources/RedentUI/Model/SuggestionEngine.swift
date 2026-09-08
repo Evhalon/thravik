@@ -18,6 +18,7 @@ public struct SuggestionEngine: Sendable {
     public func suggestions(
         for query: String,
         engine: SearchEngine,
+        spaceID: UUID?,
         limit: Int = 8
     ) async -> [AddressSuggestion] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -32,8 +33,9 @@ public struct SuggestionEngine: Sendable {
         }
 
         // Saved pages rank above visited ones: bookmarking is an explicit
-        // signal, a visit is often an accident.
-        for bookmark in await bookmarks.search(trimmed, limit: limit) {
+        // signal, a visit is often an accident. Only this Space's, though —
+        // the address bar must not leak another profile's saved pages.
+        for bookmark in await bookmarks.search(trimmed, in: spaceID, limit: limit) {
             guard seen.insert(key(bookmark.url)).inserted else { continue }
             rows.append(AddressSuggestion(
                 kind: .bookmark,

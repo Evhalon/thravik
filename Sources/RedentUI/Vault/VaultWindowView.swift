@@ -21,15 +21,17 @@ public struct VaultWindowView: View {
     @Environment(\.dismiss) private var dismiss
 
     public init(
-        credentialStore: any CredentialStoring,
-        totpStore: any TOTPAccountStoring,
-        generator: any TOTPGenerating,
+        sources: VaultSources,
         initialTab: InitialTab = .passwords,
         onImportAuthenticator: @escaping () -> Void = {}
     ) {
-        self.generator = generator
+        self.generator = sources.generator
         self.onImportAuthenticator = onImportAuthenticator
-        _model = State(initialValue: VaultListModel(credentialStore: credentialStore, totpStore: totpStore))
+        _model = State(initialValue: VaultListModel(
+            credentialStore: sources.credentials,
+            totpStore: sources.totp,
+            spaceNames: sources.spaceNames
+        ))
         _tab = State(initialValue: initialTab == .authenticator ? .authenticator : .passwords)
     }
 

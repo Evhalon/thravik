@@ -12,20 +12,20 @@ public struct JSONBookmarkStore: BookmarkStoring {
         store = BookmarkFileStore(fileURL: resolvedURL)
     }
 
-    public func all() async -> [Bookmark] {
-        await store.all()
+    public func all(in spaceID: UUID?) async -> [Bookmark] {
+        await store.all(in: spaceID)
     }
 
-    public func favorites() async -> [Bookmark] {
-        await store.favorites()
+    public func favorites(in spaceID: UUID?) async -> [Bookmark] {
+        await store.favorites(in: spaceID)
     }
 
-    public func search(_ query: String, limit: Int) async -> [Bookmark] {
-        await store.search(query, limit: limit)
+    public func search(_ query: String, in spaceID: UUID?, limit: Int) async -> [Bookmark] {
+        await store.search(query, in: spaceID, limit: limit)
     }
 
-    public func bookmark(for url: URL) async -> Bookmark? {
-        await store.bookmark(for: url)
+    public func bookmark(for url: URL, in spaceID: UUID?) async -> Bookmark? {
+        await store.bookmark(for: url, in: spaceID)
     }
 
     public func save(_ bookmark: Bookmark) async {

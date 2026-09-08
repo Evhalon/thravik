@@ -21,6 +21,7 @@ public struct BrowserImportSheet: View {
                         noBrowsersFound
                     } else {
                         browserPicker
+                        ImportDestinationPicker(destination: $model.destination)
                         kindToggles
                     }
                     outcome

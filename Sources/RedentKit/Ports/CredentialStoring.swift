@@ -11,9 +11,11 @@ public enum VaultError: Error, Sendable, Equatable {
 
 /// Storage for website logins. Implemented by the Keychain adapter in RedentVault.
 public protocol CredentialStoring: Sendable {
-    /// Every credential whose registrable domain matches `origin`,
-    /// most-recently-used first.
-    func credentials(for origin: Origin) async throws -> [Credential]
+    /// Every credential in `spaceID` whose registrable domain matches
+    /// `origin`, most-recently-used first. Logins belong to a Space, so a tab
+    /// is only ever offered the ones its own profile holds.
+    func credentials(for origin: Origin, in spaceID: UUID?) async throws -> [Credential]
+    /// Every login in every Space, for the vault manager.
     func allCredentials() async throws -> [Credential]
     func save(_ credential: Credential) async throws
     /// Imports a set with one atomic vault write, skipping existing logins.

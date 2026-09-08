@@ -69,7 +69,7 @@ struct AutofillCoordinatorTests {
         )
         await coordinator.confirmPendingSave()
 
-        let saved = try #require(await store.credentials(for: origin).first)
+        let saved = try #require(await store.credentials(for: origin, in: nil).first)
         #expect(saved.id == stored.id)
         #expect(saved.password == "new")
         #expect(saved.useCount == 7)

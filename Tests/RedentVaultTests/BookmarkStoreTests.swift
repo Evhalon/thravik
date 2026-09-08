@@ -21,7 +21,7 @@ struct BookmarkStoreTests {
             Bookmark(url: try url("https://example.com/docs/"))
         ])
         #expect(added == 1)
-        #expect(await store.all().count == 1)
+        #expect(await store.all(in: nil).count == 1)
     }
 
     @Test("Merging the same set twice adds nothing the second time")
@@ -39,7 +39,7 @@ struct BookmarkStoreTests {
             Bookmark(url: try url("https://a.com"), isFavorite: true),
             Bookmark(url: try url("https://b.com"), isFavorite: false)
         ])
-        let favorites = await store.favorites()
+        let favorites = await store.favorites(in: nil)
         #expect(favorites.map(\.origin?.host) == ["a.com"])
     }
 
@@ -50,13 +50,50 @@ struct BookmarkStoreTests {
             Bookmark(url: try url("https://a.com"), title: "Design notes", folderPath: ["Work"]),
             Bookmark(url: try url("https://b.com"), title: "Recipes", folderPath: ["Home"])
         ])
-        #expect(await store.search("design", limit: 5).count == 1)
-        #expect(await store.search("work", limit: 5).count == 1)
-        #expect(await store.search("b.com", limit: 5).count == 1)
+        #expect(await store.search("design", in: nil, limit: 5).count == 1)
+        #expect(await store.search("work", in: nil, limit: 5).count == 1)
+        #expect(await store.search("b.com", in: nil, limit: 5).count == 1)
     }
 
     @Test("A missing file behaves as an empty store")
     func missingFile() async {
-        #expect(await makeStore().all().isEmpty)
+        #expect(await makeStore().all(in: nil).isEmpty)
+    }
+
+    @Test("Bookmarks are only visible in the Space that owns them")
+    func spaceScoping() async throws {
+        let store = makeStore()
+        let other = UUID()
+        await store.merge([
+            Bookmark(url: try url("https://a.com"), spaceID: BrowserSpace.workID, isFavorite: true),
+            Bookmark(url: try url("https://b.com"), spaceID: other, isFavorite: true)
+        ])
+        #expect(await store.all(in: BrowserSpace.workID).count == 1)
+        #expect(await store.favorites(in: other).map(\.origin?.host) == ["b.com"])
+        #expect(await store.all(in: nil).count == 2)
+    }
+
+    @Test("The same page saved in two Spaces is two bookmarks")
+    func sameURLInTwoSpaces() async throws {
+        let store = makeStore()
+        let added = await store.merge([
+            Bookmark(url: try url("https://example.com"), spaceID: BrowserSpace.workID),
+            Bookmark(url: try url("https://example.com"), spaceID: BrowserSpace.travelID)
+        ])
+        #expect(added == 2)
+        #expect(await store.all(in: BrowserSpace.travelID).count == 1)
+    }
+
+    @Test("Bookmarks written before Spaces were profiles join Work")
+    func legacyBookmarksJoinWork() async throws {
+        let fileURL = FileManager.default.temporaryDirectory
+            .appending(path: "redent-bm-legacy-\(UUID().uuidString).json")
+        let legacy = """
+        [{"id":"\(UUID().uuidString)","url":"https://old.example","title":"Old",
+        "folderPath":[],"addedAt":0,"isFavorite":true}]
+        """
+        try Data(legacy.replacingOccurrences(of: "\n", with: "").utf8).write(to: fileURL)
+        let store = JSONBookmarkStore(fileURL: fileURL)
+        #expect(await store.all(in: BrowserSpace.workID).count == 1)
     }
 }

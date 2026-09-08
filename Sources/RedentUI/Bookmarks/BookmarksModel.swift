@@ -3,20 +3,34 @@ import Observation
 import RedentKit
 
 /// Backs the bookmarks manager: the list, the search box, and edits.
+///
+/// Bookmarks belong to a Space, so the manager shows the Space you are in and
+/// offers the rest of them behind a toggle — nothing is ever unreachable.
 @MainActor @Observable
 public final class BookmarksModel {
     public private(set) var all: [Bookmark] = []
     public var query: String = ""
     public var selectedFolder: String?
+    public var showsEverySpace = false { didSet { Task { await load() } } }
 
+    public let spaces: [BrowserSpace]
+    private let spaceID: UUID?
     private let store: any BookmarkStoring
 
-    public init(store: any BookmarkStoring) {
+    public init(store: any BookmarkStoring, spaces: [BrowserSpace], spaceID: UUID?) {
         self.store = store
+        self.spaces = spaces
+        self.spaceID = spaceID
+    }
+
+    public var currentSpaceName: String { name(ofSpace: spaceID) }
+
+    public func name(ofSpace id: UUID?) -> String {
+        spaces.first { $0.id == id }?.name ?? "No Space"
     }
 
     public func load() async {
-        all = await store.all()
+        all = await store.all(in: showsEverySpace ? nil : spaceID)
     }
 
     /// Folder paths present in the data, for the sidebar.
@@ -39,6 +53,16 @@ public final class BookmarksModel {
     public func toggleFavorite(_ bookmark: Bookmark) async {
         var updated = bookmark
         updated.isFavorite.toggle()
+        await store.save(updated)
+        await load()
+    }
+
+    /// Moves a saved page to another Space. The page itself is untouched: only
+    /// which profile's manager and address bar will offer it changes.
+    public func move(_ bookmark: Bookmark, to destination: UUID) async {
+        guard bookmark.spaceID != destination else { return }
+        var updated = bookmark
+        updated.spaceID = destination
         await store.save(updated)
         await load()
     }

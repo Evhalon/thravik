@@ -11,13 +11,24 @@ struct CredentialVaultCodecTests {
             Credential(
                 origin: Origin(scheme: "https", host: "site\(index).example"),
                 username: "user\(index)",
-                password: "password\(index)"
+                password: "password\(index)",
+                spaceID: index.isMultiple(of: 2) ? BrowserSpace.workID : BrowserSpace.travelID
             )
         }
 
         let decoded = try CredentialVaultCodec.decode(CredentialVaultCodec.encode(credentials))
 
         #expect(decoded == credentials)
+    }
+
+    @Test("Logins written before Spaces were profiles join Work")
+    func legacyLoginsJoinWork() throws {
+        let legacy = """
+        [{"id":"\(UUID().uuidString)","scheme":"https","host":"old.example",
+        "username":"jane","password":"secret","createdAt":0,"useCount":0}]
+        """
+        let data = Data(legacy.replacingOccurrences(of: "\n", with: "").utf8)
+        #expect(try CredentialVaultCodec.decode(data).first?.spaceID == BrowserSpace.workID)
     }
 
     @Test("Corrupt payload is rejected")

@@ -21,8 +21,8 @@ public final class NewTabModel {
     /// an invitation to import instead of an empty grid.
     public var isBare: Bool { hasLoaded && favorites.isEmpty && frequent.isEmpty }
 
-    public func load() async {
-        async let saved = bookmarks.favorites()
+    public func load(in spaceID: UUID?) async {
+        async let saved = bookmarks.favorites(in: spaceID)
         async let visited = history.mostVisited(limit: 12)
         favorites = Array(await saved.prefix(12))
         frequent = await visited

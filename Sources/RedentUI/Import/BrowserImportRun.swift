@@ -15,7 +15,7 @@ struct BrowserImportRun {
     let bookmarks: any BookmarkStoring
     let credentials: any CredentialStoring
 
-    func perform(on browser: ImportableBrowser, kinds: Set<ImportKind>) async -> Outcome {
+    func perform(on browser: ImportableBrowser, kinds: Set<ImportKind>, spaceID: UUID?) async -> Outcome {
         var outcome = Outcome()
         if kinds.contains(.history) {
             do {
@@ -27,21 +27,35 @@ struct BrowserImportRun {
         if kinds.contains(.bookmarks) {
             do {
                 let saved = try await importer.readBookmarks(from: browser)
-                outcome.summary.bookmarks = await bookmarks.merge(saved)
+                outcome.summary.bookmarks = await bookmarks.merge(saved.map { adopted($0, by: spaceID) })
             } catch { outcome.failures.append("bookmarks") }
         }
         if kinds.contains(.passwords) {
-            outcome.summary.passwords = await importPasswords(from: browser, failures: &outcome.failures)
+            outcome.summary.passwords = await importPasswords(
+                from: browser, spaceID: spaceID, failures: &outcome.failures
+            )
         }
         return outcome
     }
 
+    /// The imported page joins the receiving Space, not the one it came from.
+    private func adopted(_ bookmark: Bookmark, by spaceID: UUID?) -> Bookmark {
+        var result = bookmark
+        result.spaceID = spaceID
+        return result
+    }
+
     private func importPasswords(
         from browser: ImportableBrowser,
+        spaceID: UUID?,
         failures: inout [String]
     ) async -> Int {
         do {
-            let found = try await importer.readPasswords(from: browser)
+            let found = try await importer.readPasswords(from: browser).map { credential in
+                var adopted = credential
+                adopted.spaceID = spaceID
+                return adopted
+            }
             return try await credentials.importCredentials(found).count
         } catch ImportError.decryptionKeyUnavailable {
             failures.append("passwords-key")

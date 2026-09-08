@@ -14,15 +14,7 @@ public struct BookmarksSheet: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("Bookmarks").font(.system(size: 15, weight: .semibold))
-                Spacer()
-                TextField("Search", text: $model.query)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 190)
-                Button("Done") { dismiss() }
-            }
-            .padding(Metric.gutter)
+            header.padding(Metric.gutter)
 
             Divider()
 
@@ -34,6 +26,26 @@ public struct BookmarksSheet: View {
         .frame(minWidth: 640, minHeight: 420)
         .sheetCanvas(width: 720, height: 520)
         .task { await model.load() }
+    }
+
+    private var header: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Bookmarks").font(.system(size: 15, weight: .semibold))
+                Text(model.showsEverySpace ? "Every Space" : model.currentSpaceName)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Palette.chromeSecondaryText)
+            }
+            Spacer()
+            Toggle("All Spaces", isOn: $model.showsEverySpace)
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .font(.system(size: 11))
+            TextField("Search", text: $model.query)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 170)
+            Button("Done") { dismiss() }
+        }
     }
 
     private var folderList: some View {
@@ -51,7 +63,10 @@ public struct BookmarksSheet: View {
         if model.visible.isEmpty {
             VStack(spacing: 6) {
                 Image(systemName: "star").font(.system(size: 26, weight: .light))
-                Text("No bookmarks here yet").font(.system(size: 12))
+                Text(model.showsEverySpace
+                     ? "No bookmarks yet"
+                     : "Nothing saved in \(model.currentSpaceName) yet")
+                    .font(.system(size: 12))
             }
             .foregroundStyle(Palette.chromeSecondaryText)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -59,9 +74,14 @@ public struct BookmarksSheet: View {
             List(model.visible) { bookmark in
                 BookmarkRow(
                     bookmark: bookmark,
-                    onOpen: { onOpen(bookmark.url); dismiss() },
-                    onToggleFavorite: { Task { await model.toggleFavorite(bookmark) } },
-                    onDelete: { Task { await model.delete(bookmark) } }
+                    spaceName: model.showsEverySpace ? model.name(ofSpace: bookmark.spaceID) : nil,
+                    spaces: model.spaces,
+                    actions: .init(
+                        onOpen: { onOpen(bookmark.url); dismiss() },
+                        onToggleFavorite: { Task { await model.toggleFavorite(bookmark) } },
+                        onMove: { destination in Task { await model.move(bookmark, to: destination) } },
+                        onDelete: { Task { await model.delete(bookmark) } }
+                    )
                 )
             }
             .listStyle(.inset)

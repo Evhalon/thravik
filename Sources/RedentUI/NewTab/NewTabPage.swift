@@ -34,7 +34,7 @@ struct NewTabPage: View {
             .frame(minHeight: geometryFallbackHeight, alignment: .top)
             .defaultFocus($isSearchFocused, true)
         }
-        .task { await newTab.load() }
+        .task(id: model.currentSpaceID) { await newTab.load(in: model.currentSpaceID) }
         .onAppear { isSearchFocused = true }
         .task(id: model.centerSearchFocusEpoch) { await claimSearchFocus() }
     }

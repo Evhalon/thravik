@@ -8,6 +8,7 @@ enum CredentialVaultCodec {
         let host: String
         let username: String
         let password: String
+        var spaceID: UUID?
         let createdAt: Date
         var lastUsedAt: Date?
         var useCount: Int
@@ -18,6 +19,7 @@ enum CredentialVaultCodec {
             host = credential.origin.host
             username = credential.username
             password = credential.password
+            spaceID = credential.spaceID
             createdAt = credential.createdAt
             lastUsedAt = credential.lastUsedAt
             useCount = credential.useCount
@@ -29,6 +31,9 @@ enum CredentialVaultCodec {
                 origin: Origin(scheme: scheme, host: host),
                 username: username,
                 password: password,
+                // Logins written before Spaces were profiles join Work, the
+                // Space that also kept the existing cookies.
+                spaceID: spaceID ?? BrowserSpace.workID,
                 createdAt: createdAt,
                 lastUsedAt: lastUsedAt,
                 useCount: useCount

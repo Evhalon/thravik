@@ -93,12 +93,12 @@ private struct TestBookmarkStore: BookmarkStoring {
     let entries: [Bookmark]
 
     init(_ entries: [Bookmark] = []) { self.entries = entries }
-    func all() async -> [Bookmark] { entries }
-    func favorites() async -> [Bookmark] { entries.filter(\.isFavorite) }
-    func search(_ query: String, limit: Int) async -> [Bookmark] {
+    func all(in spaceID: UUID?) async -> [Bookmark] { entries }
+    func favorites(in spaceID: UUID?) async -> [Bookmark] { entries.filter(\.isFavorite) }
+    func search(_ query: String, in spaceID: UUID?, limit: Int) async -> [Bookmark] {
         entries.filter { $0.displayTitle.localizedCaseInsensitiveContains(query) }
     }
-    func bookmark(for url: URL) async -> Bookmark? { entries.first { $0.url == url } }
+    func bookmark(for url: URL, in spaceID: UUID?) async -> Bookmark? { entries.first { $0.url == url } }
     func save(_ bookmark: Bookmark) async {}
     func merge(_ bookmarks: [Bookmark]) async -> Int { 0 }
     func delete(_ id: UUID) async {}

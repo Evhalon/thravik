@@ -12,12 +12,17 @@ struct BrowserImportSelectionTests {
         ImportableBrowser.fake("Dia/User Data/Profile 2", name: "Dia — Side")
     ]
 
-    private func makeModel(_ importer: FakeBrowserImporter) -> BrowserImportModel {
+    private func makeModel(
+        _ importer: FakeBrowserImporter,
+        bookmarks: RecordingBookmarkStore = RecordingBookmarkStore(),
+        into spaceID: UUID = BrowserSpace.travelID
+    ) -> BrowserImportModel {
         BrowserImportModel(
             importer: importer,
             history: RecordingHistoryStore(),
-            bookmarks: RecordingBookmarkStore(),
-            credentials: FakeCredentialStore()
+            bookmarks: bookmarks,
+            credentials: FakeCredentialStore(),
+            destination: ImportDestination(spaces: BrowserSpace.starterSpaces, spaceID: spaceID)
         )
     }
 
@@ -100,5 +105,24 @@ struct BrowserImportSelectionTests {
 
         model.deselectAll()
         #expect(!model.canRun)
+    }
+
+    @Test("Imported bookmarks join the chosen Space")
+    func bookmarksJoinTheChosenSpace() async {
+        let bookmarks = RecordingBookmarkStore()
+        let model = makeModel(
+            importer(["Dia/User Data/Default": .init(history: 0, bookmarks: 2)]),
+            bookmarks: bookmarks,
+            into: BrowserSpace.researchID
+        )
+        model.discover()
+        model.selectAll()
+        model.kinds = [.bookmarks]
+
+        await model.run()
+
+        let saved = await bookmarks.merged
+        #expect(saved.isEmpty == false)
+        #expect(saved.allSatisfy { $0.spaceID == BrowserSpace.researchID })
     }
 }

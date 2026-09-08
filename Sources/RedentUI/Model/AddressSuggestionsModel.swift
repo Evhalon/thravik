@@ -41,7 +41,7 @@ public final class AddressSuggestionsModel {
 
     public func isOpen(for source: Source) -> Bool { openSource == source }
 
-    public func update(query: String, from source: Source, searchEngine: SearchEngine) {
+    public func update(query: String, from source: Source, searchEngine: SearchEngine, spaceID: UUID?) {
         pending?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return close() }
@@ -50,7 +50,7 @@ public final class AddressSuggestionsModel {
         pending = Task { [engine] in
             try? await Task.sleep(for: .milliseconds(90))
             guard !Task.isCancelled else { return }
-            let found = await engine.suggestions(for: trimmed, engine: searchEngine)
+            let found = await engine.suggestions(for: trimmed, engine: searchEngine, spaceID: spaceID)
             guard !Task.isCancelled else { return }
             rows = found
             openSource = found.isEmpty ? nil : source

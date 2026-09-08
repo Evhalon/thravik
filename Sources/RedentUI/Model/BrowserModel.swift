@@ -99,7 +99,7 @@ public final class BrowserModel {
     }
 
     public func queryChanged(_ text: String, from source: AddressSuggestionsModel.Source) {
-        suggestions.update(query: text, from: source, searchEngine: settings.searchEngine)
+        suggestions.update(query: text, from: source, searchEngine: settings.searchEngine, spaceID: currentSpaceID)
     }
 
     /// Arrow keys in a TextField never reach `onMoveCommand`. The command bar
@@ -116,6 +116,7 @@ public final class BrowserModel {
         otp.dismissIfPageChanged(selectedTab?.url)
         tabs.sweepHibernation(now: date, keeping: split.visibleTabIDs(primary: tabs.selectedID))
         if let expired = tabs.sweepExpiredTabs(now: date) { expiredTabID = expired }
+        autofill.setSpace(selectedTab?.snapshot.spaceID ?? currentSpaceID)
         autofill.observe(selectedTab?.origin)
         persistIfNeeded(date)
     }
