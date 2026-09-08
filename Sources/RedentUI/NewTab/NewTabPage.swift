@@ -27,11 +27,13 @@ struct NewTabPage: View {
                 .scrollIndicators(.never)
             }
             .frame(maxWidth: 680)
-            .frame(maxWidth: .infinity)
-            // Sits a little above centre — dead centre reads as unfinished,
-            // and the eye expects the search field slightly high.
+            .padding(.horizontal, 20)
             .padding(.vertical, 40)
-            .frame(minHeight: geometryFallbackHeight, alignment: .top)
+            // Sits a little above centre — dead centre reads as unfinished,
+            // and the eye expects the search field slightly high. A ceiling,
+            // never a floor: a short window gets the height it actually has,
+            // and the grid scrolls inside it rather than spilling past it.
+            .frame(maxWidth: .infinity, maxHeight: restingHeight)
             .defaultFocus($isSearchFocused, true)
         }
         .task(id: model.currentSpaceID) { await newTab.load(in: model.currentSpaceID) }
@@ -47,9 +49,10 @@ struct NewTabPage: View {
         isSearchFocused = true
     }
 
-    /// Keeps the stack tall enough to sit the greeting high in a large window
-    /// without a GeometryReader that would re-measure on every keystroke.
-    private let geometryFallbackHeight: CGFloat = 620
+    /// How tall the stack grows before it stops. Past this the window keeps
+    /// the extra room, which is what sits the greeting high in a large window;
+    /// below it the stack simply takes what it is given.
+    private let restingHeight: CGFloat = 620
 
     private var header: some View {
         VStack(spacing: 6) {

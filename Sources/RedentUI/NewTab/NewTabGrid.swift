@@ -6,7 +6,7 @@ struct NewTabGrid: View {
     let tiles: [NewTabTile]
     let onOpen: (NewTabTile, Bool) -> Void
 
-    private let columns = Array(repeating: GridItem(.fixed(96), spacing: 18), count: 6)
+    private let columns = [GridItem(.adaptive(minimum: 96, maximum: 96), spacing: 18)]
 
     var body: some View {
         VStack(alignment: .leading, spacing: Metric.gutter + 2) {
