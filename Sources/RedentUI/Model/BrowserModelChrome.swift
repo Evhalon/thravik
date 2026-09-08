@@ -40,6 +40,16 @@ extension BrowserModel {
         address.finishEditing()
         centerSearchFocusEpoch &+= 1
     }
+
+    /// Everything modal the window is showing, torn down at once.
+    ///
+    /// Quitting is the caller that matters: AppKit swallows `terminate` while a
+    /// sheet is attached, and this binding is what puts it there — so it has to
+    /// be cleared, not fought.
+    public func dismissPresentations() {
+        sheet = nil
+        dismissCommands()
+    }
 }
 
 extension BrowserModel {

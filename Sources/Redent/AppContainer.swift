@@ -55,7 +55,6 @@ final class AppContainer {
         self.bookmarks = bookmarks
         self.browserImporter = ChromiumImporter()
         self.sessionStore = sessionStore
-        self.updates = Self.makeUpdateModel()
         let permissions = SitePermissionLedger(store: JSONSitePolicyStore())
         self.permissions = permissions
         self.siteData = tabs.siteData
@@ -67,9 +66,11 @@ final class AppContainer {
             otp: OTPCoordinator(store: authenticator, generator: generator, logger: logger),
             suggestions: AddressSuggestionsModel(engine: SuggestionEngine(history: history, bookmarks: bookmarks))
         )
-        self.model = BrowserModel(tabs: tabs, services: services, features: features, settings: settings) { id in
+        let model = BrowserModel(tabs: tabs, services: services, features: features, settings: settings) { id in
             AnyView(BrowserPageView(controller: tabs, tabID: id))
         }
+        self.model = model
+        self.updates = Self.makeUpdateModel(presenting: model)
 
         tabs.permissionDecider = { [weak permissions] key, permission in
             permissions?.decision(key, permission) ?? .ask
@@ -91,12 +92,14 @@ final class AppContainer {
 
     /// Releases are published as signed disk images on GitHub; the installer
     /// swaps the running bundle and reopens it once this process exits.
-    private static func makeUpdateModel() -> UpdateModel {
+    private static func makeUpdateModel(presenting model: BrowserModel) -> UpdateModel {
         UpdateModel(
             currentVersion: installedVersion(),
             checker: GitHubReleaseFeed(repository: "Evhalon/thravik"),
             installer: DiskImageInstaller(),
-            quit: { AppTermination.quit() }
+            // The restart is asked for from inside a sheet this model presents,
+            // so the quit path has to close it before AppKit will terminate.
+            quit: { AppTermination.quit(dismissing: model.dismissPresentations) }
         )
     }
 
