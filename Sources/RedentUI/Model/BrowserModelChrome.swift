@@ -41,3 +41,13 @@ extension BrowserModel {
         centerSearchFocusEpoch &+= 1
     }
 }
+
+extension BrowserModel {
+    /// Drag reorder: `sourceID` was dropped on the row showing `targetID`.
+    public func reorderTab(_ sourceID: UUID, onto targetID: UUID) {
+        guard let move = TabDropPlacement.move(sourceID, onto: targetID, in: tabs.visibleTabs.map(\.id)) else {
+            return
+        }
+        tabs.move(fromOffsets: move.offsets, toOffset: move.to)
+    }
+}

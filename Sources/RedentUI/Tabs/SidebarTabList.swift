@@ -62,14 +62,20 @@ struct SidebarTabList: View {
         )
     }
 
-    private func actions(for tab: any BrowserTab) -> SidebarTabActions {
+    private func actions(for tab: any BrowserTab) -> TabRowActions {
         let grouped = tab.snapshot.groupID != nil || tab.snapshot.parentTabID != nil
-        return SidebarTabActions(
+        return TabRowActions(
             onSelect: { model.tabs.select(tab.id) },
             onClose: { model.tabs.close(tab.id) },
             onTogglePin: { model.tabs.togglePin(tab.id) },
-            onUngroup: grouped ? { try? model.tabs.perform(.moveTabToGroup(tabID: tab.id, groupID: nil)) } : nil
+            onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
+            onUngroup: grouped ? { try? model.tabs.perform(.moveTabToGroup(tabID: tab.id, groupID: nil)) } : nil,
+            onDropTab: { model.reorderTab($0, onto: tab.id) }
         )
+    }
+
+    private func canCloseOthers(than tab: any BrowserTab) -> Bool {
+        model.tabs.visibleTabs.contains { $0.id != tab.id && !$0.isPinned }
     }
 
     private func tab(_ id: UUID?) -> (any BrowserTab)? {

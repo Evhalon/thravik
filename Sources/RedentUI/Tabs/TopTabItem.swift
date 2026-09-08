@@ -1,3 +1,4 @@
+import Foundation
 import RedentKit
 import RedentDesign
 import SwiftUI
@@ -8,11 +9,10 @@ struct TopTabItem: View {
     let tab: any BrowserTab
     let isSelected: Bool
     let namespace: Namespace.ID
-    let onSelect: () -> Void
-    let onClose: () -> Void
-    let onTogglePin: () -> Void
+    let actions: TabRowActions
 
     @State private var isHovering = false
+    @State private var isDropTarget = false
 
     private var width: CGFloat? { tab.isPinned ? Metric.tabRowHeight + 6 : 184 }
 
@@ -44,7 +44,7 @@ struct TopTabItem: View {
                 TabRowLabel(tab: tab, isSelected: isSelected)
                 Spacer(minLength: 0)
                 if isHovering {
-                    ChromeButton(systemImage: "xmark", help: "Close tab", isEnabled: true, action: onClose)
+                    ChromeButton(systemImage: "xmark", help: "Close tab", isEnabled: true, action: actions.onClose)
                         .controlSize(.mini)
                 }
             }
@@ -52,14 +52,20 @@ struct TopTabItem: View {
         .padding(.horizontal, Metric.tightGutter)
         .frame(width: width, height: Metric.tabRowHeight)
         .background { selectionBackground }
+        .overlay(alignment: .leading) { dropIndicator }
         .contentShape(.rect)
-        .onTapGesture(perform: onSelect)
+        .onTapGesture(perform: actions.onSelect)
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.12)) { isHovering = hovering }
         }
-        .contextMenu {
-            Button(tab.isPinned ? "Unpin Tab" : "Pin Tab", action: onTogglePin)
-            Button("Close Tab", action: onClose)
+        .tabDragging(tab: tab, actions: actions, isTargeted: $isDropTarget)
+        .contextMenu { TabRowMenu(isPinned: tab.isPinned, actions: actions) }
+    }
+
+    @ViewBuilder
+    private var dropIndicator: some View {
+        if isDropTarget {
+            Capsule().fill(Palette.accent).frame(width: 2).padding(.vertical, 4)
         }
     }
 }

@@ -1,3 +1,4 @@
+import Foundation
 import RedentKit
 import RedentDesign
 import SwiftUI
@@ -10,10 +11,11 @@ struct SidebarTabRow: View {
     let tab: any BrowserTab
     let isSelected: Bool
     let namespace: Namespace.ID
-    let actions: SidebarTabActions
+    let actions: TabRowActions
     var indent: CGFloat = 0
 
     @State private var isHovering = false
+    @State private var isDropTarget = false
 
     var body: some View {
         HStack(spacing: Metric.tightGutter + 2) {
@@ -25,17 +27,20 @@ struct SidebarTabRow: View {
         .padding(.trailing, Metric.tightGutter + 2)
         .frame(height: Metric.tabRowHeight)
         .background { selectionBackground }
+        .overlay(alignment: .top) { dropIndicator }
         .contentShape(.rect)
         .onTapGesture(perform: actions.onSelect)
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.14)) { isHovering = hovering }
         }
-        .contextMenu {
-            Button(tab.isPinned ? "Unpin Tab" : "Pin Tab", action: actions.onTogglePin)
-            if let onUngroup = actions.onUngroup {
-                Button("Remove from Group", action: onUngroup)
-            }
-            Button("Close Tab", action: actions.onClose)
+        .tabDragging(tab: tab, actions: actions, isTargeted: $isDropTarget)
+        .contextMenu { TabRowMenu(isPinned: tab.isPinned, actions: actions) }
+    }
+
+    @ViewBuilder
+    private var dropIndicator: some View {
+        if isDropTarget {
+            Capsule().fill(Palette.accent).frame(height: 2).padding(.horizontal, 6)
         }
     }
 

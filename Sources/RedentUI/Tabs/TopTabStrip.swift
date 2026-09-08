@@ -1,4 +1,5 @@
 import RedentDesign
+import RedentKit
 import SwiftUI
 
 /// The familiar horizontal strip, for people who want their tabs where Chrome
@@ -16,9 +17,7 @@ struct TopTabStrip: View {
                             tab: tab,
                             isSelected: tab.id == model.tabs.selectedID,
                             namespace: selection,
-                            onSelect: { model.tabs.select(tab.id) },
-                            onClose: { model.tabs.close(tab.id) },
-                            onTogglePin: { model.tabs.togglePin(tab.id) }
+                            actions: actions(for: tab)
                         )
                     }
                 }
@@ -31,5 +30,19 @@ struct TopTabStrip: View {
         .padding(.horizontal, Metric.gutter)
         .frame(height: Metric.tabRowHeight + 14)
         .animation(.spring(duration: 0.3), value: model.tabs.selectedID)
+    }
+
+    private func actions(for tab: any BrowserTab) -> TabRowActions {
+        TabRowActions(
+            onSelect: { model.tabs.select(tab.id) },
+            onClose: { model.tabs.close(tab.id) },
+            onTogglePin: { model.tabs.togglePin(tab.id) },
+            onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
+            onDropTab: { model.reorderTab($0, onto: tab.id) }
+        )
+    }
+
+    private func canCloseOthers(than tab: any BrowserTab) -> Bool {
+        model.tabs.visibleTabs.contains { $0.id != tab.id && !$0.isPinned }
     }
 }

@@ -83,6 +83,15 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
         self.searchEngine = searchEngine
         self.homepage = homepage
     }
+
+    /// Picking an engine moves the homepage with it, so the two do not disagree.
+    /// A homepage the user typed themselves is left alone.
+    public mutating func selectSearchEngine(_ engine: SearchEngine) {
+        let trimmed = homepage.trimmingCharacters(in: .whitespacesAndNewlines)
+        let followsEngine = trimmed.isEmpty || SearchEngine.allCases.contains { $0.homepage == trimmed }
+        searchEngine = engine
+        if followsEngine { homepage = engine.homepage }
+    }
 }
 
 private extension Double {

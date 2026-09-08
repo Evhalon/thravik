@@ -14,7 +14,7 @@ struct GeneralSettingsPane: View {
                         .font(.system(size: 13))
                         .foregroundStyle(Palette.chromeText)
                     Spacer(minLength: Metric.gutter)
-                    Picker("Search engine", selection: $settings.searchEngine) {
+                    Picker("Search engine", selection: engineSelection) {
                         ForEach(SearchEngine.allCases) { engine in
                             Text(engine.label).tag(engine)
                         }
@@ -34,6 +34,11 @@ struct GeneralSettingsPane: View {
                     .background { fieldChrome }
             }
         }
+    }
+
+    /// Routed through the model so the homepage follows the engine.
+    private var engineSelection: Binding<SearchEngine> {
+        Binding(get: { settings.searchEngine }, set: { settings.selectSearchEngine($0) })
     }
 
     private var fieldChrome: some View {
