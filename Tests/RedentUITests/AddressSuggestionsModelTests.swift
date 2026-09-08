@@ -75,6 +75,8 @@ struct AddressSuggestionsModelTests {
 
         let count = model.rows.count
         #expect(count >= 2)
+
+        model.moveHighlight(by: 1)
         #expect(model.highlighted == 0)
 
         model.moveHighlight(by: 1)
@@ -85,6 +87,28 @@ struct AddressSuggestionsModelTests {
 
         model.moveHighlight(by: -1)
         #expect(model.highlighted == count - 1)
+    }
+
+    @Test("An up arrow from nothing armed wraps to the last row")
+    func upArrowFromNothingWraps() async throws {
+        let model = makeModel()
+        model.update(query: "example.com", from: .newTab, searchEngine: .duckduckgo, spaceID: nil)
+        await settle(model)
+
+        model.moveHighlight(by: -1)
+        #expect(model.highlighted == model.rows.count - 1)
+    }
+
+    @Test("A fresh list arms nothing, so return searches what was typed")
+    func freshListArmsNothing() async throws {
+        let model = makeModel()
+        model.update(query: "example.com", from: .newTab, searchEngine: .duckduckgo, spaceID: nil)
+        await settle(model)
+
+        #expect(model.isOpen(for: .newTab))
+        #expect(!model.rows.isEmpty)
+        #expect(model.highlighted == nil)
+        #expect(model.highlightedRow == nil)
     }
 
     @Test("Arrows do nothing when no list is open")

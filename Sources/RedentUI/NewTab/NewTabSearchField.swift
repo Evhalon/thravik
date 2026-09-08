@@ -19,6 +19,12 @@ struct NewTabSearchField: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 15))
                 .foregroundStyle(Palette.chromeText)
+                // A long query must scroll inside the pill, not wrap it into a
+                // second line: the field is fixed height, so wrapped text is
+                // clipped text.
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity)
                 .focused($isFocused)
                 .onSubmit(onSubmit)
                 .onChange(of: text) { _, value in

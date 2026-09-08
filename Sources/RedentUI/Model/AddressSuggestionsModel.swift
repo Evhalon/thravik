@@ -54,7 +54,10 @@ public final class AddressSuggestionsModel {
             guard !Task.isCancelled else { return }
             rows = found
             openSource = found.isEmpty ? nil : source
-            highlighted = found.isEmpty ? nil : 0
+            // Nothing is armed until the user arrows onto a row: return has to
+            // mean "search what I typed", or every fresh query would open
+            // whatever the list guessed first.
+            highlighted = nil
             pendingSource = nil
         }
     }
@@ -78,7 +81,10 @@ public final class AddressSuggestionsModel {
 
     public func moveHighlight(by offset: Int) {
         guard openSource != nil, !rows.isEmpty else { return }
-        let current = highlighted ?? 0
+        guard let current = highlighted else {
+            highlighted = offset > 0 ? 0 : rows.count - 1
+            return
+        }
         highlighted = (current + offset + rows.count) % rows.count
     }
 }
