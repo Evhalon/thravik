@@ -16,6 +16,7 @@ struct SheetRouter: View {
             case .settings:
                 SettingsSheet(
                     settings: settingsBinding,
+                    updates: container.updates,
                     onOpenPasswords: { container.model.sheet = .passwords },
                     onOpenAuthenticatorImport: { container.model.sheet = .importAuthenticator }
                 )

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import SwiftUI
@@ -6,6 +7,7 @@ import RedentKit
 import RedentImport
 import RedentOTPAuth
 import RedentUI
+import RedentUpdate
 import RedentVault
 
 /// The composition root. This is the ONLY type that names concrete adapters —
@@ -22,6 +24,7 @@ final class AppContainer {
     let browserImporter: any BrowserImporting
     let permissions: SitePermissionLedger
     let siteData: any SiteDataManaging
+    let updates: UpdateModel
 
     private let sessionStore: any SessionStoring
 
@@ -52,6 +55,7 @@ final class AppContainer {
         self.bookmarks = bookmarks
         self.browserImporter = ChromiumImporter()
         self.sessionStore = sessionStore
+        self.updates = Self.makeUpdateModel()
         let permissions = SitePermissionLedger(store: JSONSitePolicyStore())
         self.permissions = permissions
         self.siteData = tabs.siteData
@@ -83,5 +87,24 @@ final class AppContainer {
 
     func persist() {
         model.persistSession()
+    }
+
+    /// Releases are published as signed disk images on GitHub; the installer
+    /// swaps the running bundle and reopens it once this process exits.
+    private static func makeUpdateModel() -> UpdateModel {
+        UpdateModel(
+            currentVersion: installedVersion(),
+            checker: GitHubReleaseFeed(repository: "Evhalon/thravik"),
+            installer: DiskImageInstaller(),
+            quit: { NSApplication.shared.terminate(nil) }
+        )
+    }
+
+    /// `nil` under `swift run`, which has no Info.plist and so no version to
+    /// compare — a dev build is never offered an update.
+    private static func installedVersion() -> AppVersion? {
+        guard let raw = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        else { return nil }
+        return AppVersion(raw)
     }
 }

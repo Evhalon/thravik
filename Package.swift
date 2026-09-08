@@ -16,6 +16,7 @@ let package = Package(
         .target(name: "RedentVault", dependencies: ["RedentKit"], swiftSettings: strict),
         .target(name: "RedentImport", dependencies: ["RedentKit"], swiftSettings: strict),
         .target(name: "RedentEngine", dependencies: ["RedentKit"], resources: [.process("Resources")], swiftSettings: strict),
+        .target(name: "RedentUpdate", dependencies: ["RedentKit"], swiftSettings: strict),
         .target(name: "RedentDesign", swiftSettings: strict),
         .target(
             name: "RedentUI",
@@ -24,7 +25,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "Redent",
-            dependencies: ["RedentKit", "RedentUI", "RedentEngine", "RedentVault", "RedentOTPAuth", "RedentDesign", "RedentImport"],
+            dependencies: [
+                "RedentKit", "RedentUI", "RedentEngine", "RedentVault",
+                "RedentOTPAuth", "RedentDesign", "RedentImport", "RedentUpdate"
+            ],
             swiftSettings: strict
         ),
         .testTarget(name: "RedentCryptoTests", dependencies: ["RedentCrypto"], swiftSettings: strict),
@@ -33,6 +37,7 @@ let package = Package(
         .testTarget(name: "RedentKitTests", dependencies: ["RedentKit"], swiftSettings: strict),
         .testTarget(name: "RedentVaultTests", dependencies: ["RedentVault", "RedentKit"], swiftSettings: strict),
         .testTarget(name: "RedentUITests", dependencies: ["RedentUI", "RedentKit"], swiftSettings: strict),
-        .testTarget(name: "RedentImportTests", dependencies: ["RedentImport", "RedentKit"], swiftSettings: strict)
+        .testTarget(name: "RedentImportTests", dependencies: ["RedentImport", "RedentKit"], swiftSettings: strict),
+        .testTarget(name: "RedentUpdateTests", dependencies: ["RedentUpdate", "RedentKit"], swiftSettings: strict)
     ]
 )

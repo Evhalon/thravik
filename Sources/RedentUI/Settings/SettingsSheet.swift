@@ -9,10 +9,12 @@ public struct SettingsSheet: View {
         case general = "General"
         case appearance = "Appearance"
         case privacy = "Privacy"
+        case updates = "Updates"
         var id: String { rawValue }
     }
 
     @Binding private var settings: BrowserSettings
+    private let updates: UpdateModel
     private let onOpenPasswords: () -> Void
     private let onOpenAuthenticatorImport: () -> Void
     @State private var pane: Pane = .general
@@ -20,10 +22,12 @@ public struct SettingsSheet: View {
 
     public init(
         settings: Binding<BrowserSettings>,
+        updates: UpdateModel,
         onOpenPasswords: @escaping () -> Void,
         onOpenAuthenticatorImport: @escaping () -> Void
     ) {
         self._settings = settings
+        self.updates = updates
         self.onOpenPasswords = onOpenPasswords
         self.onOpenAuthenticatorImport = onOpenAuthenticatorImport
     }
@@ -69,6 +73,8 @@ public struct SettingsSheet: View {
                 onOpenPasswords: onOpenPasswords,
                 onOpenAuthenticatorImport: onOpenAuthenticatorImport
             )
+        case .updates:
+            UpdatesSettingsPane(updates: updates)
         }
     }
 
@@ -85,10 +91,27 @@ public struct SettingsSheet: View {
 }
 
 #if DEBUG
+/// The preview needs a model, not a network round trip.
+private struct QuietUpdateChecker: UpdateChecking {
+    func latestRelease() async throws -> AppRelease { throw CancellationError() }
+}
+
+private struct QuietUpdateInstaller: UpdateInstalling {
+    func stage(_ release: AppRelease) async throws {}
+}
+
 #Preview {
     @Previewable @State var settings = BrowserSettings()
     return SettingsSheet(
-        settings: $settings, onOpenPasswords: {}, onOpenAuthenticatorImport: {}
+        settings: $settings,
+        updates: UpdateModel(
+            currentVersion: AppVersion("0.1.2"),
+            checker: QuietUpdateChecker(),
+            installer: QuietUpdateInstaller(),
+            quit: {}
+        ),
+        onOpenPasswords: {},
+        onOpenAuthenticatorImport: {}
     )
 }
 #endif
