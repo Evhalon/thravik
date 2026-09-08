@@ -10,6 +10,7 @@ public final class AddressBarModel {
     public var isEditing: Bool = false
 
     private var lastSyncedURL: URL?
+    private var programmaticText: String?
 
     public init() {}
 
@@ -18,21 +19,21 @@ public final class AddressBarModel {
     public func sync(with tab: (any BrowserTab)?) {
         guard let tab else {
             lastSyncedURL = nil
-            text = ""
+            setProgrammaticText("")
             return
         }
         guard !isEditing else { return }
         let url = tab.url
         guard url != lastSyncedURL else { return }
         lastSyncedURL = url
-        text = url.map(Self.prettyPrint) ?? ""
+        setProgrammaticText(url.map(Self.prettyPrint) ?? "")
     }
 
     public func beginEditing(with tab: (any BrowserTab)?) {
         isEditing = true
         let url = tab?.url
         lastSyncedURL = url
-        text = url?.absoluteString ?? text
+        setProgrammaticText(url?.absoluteString ?? text)
     }
 
     /// A tab switch replaces any address left by the previous tab. When the
@@ -41,7 +42,14 @@ public final class AddressBarModel {
     public func syncSelection(with tab: (any BrowserTab)?) {
         let url = tab?.url
         lastSyncedURL = url
-        text = url.map { isEditing ? $0.absoluteString : Self.prettyPrint($0) } ?? ""
+        setProgrammaticText(url.map { isEditing ? $0.absoluteString : Self.prettyPrint($0) } ?? "")
+    }
+
+    /// SwiftUI reports model-driven replacements through the same callback as
+    /// typing. Only real edits should start an address suggestion query.
+    public func isUserChange(_ value: String) -> Bool {
+        defer { programmaticText = nil }
+        return value != programmaticText
     }
 
     /// - Returns: the URL to load, or `nil` if the input was empty.
@@ -61,6 +69,11 @@ public final class AddressBarModel {
         isEditing = false
         lastSyncedURL = nil
         sync(with: tab)
+    }
+
+    private func setProgrammaticText(_ value: String) {
+        programmaticText = value
+        text = value
     }
 
     /// `https://www.example.com/path` → `example.com/path`. The scheme is noise

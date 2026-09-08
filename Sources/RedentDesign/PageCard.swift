@@ -16,7 +16,6 @@ private struct PageCard: ViewModifier {
         )
         return content
             .overlay { cornerCover }
-            .overlay { edgeStroke(shape) }
             .background { shadowPlate(shape) }
             .padding(isInset ? Metric.pageInset : 0)
             .animation(.spring(duration: 0.3), value: isInset)
@@ -42,16 +41,6 @@ private struct PageCard: ViewModifier {
 
     private var chromeFill: Color {
         scheme == .dark ? Color(white: 0.09) : Color(white: 0.935)
-    }
-
-    private func edgeStroke(_ shape: RoundedRectangle) -> some View {
-        shape.strokeBorder(
-            LinearGradient(
-                colors: [.white.opacity(isInset ? 0.22 : 0), .white.opacity(isInset ? 0.04 : 0)],
-                startPoint: .top, endPoint: .bottom
-            ),
-            lineWidth: Metric.hairWidth * 1.5
-        )
     }
 
     /// The shadow belongs to a shape *behind* the card, not to the card itself.

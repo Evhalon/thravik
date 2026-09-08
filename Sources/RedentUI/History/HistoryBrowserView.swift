@@ -40,8 +40,8 @@ public struct HistoryBrowserView: View {
             Divider()
             content
         }
-        .frame(minWidth: 680, minHeight: 460)
-        .sheetCanvas(width: 760, height: 560)
+        .frame(minWidth: 680)
+        .sheetCanvas(width: 760, height: 460)
         .task(id: model.query + (model.spaceID?.uuidString ?? "")) { await model.load() }
     }
 

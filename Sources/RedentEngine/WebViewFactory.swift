@@ -60,6 +60,7 @@ enum WebViewFactory {
         view.isInspectable = true
         view.allowsMagnification = true
         view.customUserAgent = nil
+        view.appearance = nil
         // A clear page in a non-opaque window makes hardware video composite
         // as a black rectangle the moment the player adds an overlay.
         view.underPageBackgroundColor = .windowBackgroundColor

@@ -57,6 +57,19 @@ struct AddressBarModelTests {
         #expect(model.text == "https://second.example/login")
     }
 
+    @Test("Navigation-driven address changes do not look like typing")
+    func navigationDoesNotTriggerSuggestions() throws {
+        let tab = InertTab()
+        tab.url = try url("https://advert.example/landing")
+        let model = AddressBarModel()
+        model.beginEditing(with: nil)
+
+        model.syncSelection(with: tab)
+
+        #expect(!model.isUserChange(model.text))
+        #expect(model.isUserChange("https://advert.example/landing?q=user"))
+    }
+
     @Test("Closing the last tab clears a stale address")
     func closingLastTab() throws {
         let tab = InertTab()

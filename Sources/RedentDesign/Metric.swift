@@ -21,7 +21,7 @@ public enum Metric {
     public static let gutter: CGFloat = 12
     public static let tightGutter: CGFloat = 6
     /// The inset between the chrome and the page card, on every side.
-    public static let pageInset: CGFloat = 9
+    public static let pageInset: CGFloat = 3
     /// Height of the full-width glass titlebar the window buttons sit on.
     public static let titlebarInset: CGFloat = 30
 

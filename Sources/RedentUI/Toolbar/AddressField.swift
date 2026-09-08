@@ -28,7 +28,7 @@ struct AddressField: View {
                     model.address.beginEditing(with: model.selectedTab)
                 }
                 .onChange(of: address.text) { _, text in
-                    guard isFocused else { return }
+                    guard isFocused, model.address.isUserChange(text) else { return }
                     model.queryChanged(text, from: .addressBar)
                 }
                 .onChange(of: model.centerSearchFocusEpoch) { _, _ in

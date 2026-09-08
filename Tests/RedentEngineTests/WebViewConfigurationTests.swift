@@ -71,6 +71,11 @@ struct WebViewConfigurationTests {
         #expect(view.underPageBackgroundColor.alphaComponent == 1)
     }
 
+    @Test("The page inherits appearance instead of forcing a color scheme")
+    func appearanceIsNotForced() {
+        #expect(makeView().appearance == nil)
+    }
+
     /// Polls a condition in the page. `document.readyState` is no use here: for
     /// a moment after a load starts it still describes the previous, empty
     /// document and reports "complete".
