@@ -31,6 +31,13 @@ public struct ImportSummary: Sendable, Hashable {
     }
 
     public var isEmpty: Bool { history == 0 && bookmarks == 0 && passwords == 0 }
+
+    /// Folds another profile's counts in, so several profiles report as one run.
+    public mutating func add(_ other: Self) {
+        history += other.history
+        bookmarks += other.bookmarks
+        passwords += other.passwords
+    }
 }
 
 public enum ImportKind: String, CaseIterable, Sendable, Identifiable {

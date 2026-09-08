@@ -40,7 +40,7 @@ public struct BrowserImportSheet: View {
         VStack(alignment: .leading, spacing: 3) {
             Text("Import from another browser")
                 .font(.system(size: 16, weight: .semibold))
-            Text("Nothing leaves your Mac. Everything is written straight into Thravik's own storage.")
+            Text("Pick as many profiles as you like — they are imported one after another. Nothing leaves your Mac.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(Palette.chromeSecondaryText)
         }
@@ -55,13 +55,27 @@ public struct BrowserImportSheet: View {
 
     private var browserPicker: some View {
         VStack(alignment: .leading, spacing: Metric.tightGutter) {
-            Text("BROWSER").font(.system(size: 9.5, weight: .bold)).tracking(1)
-                .foregroundStyle(Palette.chromeSecondaryText)
+            pickerHeader
             ForEach(model.browsers) { browser in
                 ImportBrowserRow(
                     browser: browser,
-                    isSelected: browser.id == model.selectedID
-                ) { model.selectedID = browser.id }
+                    isSelected: model.selectedIDs.contains(browser.id)
+                ) { model.toggle(browserID: browser.id) }
+            }
+        }
+    }
+
+    private var pickerHeader: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("PROFILES").font(.system(size: 9.5, weight: .bold)).tracking(1)
+                .foregroundStyle(Palette.chromeSecondaryText)
+            Spacer(minLength: Metric.gutter)
+            if model.browsers.count > 1 {
+                Button(model.isEverythingSelected ? "Deselect all" : "Select all") {
+                    if model.isEverythingSelected { model.deselectAll() } else { model.selectAll() }
+                }
+                .buttonStyle(.link)
+                .font(.system(size: 11))
             }
         }
     }
@@ -96,12 +110,18 @@ public struct BrowserImportSheet: View {
         }
     }
 
+    private var progressLabel: String {
+        guard let name = model.runningBrowserName else { return "Importing…" }
+        return "Importing \(name)…"
+    }
+
     private var footer: some View {
         HStack {
             if model.isRunning {
                 ProgressView().controlSize(.small)
-                Text("Importing…").font(.system(size: 11.5))
+                Text(progressLabel).font(.system(size: 11.5))
                     .foregroundStyle(Palette.chromeSecondaryText)
+                    .lineLimit(1)
             }
             Spacer()
             Button(model.summary == nil ? "Cancel" : "Done") { dismiss() }

@@ -2,15 +2,15 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// One selectable browser profile.
+/// One browser profile, picked independently of the others.
 struct ImportBrowserRow: View {
     let browser: ImportableBrowser
     let isSelected: Bool
-    let onSelect: () -> Void
+    let onToggle: () -> Void
 
     var body: some View {
         HStack(spacing: Metric.tightGutter + 2) {
-            Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
+            Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                 .foregroundStyle(isSelected ? Palette.accent : Palette.chromeSecondaryText)
             Text(browser.name).font(.system(size: 12.5))
             Spacer(minLength: 0)
@@ -22,6 +22,7 @@ struct ImportBrowserRow: View {
                 .fill(isSelected ? Palette.accent.opacity(0.12) : .clear)
         }
         .contentShape(.rect)
-        .onTapGesture(perform: onSelect)
+        .onTapGesture(perform: onToggle)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }

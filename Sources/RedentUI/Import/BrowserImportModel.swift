@@ -2,21 +2,22 @@ import Foundation
 import Observation
 import RedentKit
 
-/// Runs an import from another browser and reports what came across.
+/// Runs an import from one or more other browser profiles and reports what
+/// came across. Profiles are imported in turn, and counted as one result.
 @MainActor @Observable
 public final class BrowserImportModel {
     public private(set) var browsers: [ImportableBrowser] = []
-    public var selectedID: String?
+    public private(set) var selectedIDs: Set<String> = []
     public var kinds: Set<ImportKind> = [.history, .bookmarks, .passwords]
     public private(set) var isRunning = false
+    /// The profile currently being read, so a multi-profile run shows progress.
+    public private(set) var runningBrowserName: String?
     public private(set) var summary: ImportSummary?
     /// Set when part of the import failed. The rest still went through.
     public private(set) var problem: String?
 
     private let importer: any BrowserImporting
-    private let history: any HistoryStoring
-    private let bookmarks: any BookmarkStoring
-    private let credentials: any CredentialStoring
+    private let run: BrowserImportRun
 
     public init(
         importer: any BrowserImporting,
@@ -25,74 +26,68 @@ public final class BrowserImportModel {
         credentials: any CredentialStoring
     ) {
         self.importer = importer
-        self.history = history
-        self.bookmarks = bookmarks
-        self.credentials = credentials
+        run = BrowserImportRun(
+            importer: importer,
+            history: history,
+            bookmarks: bookmarks,
+            credentials: credentials
+        )
     }
 
-    public var selected: ImportableBrowser? {
-        browsers.first { $0.id == selectedID }
+    /// Selected profiles, in the order they are shown.
+    public var selectedBrowsers: [ImportableBrowser] {
+        browsers.filter { selectedIDs.contains($0.id) }
     }
 
-    public var canRun: Bool { selected != nil && !kinds.isEmpty && !isRunning }
+    public var canRun: Bool { !selectedIDs.isEmpty && !kinds.isEmpty && !isRunning }
+    public var isEverythingSelected: Bool {
+        !browsers.isEmpty && selectedIDs.count == browsers.count
+    }
 
     public func discover() {
         browsers = importer.availableBrowsers()
-        selectedID = selectedID ?? browsers.first?.id
+        let known = Set(browsers.map(\.id))
+        selectedIDs.formIntersection(known)
+        if selectedIDs.isEmpty, let first = browsers.first { selectedIDs.insert(first.id) }
     }
+
+    public func toggle(browserID: String) {
+        if selectedIDs.contains(browserID) {
+            selectedIDs.remove(browserID)
+        } else {
+            selectedIDs.insert(browserID)
+        }
+    }
+
+    public func selectAll() { selectedIDs = Set(browsers.map(\.id)) }
+    public func deselectAll() { selectedIDs.removeAll() }
 
     public func toggle(_ kind: ImportKind) {
         if kinds.contains(kind) { kinds.remove(kind) } else { kinds.insert(kind) }
     }
 
     public func run() async {
-        guard let browser = selected, !isRunning else { return }
+        let targets = selectedBrowsers
+        guard !targets.isEmpty, !isRunning else { return }
         isRunning = true
         problem = nil
         summary = nil
-        defer { isRunning = false }
+        defer {
+            isRunning = false
+            runningBrowserName = nil
+        }
 
-        var result = ImportSummary()
+        var total = ImportSummary()
         var failures: [String] = []
-
-        if kinds.contains(.history) {
-            do {
-                let entries = try await importer.readHistory(from: browser)
-                await history.merge(entries)
-                result.history = entries.count
-            } catch { failures.append("history") }
-        }
-        if kinds.contains(.bookmarks) {
-            do {
-                let saved = try await importer.readBookmarks(from: browser)
-                result.bookmarks = await bookmarks.merge(saved)
-            } catch { failures.append("bookmarks") }
-        }
-        if kinds.contains(.passwords) {
-            result.passwords = await importPasswords(from: browser, failures: &failures)
+        for browser in targets {
+            runningBrowserName = browser.name
+            let outcome = await run.perform(on: browser, kinds: kinds)
+            total.add(outcome.summary)
+            failures.append(contentsOf: outcome.failures)
         }
 
-        summary = result
+        summary = total
         problem = failures.isEmpty ? nil : Self.message(for: failures)
-    }
-
-    private func importPasswords(
-        from browser: ImportableBrowser,
-        failures: inout [String]
-    ) async -> Int {
-        do {
-            let found = try await importer.readPasswords(from: browser)
-            return try await credentials.importCredentials(found).count
-        } catch ImportError.decryptionKeyUnavailable {
-            failures.append("passwords-key")
-            return 0
-        } catch ImportError.databaseUnreadable(_) {
-            failures.append("passwords-locked")
-            return 0
-        } catch {
-            failures.append("passwords-save")
-            return 0
-        }
     }
 
     static func message(for failures: [String]) -> String {
@@ -108,6 +103,8 @@ public final class BrowserImportModel {
         if failures.contains("passwords") {
             return "Could not read passwords from the other browser."
         }
-        return "Could not read: \(failures.joined(separator: ", ")). The other browser may be running — quit it and try again."
+        var seen: Set<String> = []
+        let kinds = failures.filter { seen.insert($0).inserted }
+        return "Could not read: \(kinds.joined(separator: ", ")). The other browser may be running — quit it and try again."
     }
 }
