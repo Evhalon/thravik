@@ -57,10 +57,33 @@ extension TabController {
               (0...ordered.count).contains(toOffset) else { return }
         undoHistory.record(session)
         ordered.move(fromOffsets: fromOffsets, toOffset: toOffset)
+        replaceSpaceTabs(ordered)
+    }
+
+    public func applyOrder(_ ids: [UUID]) {
+        var ordered = webTabs.filter { $0.snapshot.spaceID == workspace.selectedSpaceID }
+        let wanted = ids.filter { id in ordered.contains { $0.id == id } }
+        let current = ordered.map(\.id).filter(wanted.contains)
+        guard current != wanted, !wanted.isEmpty else { return }
+        undoHistory.record(session)
+        let byID = Dictionary(uniqueKeysWithValues: ordered.map { ($0.id, $0) })
+        var queue = wanted
+        ordered = ordered.map { tab in
+            guard wanted.contains(tab.id), let next = queue.first, let replacement = byID[next] else {
+                return tab
+            }
+            queue.removeFirst()
+            return replacement
+        }
+        replaceSpaceTabs(ordered)
+    }
+
+    private func replaceSpaceTabs(_ ordered: [WebTab]) {
+        let spaceID = workspace.selectedSpaceID
         let replacement = ordered.filter(\.isPinned) + ordered.filter { !$0.isPinned }
         var index = 0
         webTabs = webTabs.map { tab in
-            guard tab.snapshot.spaceID == workspace.selectedSpaceID else { return tab }
+            guard tab.snapshot.spaceID == spaceID else { return tab }
             defer { index += 1 }
             return replacement[index]
         }

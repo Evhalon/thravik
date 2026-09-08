@@ -72,6 +72,7 @@ final class FakeBrowser: BrowserControlling {
     func selectNext() {}
     func selectPrevious() {}
     func move(fromOffsets: IndexSet, toOffset: Int) {}
+    func applyOrder(_ ids: [UUID]) {}
     func togglePin(_ id: UUID) {}
     func reopenLastClosed() {}
     func sweepHibernation(now: Date, keeping visible: Set<UUID>) {}

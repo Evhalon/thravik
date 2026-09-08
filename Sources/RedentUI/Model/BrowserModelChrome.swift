@@ -52,11 +52,20 @@ extension BrowserModel {
         Dictionary(tabs.session.spaces.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     }
 
-    /// Drag reorder: `sourceID` was dropped on the row showing `targetID`.
-    public func reorderTab(_ sourceID: UUID, onto targetID: UUID) {
-        guard let move = TabDropPlacement.move(sourceID, onto: targetID, in: tabs.visibleTabs.map(\.id)) else {
-            return
+    /// Commits a live drag: `order` is what the user saw when they let go, and
+    /// the tab's cluster membership follows what it was dropped between.
+    public func commitTabDrag(_ id: UUID, order: [UUID]) {
+        let outcome = TabDropGrouping.outcome(
+            moved: id,
+            order: order,
+            tabs: tabs.session.tabs,
+            groups: tabs.session.groups
+        )
+        tabs.applyOrder(order)
+        switch outcome {
+        case .keep: return
+        case .leave: try? tabs.perform(.moveTabToGroup(tabID: id, groupID: nil))
+        case .join(let groupID): try? tabs.perform(.moveTabToGroup(tabID: id, groupID: groupID))
         }
-        tabs.move(fromOffsets: move.offsets, toOffset: move.to)
     }
 }

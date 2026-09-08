@@ -43,6 +43,14 @@ public enum Palette {
 
     public static var danger: Color { Color(nsColor: .systemRed) }
 
+    /// Fully opaque pill while a tab is being dragged, so glass does not
+    /// bleed through the lifted row.
+    public static var liftedChrome: Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.isDark ? NSColor(white: 0.16, alpha: 1) : NSColor(white: 0.97, alpha: 1)
+        })
+    }
+
     /// Opaque base for menus and dropdowns, which must stay readable over
     /// whatever they happen to overhang.
     public static var dropdownBase: Color {

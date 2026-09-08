@@ -1,13 +1,11 @@
 import Foundation
+import RedentKit
 import SwiftUI
 
 /// Live state for dragging one tab within a strip.
 ///
-/// Reordering used to go through `.draggable`, which hands the gesture to
-/// AppKit: a translucent ghost, a copy badge and a snap-back on release — the
-/// look of moving a file, not of nudging a tab. Here the pill itself follows
-/// the pointer, locked to the strip's axis, and the row it would land on
-/// shows the insertion line.
+/// The pill follows the pointer. Other rows shift as the pointer crosses
+/// their midpoints, so a drop never depends on hitting a row's exact frame.
 @MainActor
 @Observable
 final class TabDragCoordinator {
@@ -15,46 +13,86 @@ final class TabDragCoordinator {
 
     private let axis: Axis
     private var liftedID: UUID?
-    private var targetID: UUID?
     private var travel: CGFloat = 0
-    /// Row frames in the strip's coordinate space, so the pointer can be
-    /// resolved to a tab without a system drop destination.
+    private var slot = 0
+    private var originIndex = 0
+    private var span: CGFloat = 0
+    private var shifts: [UUID: CGFloat] = [:]
     private var frames: [UUID: CGRect] = [:]
+    private var drawn: [UUID: [UUID]] = [:]
+    private var frozen: [(UUID, CGRect)] = []
 
     init(axis: Axis) { self.axis = axis }
 
-    func track(_ id: UUID, frame: CGRect) { frames[id] = frame }
+    /// - Parameter tabs: the tabs this row stands for. A cluster header speaks
+    ///   for its whole cluster while collapsed, so hidden members travel with it.
+    func track(_ id: UUID, drawing tabs: [UUID], frame: CGRect) {
+        guard liftedID == nil else { return }
+        frames[id] = frame
+        drawn[id] = tabs
+    }
 
-    /// A row scrolled out of a lazy stack no longer has a position to hit-test.
-    func forget(_ id: UUID) { frames.removeValue(forKey: id) }
+    func forget(_ id: UUID) {
+        guard liftedID == nil else { return }
+        frames.removeValue(forKey: id)
+        drawn.removeValue(forKey: id)
+    }
+
+    var isDragging: Bool { liftedID != nil }
 
     func isLifted(_ id: UUID) -> Bool { id == liftedID }
-    func isTargeted(_ id: UUID) -> Bool { id == targetID }
 
-    /// Only the lifted row moves, and only along the strip: a tab that drifts
-    /// sideways off its own rail reads as a mistake, not as a drag.
     func offset(for id: UUID) -> CGSize {
-        guard id == liftedID else { return .zero }
-        return axis == .vertical
-            ? CGSize(width: 0, height: travel)
-            : CGSize(width: travel, height: 0)
+        if id == liftedID { return vec(travel) }
+        return vec(shifts[id] ?? 0)
     }
 
-    func drag(_ id: UUID, to value: DragGesture.Value) {
-        liftedID = id
+    func follow(_ id: UUID, to value: DragGesture.Value) {
+        if liftedID != id { begin(id) }
         travel = axis == .vertical ? value.translation.height : value.translation.width
-        let under = frames.first { $0.value.contains(value.location) }?.key
-        targetID = under == id ? nil : under
     }
 
-    /// The tab the pointer released over, if the drag ends somewhere useful.
-    /// Clears the lift either way — a drag that lands nowhere just settles.
-    func drop() -> UUID? {
-        defer {
-            liftedID = nil
-            targetID = nil
-            travel = 0
-        }
-        return targetID
+    func refreshSlot(_ value: DragGesture.Value) {
+        guard let liftedID else { return }
+        let pointer = axis == .vertical ? value.location.y : value.location.x
+        let mids = frozen.map { ($0.0, axis == .vertical ? $0.1.midY : $0.1.midX) }
+        let next = TabDragGeometry.slot(pointer: pointer, mids: mids, lifted: liftedID)
+        guard next != slot else { return }
+        slot = next
+        shifts = TabDragGeometry.shifts(
+            ids: frozen.map(\.0), lifted: liftedID, from: originIndex, slot: slot, span: span
+        )
+    }
+
+    func drop() -> [UUID]? {
+        defer { reset() }
+        guard let liftedID else { return nil }
+        let rows = frozen.map { drawn[$0.0] ?? [$0.0] }
+        return TabDropPlacement.reordered(liftedID, afterCount: slot, in: rows)
+    }
+
+    private func begin(_ id: UUID) {
+        frozen = frames.sorted { lhs, rhs in
+            axis == .vertical ? lhs.value.minY < rhs.value.minY : lhs.value.minX < rhs.value.minX
+        }.map { ($0.key, $0.value) }
+        guard let index = frozen.firstIndex(where: { $0.0 == id }) else { return }
+        liftedID = id
+        originIndex = index
+        span = axis == .vertical ? frozen[index].1.height : frozen[index].1.width
+        slot = index
+    }
+
+    private func reset() {
+        liftedID = nil
+        travel = 0
+        slot = 0
+        originIndex = 0
+        span = 0
+        shifts = [:]
+        frozen = []
+    }
+
+    private func vec(_ value: CGFloat) -> CGSize {
+        axis == .vertical ? CGSize(width: 0, height: value) : CGSize(width: value, height: 0)
     }
 }

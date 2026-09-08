@@ -45,7 +45,7 @@ struct TopTabStrip: View {
             onClose: { model.tabs.close(tab.id) },
             onTogglePin: { model.tabs.togglePin(tab.id) },
             onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
-            onMoveOnto: { model.reorderTab(tab.id, onto: $0) }
+            onReorder: { model.commitTabDrag(tab.id, order: $0) }
         )
     }
 

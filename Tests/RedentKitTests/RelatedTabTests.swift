@@ -28,8 +28,8 @@ struct RelatedTabTests {
         #expect(RelatedTabGrouping.outcome(parent: parent, child: child) == .skip)
     }
 
-    @Test("Related children nest under the opener in the sidebar")
-    func outlineNestsChildren() throws {
+    @Test("A lone related child nests under the opener")
+    func singleChildNests() {
         var parent = TabSnapshot(title: "MiFID Correttiva", spaceID: BrowserSpace.workID)
         var child = TabSnapshot(title: "Correttiva #300192", spaceID: BrowserSpace.workID)
         child.parentTabID = parent.id
@@ -38,15 +38,65 @@ struct RelatedTabTests {
         child.groupID = groupID
         let group = BrowserGroup(id: groupID, spaceID: BrowserSpace.workID, name: parent.title)
         let outline = SidebarOutline(tabs: [parent, child], groups: [group], spaceID: BrowserSpace.workID)
+        guard case let .cluster(cluster) = outline.nodes.first else {
+            Issue.record("expected a cluster")
+            return
+        }
+        #expect(cluster.headerTabID == parent.id)
+        #expect(cluster.memberIDs == [child.id])
+        #expect(outline.tabIDs == [parent.id, child.id])
+    }
+
+    @Test("Two related children nest under the opener")
+    func twoChildrenNest() {
+        var parent = TabSnapshot(title: "MiFID Correttiva", spaceID: BrowserSpace.workID)
+        var first = TabSnapshot(title: "Ticket", spaceID: BrowserSpace.workID)
+        var second = TabSnapshot(title: "Login", spaceID: BrowserSpace.workID)
+        first.parentTabID = parent.id
+        second.parentTabID = parent.id
+        let groupID = UUID()
+        parent.groupID = groupID
+        first.groupID = groupID
+        second.groupID = groupID
+        let group = BrowserGroup(id: groupID, spaceID: BrowserSpace.workID, name: parent.title)
+        let outline = SidebarOutline(
+            tabs: [parent, first, second], groups: [group], spaceID: BrowserSpace.workID
+        )
         #expect(outline.nodes.count == 1)
         guard case let .cluster(cluster) = outline.nodes[0] else {
             Issue.record("expected a cluster")
             return
         }
         #expect(cluster.headerTabID == parent.id)
-        #expect(cluster.memberIDs == [child.id])
-        #expect(cluster.name == "MiFID Correttiva")
-        #expect(outline.tabIDs == [parent.id, child.id])
+        #expect(cluster.memberIDs == [first.id, second.id])
+        #expect(outline.tabIDs == [parent.id, first.id, second.id])
+    }
+
+    @Test("A named group of one tab is drawn as a tab")
+    func singletonGroupIsFlat() {
+        var tab = TabSnapshot(title: "Alone", spaceID: BrowserSpace.workID)
+        let groupID = UUID()
+        tab.groupID = groupID
+        let group = BrowserGroup(id: groupID, spaceID: BrowserSpace.workID, name: "Folder")
+        let outline = SidebarOutline(tabs: [tab], groups: [group], spaceID: BrowserSpace.workID)
+        #expect(outline.nodes == [.tab(tab.id)])
+    }
+
+    @Test("A named group of two siblings still clusters")
+    func siblingGroupClusters() {
+        var first = TabSnapshot(title: "One", spaceID: BrowserSpace.workID)
+        var second = TabSnapshot(title: "Two", spaceID: BrowserSpace.workID)
+        let groupID = UUID()
+        first.groupID = groupID
+        second.groupID = groupID
+        let group = BrowserGroup(id: groupID, spaceID: BrowserSpace.workID, name: "Both")
+        let outline = SidebarOutline(tabs: [first, second], groups: [group], spaceID: BrowserSpace.workID)
+        guard case let .cluster(cluster) = outline.nodes[0] else {
+            Issue.record("expected a cluster")
+            return
+        }
+        #expect(cluster.headerTabID == nil)
+        #expect(cluster.memberIDs == [first.id, second.id])
     }
 
     @Test("Unrelated tabs stay flat")

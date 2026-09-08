@@ -19,7 +19,9 @@ struct TopTabItem: View {
     @ViewBuilder
     private var selectionBackground: some View {
         let shape = RoundedRectangle(cornerRadius: Metric.mediumRadius, style: .continuous)
-        if isSelected {
+        if drag.isLifted(tab.id) {
+            EmptyView()
+        } else if isSelected {
             ZStack {
                 shape.fill(.white.opacity(0.13))
                 shape.strokeBorder(
@@ -30,7 +32,7 @@ struct TopTabItem: View {
             }
             .matchedGeometryEffect(id: "topTabSelection", in: namespace)
             .shadow(color: .black.opacity(0.22), radius: 7, y: 2)
-        } else if isHovering {
+        } else if isHovering && !drag.isDragging {
             shape.fill(.white.opacity(0.07))
         }
     }
@@ -52,7 +54,6 @@ struct TopTabItem: View {
         .padding(.horizontal, Metric.tightGutter)
         .frame(width: width, height: Metric.tabRowHeight)
         .background { selectionBackground }
-        .overlay(alignment: .leading) { dropIndicator }
         .contentShape(.rect)
         .onTapGesture(perform: actions.onSelect)
         .onHover { hovering in
@@ -60,12 +61,5 @@ struct TopTabItem: View {
         }
         .tabDragging(tab: tab, actions: actions, drag: drag, space: TopTabStrip.dragSpace)
         .contextMenu { TabRowMenu(isPinned: tab.isPinned, actions: actions) }
-    }
-
-    @ViewBuilder
-    private var dropIndicator: some View {
-        if drag.isTargeted(tab.id) {
-            Capsule().fill(Palette.accent).frame(width: 2).padding(.vertical, 4)
-        }
     }
 }

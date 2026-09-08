@@ -9,7 +9,7 @@ struct SidebarTabList: View {
 
     /// Named so a row's frame and the pointer are measured against the same
     /// origin even after the list scrolls.
-    static let dragSpace = "sidebarTabs"
+    nonisolated static let dragSpace = "sidebarTabs"
 
     @State private var collapsed = Set<UUID>()
     @State private var drag = TabDragCoordinator(axis: .vertical)
@@ -52,11 +52,22 @@ struct SidebarTabList: View {
             isCollapsed: folded,
             actions: .init(onSelect: { selectHeader(cluster) }, onToggle: { toggle(cluster.id) })
         )
+        // A header the drag does not know about is a dead band the pointer has
+        // to cross blind, so it joins the geometry like any other row.
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.dragSpace)) } action: {
+            drag.track(cluster.id, drawing: headerTabs(cluster, folded: folded), frame: $0)
+        }
+        .onDisappear { drag.forget(cluster.id) }
         if !folded {
             ForEach(cluster.memberIDs, id: \.self) { id in
                 if let tab = tab(id) { row(tab, indent: Metric.gutter) }
             }
         }
+    }
+
+    private func headerTabs(_ cluster: SidebarNode.Cluster, folded: Bool) -> [UUID] {
+        let header = cluster.headerTabID.map { [$0] } ?? []
+        return folded ? header + cluster.memberIDs : header
     }
 
     private func row(_ tab: any BrowserTab, indent: CGFloat) -> some View {
@@ -78,7 +89,7 @@ struct SidebarTabList: View {
             onTogglePin: { model.tabs.togglePin(tab.id) },
             onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
             onUngroup: grouped ? { try? model.tabs.perform(.moveTabToGroup(tabID: tab.id, groupID: nil)) } : nil,
-            onMoveOnto: { model.reorderTab(tab.id, onto: $0) }
+            onReorder: { model.commitTabDrag(tab.id, order: $0) }
         )
     }
 

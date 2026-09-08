@@ -25,7 +25,7 @@ struct AddressField: View {
                 }
                 .onChange(of: isFocused) { _, focused in
                     guard focused else { return model.suggestions.close(from: .addressBar) }
-                    model.address.beginEditing()
+                    model.address.beginEditing(with: model.selectedTab)
                 }
                 .onChange(of: address.text) { _, text in
                     guard isFocused else { return }

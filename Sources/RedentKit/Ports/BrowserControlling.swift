@@ -31,6 +31,9 @@ public protocol BrowserControlling: AnyObject {
     func selectNext()
     func selectPrevious()
     func move(fromOffsets: IndexSet, toOffset: Int)
+    /// Commits a live drag: `ids` is the visual order after the lifted tab
+    /// landed. Tabs not named keep their relative seats.
+    func applyOrder(_ ids: [UUID])
     func togglePin(_ id: UUID)
     func reopenLastClosed()
     /// Drops every reopen and undo record that would bring a forgotten site

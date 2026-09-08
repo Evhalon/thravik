@@ -66,6 +66,22 @@ struct TabSelectionTests {
         browser.close(created.id)
         #expect(browser.selectedID == original)
     }
+
+    @Test("applyOrder permutes named tabs")
+    func applyOrderPermutes() {
+        let browser = controller(titles: ["A", "B", "C", "D"])
+        let ids = browser.visibleTabs.map(\.id)
+        browser.applyOrder([ids[2], ids[0], ids[1], ids[3]])
+        #expect(browser.visibleTabs.map(\.id) == [ids[2], ids[0], ids[1], ids[3]])
+    }
+
+    @Test("applyOrder leaves unnamed tabs in their seats")
+    func applyOrderKeepsUnnamed() {
+        let browser = controller(titles: ["A", "B", "C"])
+        let ids = browser.visibleTabs.map(\.id)
+        browser.applyOrder([ids[2], ids[0]])
+        #expect(browser.visibleTabs.map(\.id) == [ids[2], ids[1], ids[0]])
+    }
 }
 
 private struct MuteLogger: EventLogging {

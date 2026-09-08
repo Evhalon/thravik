@@ -27,7 +27,6 @@ struct SidebarTabRow: View {
         .padding(.trailing, Metric.tightGutter + 2)
         .frame(height: Metric.tabRowHeight)
         .background { selectionBackground }
-        .overlay(alignment: .top) { dropIndicator }
         .contentShape(.rect)
         .onTapGesture(perform: actions.onSelect)
         .onHover { hovering in
@@ -38,16 +37,11 @@ struct SidebarTabRow: View {
     }
 
     @ViewBuilder
-    private var dropIndicator: some View {
-        if drag.isTargeted(tab.id) {
-            Capsule().fill(Palette.accent).frame(height: 2).padding(.horizontal, 6)
-        }
-    }
-
-    @ViewBuilder
     private var selectionBackground: some View {
         let shape = RoundedRectangle(cornerRadius: Metric.mediumRadius, style: .continuous)
-        if isSelected {
+        if drag.isLifted(tab.id) {
+            EmptyView()
+        } else if isSelected {
             ZStack {
                 shape.fill(.white.opacity(0.13))
                 shape.strokeBorder(
@@ -58,7 +52,7 @@ struct SidebarTabRow: View {
             }
             .matchedGeometryEffect(id: "tabSelection", in: namespace)
             .shadow(color: .black.opacity(0.22), radius: 7, y: 2)
-        } else if isHovering {
+        } else if isHovering && !drag.isDragging {
             shape.fill(.white.opacity(0.07))
         }
     }

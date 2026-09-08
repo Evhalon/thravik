@@ -1,8 +1,9 @@
 import Foundation
+import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// Lifts a tab row under the pointer and reorders on release.
+/// Lifts a tab row under the pointer and reorders as neighbours slide aside.
 ///
 /// The row reports its frame so the coordinator can hit-test without a system
 /// drop destination, and the gesture's minimum distance keeps a plain click on
@@ -18,24 +19,36 @@ private struct TabDragging: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(space)) } action: {
-                drag.track(tab.id, frame: $0)
+                drag.track(tab.id, drawing: [tab.id], frame: $0)
             }
             .onDisappear { drag.forget(tab.id) }
-            .scaleEffect(lifted ? 1.035 : 1)
-            .shadow(color: .black.opacity(lifted ? 0.34 : 0), radius: 11, y: 3)
+            .background { liftedFill }
+            .scaleEffect(lifted ? 1.02 : 1)
+            .shadow(color: .black.opacity(lifted ? 0.42 : 0), radius: 12, y: 4)
             .offset(drag.offset(for: tab.id))
             .zIndex(lifted ? 1 : 0)
             .gesture(gesture)
     }
 
+    @ViewBuilder
+    private var liftedFill: some View {
+        if lifted {
+            RoundedRectangle(cornerRadius: Metric.mediumRadius, style: .continuous)
+                .fill(Palette.liftedChrome)
+        }
+    }
+
     private var gesture: some Gesture {
         DragGesture(minimumDistance: 4, coordinateSpace: .named(space))
             .onChanged { value in
-                withAnimation(.easeOut(duration: 0.12)) { drag.drag(tab.id, to: value) }
+                drag.follow(tab.id, to: value)
+                withAnimation(.easeInOut(duration: 0.14)) { drag.refreshSlot(value) }
             }
             .onEnded { _ in
-                withAnimation(.spring(duration: 0.26)) {
-                    if let target = drag.drop() { actions.onMoveOnto?(target) }
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    if let order = drag.drop() { actions.onReorder?(order) }
                 }
             }
     }

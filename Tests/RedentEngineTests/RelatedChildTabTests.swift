@@ -35,7 +35,7 @@ struct RelatedChildTabTests {
             return
         }
         #expect(cluster.headerTabID == parent.id)
-        #expect(cluster.memberIDs.contains(child.id))
+        #expect(cluster.memberIDs == [child.id])
     }
 
     @Test("A second popup joins the same related group")
@@ -54,6 +54,17 @@ struct RelatedChildTabTests {
         )
         #expect(browser.session.groups.count == 1)
         #expect(browser.session.groups[0].tabIDs.count == 3)
+        let outline = SidebarOutline(
+            tabs: browser.session.tabs,
+            groups: browser.session.groups,
+            spaceID: browser.session.selectedSpaceID
+        )
+        guard case let .cluster(cluster) = outline.nodes.last else {
+            Issue.record("expected related cluster")
+            return
+        }
+        #expect(cluster.headerTabID == parent.id)
+        #expect(cluster.memberIDs.count == 2)
     }
 
     @Test("Closing the opener leaves children as ordinary tabs")

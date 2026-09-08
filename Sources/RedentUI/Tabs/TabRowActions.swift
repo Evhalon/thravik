@@ -9,7 +9,6 @@ struct TabRowActions {
     let onTogglePin: () -> Void
     var onCloseOthers: (() -> Void)?
     var onUngroup: (() -> Void)?
-    /// This row's tab was dragged onto the tab with the given id. Nil for
-    /// rows that cannot reorder.
-    var onMoveOnto: ((UUID) -> Void)?
+    /// Visual order after a live drag. Nil for rows that cannot reorder.
+    var onReorder: (([UUID]) -> Void)?
 }

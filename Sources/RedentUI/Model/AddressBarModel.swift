@@ -23,8 +23,20 @@ public final class AddressBarModel {
         text = url.map(Self.prettyPrint) ?? ""
     }
 
-    public func beginEditing() {
+    public func beginEditing(with tab: (any BrowserTab)?) {
         isEditing = true
+        let url = tab?.url
+        lastSyncedURL = url
+        text = url?.absoluteString ?? text
+    }
+
+    /// A tab switch replaces any address left by the previous tab. When the
+    /// field keeps focus, retain its editable full URL instead of the compact
+    /// presentation used by idle chrome.
+    public func syncSelection(with tab: (any BrowserTab)?) {
+        let url = tab?.url
+        lastSyncedURL = url
+        text = url.map { isEditing ? $0.absoluteString : Self.prettyPrint($0) } ?? ""
     }
 
     /// - Returns: the URL to load, or `nil` if the input was empty.
