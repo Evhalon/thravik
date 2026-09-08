@@ -96,7 +96,7 @@ final class AppContainer {
             currentVersion: installedVersion(),
             checker: GitHubReleaseFeed(repository: "Evhalon/thravik"),
             installer: DiskImageInstaller(),
-            quit: { NSApplication.shared.terminate(nil) }
+            quit: { AppTermination.quit() }
         )
     }
 
