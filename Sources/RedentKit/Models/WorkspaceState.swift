@@ -27,11 +27,9 @@ public struct WorkspaceState: Codable, Sendable, Equatable {
         case .createGroup, .createGroupWithTabs, .renameGroup,
              .deleteGroup, .moveTabToGroup, .groupTabs:
             try applyGroup(action)
-        case .createContainer, .renameContainer, .deleteContainer,
-             .moveTabToContainer, .setSpaceContainer:
-            try applyContainer(action)
         }
         rebuildMembership()
+        normalizeContainers()
         normalizeSelection()
     }
 

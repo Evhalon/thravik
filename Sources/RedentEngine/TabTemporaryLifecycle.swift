@@ -8,7 +8,7 @@ extension TabController {
     public func newTemporaryTab(url: URL?, expiresAt: Date?) -> any BrowserTab {
         var snapshot = TabSnapshot(url: url)
         snapshot.spaceID = workspace.selectedSpaceID
-        snapshot.containerID = workspace.spaces.first { $0.id == workspace.selectedSpaceID }?.defaultContainerID
+        snapshot.containerID = workspace.spaces.first { $0.id == workspace.selectedSpaceID }?.containerID
         snapshot.lifespan = .temporary(sessionID: UUID(), expiresAt: expiresAt, cleanupOnClose: true)
         let tab = WebTab(snapshot: snapshot, controller: self)
         webTabs.insert(tab, at: insertIndexAfterCurrent())
@@ -29,7 +29,7 @@ extension TabController {
         tab.snapshot.lifespan = .normal
         if tab.snapshot.containerID == nil {
             tab.snapshot.containerID = workspace.spaces
-                .first { $0.id == tab.snapshot.spaceID }?.defaultContainerID
+                .first { $0.id == tab.snapshot.spaceID }?.containerID
         }
         tab.wake(loading: url)
         changed()

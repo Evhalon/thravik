@@ -14,11 +14,6 @@ public enum WorkspaceAction: Sendable, Hashable, Codable {
     case deleteGroup(id: UUID)
     case moveTabToGroup(tabID: UUID, groupID: UUID?)
     case groupTabs(groupID: UUID, tabIDs: [UUID])
-    case createContainer(name: String)
-    case renameContainer(id: UUID, name: String)
-    case deleteContainer(id: UUID)
-    case moveTabToContainer(tabID: UUID, containerID: UUID)
-    case setSpaceContainer(spaceID: UUID, containerID: UUID)
 }
 
 public enum WorkspaceActionError: Error, Equatable, Sendable {
@@ -27,6 +22,4 @@ public enum WorkspaceActionError: Error, Equatable, Sendable {
     case missingGroup(UUID)
     case cannotDeleteLastSpace
     case groupSpaceMismatch
-    case missingContainer(UUID)
-    case cannotDeleteDefaultContainer
 }

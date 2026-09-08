@@ -14,7 +14,7 @@ public struct WorkspacePanel: View {
         VStack(alignment: .leading, spacing: 14) {
             SheetHeading(
                 title: "Spaces",
-                subtitle: "Each Space keeps its tabs and selection. Rooms, not windows."
+                subtitle: "Each Space is its own profile: separate tabs, cookies and logins."
             )
             spaceList
             ChromeComposer(

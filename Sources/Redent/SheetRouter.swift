@@ -42,9 +42,6 @@ struct SheetRouter: View {
             case .groups:
                 TabGroupsPanel(controller: container.model.tabs)
 
-            case .containers:
-                ContainersPanel(controller: container.model.tabs)
-
             case .timeline:
                 if let tab = container.model.selectedTab {
                     TabTimelinePanel(tab: tab)

@@ -17,9 +17,12 @@ public struct BrowserSpace: Identifiable, Codable, Sendable, Hashable {
     public var tabIDs: [UUID]
     public var groupIDs: [UUID]
     public var selectedTabID: UUID?
-    public var defaultContainerID: UUID
 
-    public init(id: UUID = UUID(), name: String, defaultContainerID: UUID = BrowserContainer.defaultID) {
+    /// The Space's own website-data boundary: its cookies, storage and logins.
+    /// Derived, never stored, so no Space can end up sharing another's session.
+    public var containerID: UUID { SpaceIdentity.containerID(for: id) }
+
+    public init(id: UUID = UUID(), name: String) {
         self.id = id
         self.name = name
         let look = SpaceIdentity.look(id: id, icon: SpaceIdentity.unsetIcon, colorToken: SpaceIdentity.unsetToken)
@@ -28,7 +31,6 @@ public struct BrowserSpace: Identifiable, Codable, Sendable, Hashable {
         self.tabIDs = []
         self.groupIDs = []
         self.selectedTabID = nil
-        self.defaultContainerID = defaultContainerID
     }
 
     public static let starterSpaces: [BrowserSpace] = [

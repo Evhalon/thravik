@@ -19,7 +19,6 @@ struct SpaceSwitcher: View {
             Divider()
             Button("Manage Spaces…") { model.sheet = .spaces }
             Button("Tab Groups…") { model.sheet = .groups }
-            Button("Containers…") { model.sheet = .containers }
             Button("Command Bar…", action: model.showCommands)
         } label: {
             label

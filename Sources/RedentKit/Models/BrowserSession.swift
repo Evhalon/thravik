@@ -6,7 +6,6 @@ public struct BrowserSession: Sendable, Codable, Equatable {
     public var selectedTabID: UUID?
     public var spaces: [BrowserSpace]
     public var selectedSpaceID: UUID?
-    public var containers: [BrowserContainer]
     public var groups: [BrowserGroup]
     /// Which tabs the window was showing side by side. Validated against the
     /// restored tabs, so a pane whose tab is gone does not come back empty.
@@ -16,23 +15,22 @@ public struct BrowserSession: Sendable, Codable, Equatable {
         tabs: [TabSnapshot] = [],
         selectedTabID: UUID? = nil,
         spaces: [BrowserSpace] = BrowserSpace.starterSpaces,
-        selectedSpaceID: UUID? = BrowserSpace.workID,
-        containers: [BrowserContainer] = [.default]
+        selectedSpaceID: UUID? = BrowserSpace.workID
     ) {
         let usableSpaces = spaces.isEmpty ? BrowserSpace.starterSpaces : spaces
         let activeSpace = selectedSpaceID.flatMap { id in usableSpaces.contains { $0.id == id } ? id : nil }
             ?? usableSpaces[0].id
         self.spaces = usableSpaces
         self.selectedSpaceID = activeSpace
-        self.containers = Self.normalizedContainers(containers)
         self.groups = []
         let spaceIDs = Set(usableSpaces.map(\.id))
-        let containerIDs = Set(self.containers.map(\.id))
         self.tabs = Self.droppingOrphanParents(tabs.map { tab in
             var normalized = tab
-            normalized.spaceID = tab.spaceID.flatMap { spaceIDs.contains($0) ? $0 : nil } ?? activeSpace
-            normalized.containerID = tab.containerID.flatMap { containerIDs.contains($0) ? $0 : nil }
-                ?? BrowserContainer.defaultID
+            let spaceID = tab.spaceID.flatMap { spaceIDs.contains($0) ? $0 : nil } ?? activeSpace
+            normalized.spaceID = spaceID
+            // A tab browses in its Space's Container, and nowhere else. That
+            // single assignment is the whole isolation guarantee.
+            normalized.containerID = SpaceIdentity.containerID(for: spaceID)
             return normalized
         })
         self.selectedTabID = selectedTabID.flatMap { id in
@@ -42,7 +40,7 @@ public struct BrowserSession: Sendable, Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case tabs, selectedTabID, spaces, selectedSpaceID, containers, groups, splitLayout
+        case tabs, selectedTabID, spaces, selectedSpaceID, groups, splitLayout
     }
 
     public init(from decoder: Decoder) throws {
@@ -51,8 +49,7 @@ public struct BrowserSession: Sendable, Codable, Equatable {
             tabs: try values.decodeIfPresent([TabSnapshot].self, forKey: .tabs) ?? [],
             selectedTabID: try values.decodeIfPresent(UUID.self, forKey: .selectedTabID),
             spaces: try values.decodeIfPresent([BrowserSpace].self, forKey: .spaces) ?? BrowserSpace.starterSpaces,
-            selectedSpaceID: try values.decodeIfPresent(UUID.self, forKey: .selectedSpaceID),
-            containers: try values.decodeIfPresent([BrowserContainer].self, forKey: .containers) ?? [.default]
+            selectedSpaceID: try values.decodeIfPresent(UUID.self, forKey: .selectedSpaceID)
         )
         self.groups = (try values.decodeIfPresent([BrowserGroup].self, forKey: .groups) ?? []).filter { group in
             self.spaces.contains { space in space.id == group.spaceID }
@@ -79,12 +76,6 @@ public struct BrowserSession: Sendable, Codable, Equatable {
             if let parent = next.parentTabID, !ids.contains(parent) { next.parentTabID = nil }
             return next
         }
-    }
-
-    private static func normalizedContainers(_ containers: [BrowserContainer]) -> [BrowserContainer] {
-        var result = containers
-        if !result.contains(where: { $0.id == BrowserContainer.defaultID }) { result.insert(.default, at: 0) }
-        return result
     }
 
     private static func reconcileSpaces(_ spaces: [BrowserSpace], tabs: [TabSnapshot]) -> [BrowserSpace] {

@@ -82,7 +82,7 @@ public final class TabController: BrowserControlling {
         undoHistory.record(session)
         var snapshot = TabSnapshot(url: url)
         snapshot.spaceID = workspace.selectedSpaceID
-        snapshot.containerID = workspace.spaces.first { $0.id == workspace.selectedSpaceID }?.defaultContainerID
+        snapshot.containerID = workspace.spaces.first { $0.id == workspace.selectedSpaceID }?.containerID
         let tab = WebTab(snapshot: snapshot, controller: self)
         webTabs.insert(tab, at: insertIndexAfterCurrent())
         selectedID = tab.id

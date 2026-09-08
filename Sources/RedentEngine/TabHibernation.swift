@@ -39,7 +39,7 @@ extension TabController {
     /// tab does not pay for a content process launch on the main thread.
     public func warmUp() {
         let context = BrowsingContext.container(
-            workspace.spaces.first { $0.id == workspace.selectedSpaceID }?.defaultContainerID
+            workspace.spaces.first { $0.id == workspace.selectedSpaceID }?.containerID
                 ?? BrowserContainer.defaultID
         )
         warmer.prepare(store: contexts.store(for: context),

@@ -4,13 +4,12 @@ import Testing
 
 @Suite("Workspace domain")
 struct WorkspaceTests {
-    @Test("Legacy sessions migrate into starter spaces and Default")
+    @Test("Legacy sessions migrate into starter spaces and the Work Container")
     func legacyMigration() throws {
         let id = UUID()
         let data = Data("{\"tabs\":[{\"id\":\"\(id.uuidString)\",\"title\":\"Old\",\"isPinned\":true,\"lastActiveAt\":0}],\"selectedTabID\":\"\(id.uuidString)\"}".utf8)
         let session = try JSONDecoder().decode(BrowserSession.self, from: data)
         #expect(session.spaces.count == 4)
-        #expect(session.containers == [.default])
         #expect(session.tabs.first?.spaceID == BrowserSpace.workID)
         #expect(session.tabs.first?.containerID == BrowserContainer.defaultID)
     }

@@ -65,8 +65,6 @@ public struct BrowserCommands: Commands {
             Button("Manage Spaces…") { model.sheet = .spaces }
             Button("Tab Groups…") { model.sheet = .groups }
                 .keyboardShortcut("g", modifiers: [.control, .option])
-            Button("Containers…") { model.sheet = .containers }
-                .keyboardShortcut("c", modifiers: [.control, .option])
         }
         CommandGroup(after: .appSettings) {
             Button("Tab Timeline…") { model.sheet = .timeline }
