@@ -27,12 +27,16 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
         _ webView: WKWebView,
         decidePolicyFor navigationAction: WKNavigationAction
     ) async -> WKNavigationActionPolicy {
-        if LinkActivation.opensNewTab(
+        let target = LinkActivation.target(
             isUserLink: navigationAction.navigationType == .linkActivated,
-            commandHeld: navigationAction.modifierFlags.contains(.command)
-        ) {
+            commandHeld: navigationAction.modifierFlags.contains(.command),
+            shiftHeld: navigationAction.modifierFlags.contains(.shift)
+        )
+        if target != .currentTab {
             if let url = navigationAction.request.url, let tab {
-                tab.controller?.openCommandClickedLink(url: url, from: tab.snapshot)
+                tab.controller?.openCommandClickedLink(
+                    url: url, from: tab.snapshot, selecting: target == .foregroundTab
+                )
             }
             return .cancel
         }

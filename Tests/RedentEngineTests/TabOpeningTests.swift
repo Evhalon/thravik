@@ -69,8 +69,30 @@ struct TabOpeningTests {
         #expect(opened.snapshot.containerID == container)
         #expect(opened.snapshot.parentTabID == nil)
         #expect(opened.snapshot.groupID == nil)
+    }
+
+    @Test("Command-click leaves the reader on the page they clicked from")
+    func commandClickStaysPut() throws {
+        let browser = controller()
+        let parent = try #require(browser.newTab(url: URL(string: "https://example.com")) as? WebTab)
+        let opened = browser.openCommandClickedLink(
+            url: try #require(URL(string: "https://example.com/next")),
+            from: parent.snapshot
+        )
+        #expect(browser.selectedID == parent.id)
+        #expect(browser.webTabs.contains { $0.id == opened.id })
+    }
+
+    @Test("Command-shift-click switches to the new tab")
+    func commandShiftClickSelects() throws {
+        let browser = controller()
+        let parent = try #require(browser.newTab(url: URL(string: "https://example.com")) as? WebTab)
+        let opened = browser.openCommandClickedLink(
+            url: try #require(URL(string: "https://example.com/next")),
+            from: parent.snapshot,
+            selecting: true
+        )
         #expect(browser.selectedID == opened.id)
-        #expect(browser.selectedID != parent.id)
     }
 
     /// Prepare sleeps 300ms then hops back to the main actor; a fixed 500ms
