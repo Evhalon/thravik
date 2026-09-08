@@ -116,7 +116,6 @@ public final class BrowserModel {
         otp.dismissIfPageChanged(selectedTab?.url)
         tabs.sweepHibernation(now: date, keeping: split.visibleTabIDs(primary: tabs.selectedID))
         if let expired = tabs.sweepExpiredTabs(now: date) { expiredTabID = expired }
-        autofill.setSpace(selectedTab?.snapshot.spaceID ?? currentSpaceID)
         autofill.observe(selectedTab?.origin)
         persistIfNeeded(date)
     }

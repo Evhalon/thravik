@@ -31,9 +31,7 @@ struct BrowserImportRun {
             } catch { outcome.failures.append("bookmarks") }
         }
         if kinds.contains(.passwords) {
-            outcome.summary.passwords = await importPasswords(
-                from: browser, spaceID: spaceID, failures: &outcome.failures
-            )
+            outcome.summary.passwords = await importPasswords(from: browser, failures: &outcome.failures)
         }
         return outcome
     }
@@ -47,15 +45,10 @@ struct BrowserImportRun {
 
     private func importPasswords(
         from browser: ImportableBrowser,
-        spaceID: UUID?,
         failures: inout [String]
     ) async -> Int {
         do {
-            let found = try await importer.readPasswords(from: browser).map { credential in
-                var adopted = credential
-                adopted.spaceID = spaceID
-                return adopted
-            }
+            let found = try await importer.readPasswords(from: browser)
             return try await credentials.importCredentials(found).count
         } catch ImportError.decryptionKeyUnavailable {
             failures.append("passwords-key")

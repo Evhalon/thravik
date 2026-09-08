@@ -24,21 +24,20 @@ struct NewTabModelTests {
         #expect(model.tiles.map(\.host) == ["forum.home"])
     }
 
-    @Test("A Space with no browsing of its own still shows something")
-    func emptySpaceFallsBackToEverySpace() async throws {
+    @Test("A new Space does not inherit another Space's frequent sites")
+    func emptySpaceStaysEmpty() async throws {
         let history = SpacedHistoryStore(
             bySpace: [BrowserSpace.workID: [HistoryEntry(url: try page("https://tracker.work/"))]]
         )
         let model = NewTabModel(history: history, bookmarks: EmptyBookmarkStore())
 
         await model.load(in: BrowserSpace.travelID)
-        #expect(model.tiles.map(\.host) == ["tracker.work"])
-        #expect(model.isBare == false)
+        #expect(model.tiles.isEmpty)
+        #expect(model.isBare)
     }
 }
 
-/// History that answers scoped queries the way the SQLite store does, and
-/// falls back to every Space for an unscoped `mostVisited`.
+/// History that answers scoped queries the way the SQLite store does.
 private struct SpacedHistoryStore: HistoryStoring {
     let bySpace: [UUID: [HistoryEntry]]
 

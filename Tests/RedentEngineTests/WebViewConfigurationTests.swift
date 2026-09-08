@@ -44,6 +44,18 @@ struct WebViewConfigurationTests {
         #expect(configuration.preferences.inactiveSchedulingPolicy == .suspend)
     }
 
+    @Test("The page context menu exposes Web Inspector")
+    func contextMenuAllowsInspection() {
+        let configuration = WebViewFactory.makeConfiguration(
+            store: .nonPersistent(), blocksTrackers: false, contentBlocker: nil
+        )
+        let developerExtras = configuration.preferences.value(
+            forKey: "developerExtrasEnabled"
+        ) as? Bool
+        #expect(developerExtras == true)
+        #expect(WebViewFactory.makeWebView(configuration: configuration).isInspectable)
+    }
+
     @Test("Media can start without another click, so YouTube ads cannot stall the player")
     func mediaDoesNotNeedAGesture() {
         let configuration = WebViewFactory.makeConfiguration(

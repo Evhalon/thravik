@@ -18,7 +18,8 @@ struct SheetRouter: View {
                     settings: settingsBinding,
                     updates: container.updates,
                     onOpenPasswords: { container.model.sheet = .passwords },
-                    onOpenAuthenticatorImport: { container.model.sheet = .importAuthenticator }
+                    onOpenAuthenticatorImport: { container.model.sheet = .importAuthenticator },
+                    onResetWorkspace: { container.model.resetWorkspace() }
                 )
 
             case .passwords, .authenticator:
@@ -26,8 +27,7 @@ struct SheetRouter: View {
                     sources: VaultSources(
                         credentials: container.credentials,
                         totp: container.authenticator,
-                        generator: container.generator,
-                        spaceNames: container.model.spaceNames
+                        generator: container.generator
                     ),
                     initialTab: route == .authenticator ? .authenticator : .passwords,
                     onImportAuthenticator: { container.model.sheet = .importAuthenticator }

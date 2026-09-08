@@ -84,9 +84,16 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
     ) -> WKWebView? {
         guard navigationAction.targetFrame == nil,
               let tab, let controller = tab.controller else { return nil }
+        let url = navigationAction.request.url
+        guard !controller.shouldBlockPopup(url: url, from: tab.snapshot.url) else { return nil }
         return controller.openPopupTab(
-            configuration: configuration, url: navigationAction.request.url, of: tab.snapshot
+            configuration: configuration, url: url, of: tab.snapshot
         ).webView
+    }
+
+    func webViewDidClose(_ webView: WKWebView) {
+        guard let tab else { return }
+        tab.controller?.closePopup(tab.id)
     }
 
     func webView(

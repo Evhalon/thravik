@@ -62,6 +62,7 @@ final class FakeBrowser: BrowserControlling {
     func perform(_ action: WorkspaceAction) throws {}
     func undo() {}
     func apply(settings: BrowserSettings) {}
+    func resetWorkspace() {}
     func newTab(url: URL?) -> any BrowserTab { InertTab() }
     func newTemporaryTab(url: URL?, expiresAt: Date?) -> any BrowserTab { InertTab() }
     func keepTab(_ id: UUID) {}

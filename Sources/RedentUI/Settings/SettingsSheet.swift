@@ -17,6 +17,7 @@ public struct SettingsSheet: View {
     private let updates: UpdateModel
     private let onOpenPasswords: () -> Void
     private let onOpenAuthenticatorImport: () -> Void
+    private let onResetWorkspace: () -> Void
     @State private var pane: Pane = .general
     @Environment(\.dismiss) private var dismiss
 
@@ -24,12 +25,14 @@ public struct SettingsSheet: View {
         settings: Binding<BrowserSettings>,
         updates: UpdateModel,
         onOpenPasswords: @escaping () -> Void,
-        onOpenAuthenticatorImport: @escaping () -> Void
+        onOpenAuthenticatorImport: @escaping () -> Void,
+        onResetWorkspace: @escaping () -> Void
     ) {
         self._settings = settings
         self.updates = updates
         self.onOpenPasswords = onOpenPasswords
         self.onOpenAuthenticatorImport = onOpenAuthenticatorImport
+        self.onResetWorkspace = onResetWorkspace
     }
 
     public var body: some View {
@@ -64,7 +67,7 @@ public struct SettingsSheet: View {
     private var paneContent: some View {
         switch pane {
         case .general:
-            GeneralSettingsPane(settings: $settings)
+            GeneralSettingsPane(settings: $settings, onResetWorkspace: onResetWorkspace)
         case .appearance:
             AppearanceSettingsPane(settings: $settings)
         case .privacy:
@@ -111,7 +114,8 @@ private struct QuietUpdateInstaller: UpdateInstalling {
             quit: {}
         ),
         onOpenPasswords: {},
-        onOpenAuthenticatorImport: {}
+        onOpenAuthenticatorImport: {},
+        onResetWorkspace: {}
     )
 }
 #endif

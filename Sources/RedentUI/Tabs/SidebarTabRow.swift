@@ -61,11 +61,14 @@ struct SidebarTabRow: View {
     private var trailingAccessory: some View {
         if isHovering {
             Button(action: actions.onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(Palette.chromeSecondaryText)
-                    .frame(width: 17, height: 17)
-                    .background(Circle().fill(.white.opacity(0.12)))
+                ZStack {
+                    Circle().fill(.white.opacity(0.12)).frame(width: 17, height: 17)
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8.5, weight: .bold))
+                        .foregroundStyle(Palette.chromeSecondaryText)
+                }
+                .frame(width: 28, height: 28)
+                .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .transition(.scale.combined(with: .opacity))

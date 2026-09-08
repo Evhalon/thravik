@@ -29,8 +29,7 @@ public struct VaultWindowView: View {
         self.onImportAuthenticator = onImportAuthenticator
         _model = State(initialValue: VaultListModel(
             credentialStore: sources.credentials,
-            totpStore: sources.totp,
-            spaceNames: sources.spaceNames
+            totpStore: sources.totp
         ))
         _tab = State(initialValue: initialTab == .authenticator ? .authenticator : .passwords)
     }

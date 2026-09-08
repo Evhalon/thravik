@@ -26,4 +26,15 @@ struct CredentialImportDeduperTests {
         let fresh = CredentialImportDeduper.newcomers(in: found, alreadyHave: [])
         #expect(fresh.count == 1)
     }
+
+    @Test("The same login from another Space is still a duplicate")
+    func collapsesCrossSpaceDuplicates() {
+        let existing = Credential(
+            origin: origin, username: "a", password: "1", spaceID: BrowserSpace.workID
+        )
+        let found = Credential(
+            origin: origin, username: "a", password: "2", spaceID: BrowserSpace.personalID
+        )
+        #expect(CredentialImportDeduper.newcomers(in: [found], alreadyHave: [existing]).isEmpty)
+    }
 }

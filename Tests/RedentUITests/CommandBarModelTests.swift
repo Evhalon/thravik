@@ -54,6 +54,17 @@ struct CommandBarModelTests {
         #expect(sink.actions.isEmpty)
     }
 
+    @Test("A pending search does not reset keyboard selection")
+    func pendingSearchKeepsSelection() async {
+        let model = makeModel(history: DelayedHistoryStore(), bookmarks: TestBookmarkStore())
+        model.updateContext(.init())
+        model.query = "new"
+        model.moveSelection(by: 1)
+        await settle(model)
+
+        #expect(model.selectedIndex == 1)
+    }
+
     private func settle(_ model: CommandBarModel) async {
         await model.searchInFlight?.value
     }

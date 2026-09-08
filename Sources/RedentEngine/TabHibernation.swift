@@ -30,7 +30,9 @@ extension WebTab {
     /// settings change, without needing a reload.
     func applySettingsChange(blocksTrackers: Bool) {
         guard let webView else { return }
-        WebViewFactory.setContentBlocking(blocksTrackers, list: controller?.contentBlocker.compiledList, on: webView)
+        WebViewFactory.setContentBlocking(
+            blocksTrackers, lists: controller?.contentBlocker.compiledLists ?? [], on: webView
+        )
     }
 }
 

@@ -56,4 +56,16 @@ struct AddressBarModelTests {
 
         #expect(model.text == "https://second.example/login")
     }
+
+    @Test("Closing the last tab clears a stale address")
+    func closingLastTab() throws {
+        let tab = InertTab()
+        tab.url = try url("https://tracker.example/redirect?token=value")
+        let model = AddressBarModel()
+        model.beginEditing(with: tab)
+
+        model.sync(with: nil)
+
+        #expect(model.text.isEmpty)
+    }
 }

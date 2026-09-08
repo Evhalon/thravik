@@ -2,6 +2,15 @@ import Foundation
 import RedentKit
 
 extension TabController {
+    public func resetWorkspace() {
+        var blank = TabSnapshot()
+        blank.spaceID = BrowserSpace.workID
+        blank.containerID = SpaceIdentity.containerID(for: BrowserSpace.workID)
+        closedStack.removeAll()
+        undoHistory.clear()
+        reconcile(BrowserSession(tabs: [blank], selectedTabID: blank.id))
+    }
+
     public func perform(_ action: WorkspaceAction) throws {
         let before = session
         var state = WorkspaceState(session: before)

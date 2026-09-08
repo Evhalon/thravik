@@ -1,7 +1,7 @@
 #!/bin/sh
-# Sign the Thravik app with a stable identity. Ad-hoc is last resort:
-# its designated requirement becomes a unique cdhash, so the next
-# `make app` looks like a different browser to Keychain and WebKit.
+# Sign the Thravik app with a stable designated requirement. Development uses
+# ad-hoc signing deliberately: looking up a local private key makes every build
+# unlock the login Keychain, while the explicit requirement stays unchanged.
 set -e
 APP_DIR="$1"
 BUNDLE_ID="$2"
@@ -21,15 +21,11 @@ adhoc_sign() {
 		"$APP_DIR"
 }
 
-identity="${CODESIGN_IDENTITY:-Redent Development}"
+identity="${CODESIGN_IDENTITY:--}"
 if [ "$identity" = "-" ]; then
 	echo "signing ad hoc with stable requirement"
 	adhoc_sign
 	exit 0
-fi
-
-if [ "$identity" = "Redent Development" ]; then
-	sh "$(dirname "$0")/ensure-dev-identity.sh"
 fi
 
 echo "signing with $identity"

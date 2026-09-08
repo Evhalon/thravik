@@ -79,6 +79,20 @@ struct RelatedChildTabTests {
         browser.close(parent.id)
         #expect(child.snapshot.parentTabID == nil)
     }
+
+    @Test("A popup closing itself removes its child tab")
+    func scriptClosedPopupDisappears() throws {
+        let browser = controller()
+        let parent = try #require(browser.newTab(url: URL(string: "https://example.com")) as? WebTab)
+        let child = browser.openPopupTab(
+            configuration: WKWebViewConfiguration(),
+            url: URL(string: "https://login.example.com"), of: parent.snapshot
+        )
+        let view = try #require(child.webView)
+        child.navigationDelegate?.webViewDidClose(view)
+        #expect(browser.webTabs.map(\.id) == [parent.id])
+        #expect(browser.session.groups.isEmpty)
+    }
 }
 
 private struct QuietLogger: EventLogging {

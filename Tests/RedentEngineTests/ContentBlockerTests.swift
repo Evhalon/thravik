@@ -75,6 +75,17 @@ struct ContentBlockerTests {
         #expect(!catalog.trackerDomains.contains("t.co"))
     }
 
+    @Test("Known ad popups are rejected before creating a tab")
+    func blocksKnownAdPopup() throws {
+        let catalog = try #require(ContentBlockCatalog.load())
+        let adAddress = "https://securepubads.g.doubleclick.net/pagead/landing"
+        let pageAddress = "https://example.com/watch"
+        let ad = try #require(URL(string: adAddress))
+        let page = try #require(URL(string: pageAddress))
+        #expect(catalog.blocksPopup(ad, from: page))
+        #expect(!catalog.blocksPopup(page, from: page))
+    }
+
     private func parsedRules() throws -> [[String: Any]] {
         let json = try #require(ContentBlocker.ruleListJSON)
         let data = try #require(json.data(using: .utf8))

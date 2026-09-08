@@ -30,17 +30,12 @@ public final class NewTabModel {
     }
 
     /// Most-visited sites counted within the Space being viewed, so a work
-    /// Space never suggests what was browsed in a personal one. A Space with
-    /// no browsing of its own yet — freshly created, or older history that
-    /// predates Space attribution — falls back to every Space rather than
-    /// showing a bare page.
+    /// Space never suggests what was browsed in a personal one.
     private func frequentSites(in spaceID: UUID?) async -> [HistoryEntry] {
         guard let spaceID else { return await history.mostVisited(limit: Self.tileLimit) }
-        let scoped = await history.query(HistoryQuery(
+        return await history.query(HistoryQuery(
             scope: HistoryScope(spaceID: spaceID), limit: Self.tileLimit, sort: .mostVisited
         ))
-        guard scoped.isEmpty else { return scoped }
-        return await history.mostVisited(limit: Self.tileLimit)
     }
 
     private static let tileLimit = 12

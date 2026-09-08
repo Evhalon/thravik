@@ -67,6 +67,23 @@ struct WorkspaceControllerTests {
         browser.closeOthers(than: id)
         #expect(browser.tabs.contains { $0.id == other })
     }
+
+    @Test func resetWorkspaceRestoresStarterStateAndClearsUndo() throws {
+        let browser = controller()
+        let oldIDs = Set(browser.tabs.map(\.id))
+        browser.close(try #require(browser.selectedID))
+
+        browser.resetWorkspace()
+
+        #expect(browser.session.spaces.map(\.id) == BrowserSpace.starterSpaces.map(\.id))
+        #expect(browser.session.spaces.map(\.name) == BrowserSpace.starterSpaces.map(\.name))
+        #expect(browser.session.groups.isEmpty)
+        #expect(browser.tabs.count == 1)
+        #expect(browser.selectedTab?.url == nil)
+        #expect(oldIDs.isDisjoint(with: browser.tabs.map(\.id)))
+        #expect(!browser.canUndo)
+        #expect(!browser.canReopen)
+    }
 }
 
 private struct SilentLogger: EventLogging {

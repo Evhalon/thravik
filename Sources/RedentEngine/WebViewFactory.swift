@@ -26,6 +26,9 @@ enum WebViewFactory {
         // WebKit ships element fullscreen off on macOS, which is why the
         // fullscreen button on a video site did nothing at all.
         config.preferences.isElementFullscreenEnabled = true
+        // `isInspectable` permits Safari to attach, while this WebKit switch
+        // also exposes Inspect Element in the page's contextual menu.
+        config.preferences.setValue(true, forKey: "developerExtrasEnabled")
         // A tab that is not on screen is detached from the window, and WebKit
         // will then stop running its JavaScript and layout altogether. Playing
         // media and in-flight loads are exempt, so a background video or a page
@@ -65,11 +68,10 @@ enum WebViewFactory {
 
     /// Adds or removes the compiled ad/tracker list on an already-live web
     /// view. Remove first so a late compile cannot add the same list twice.
-    static func setContentBlocking(_ enabled: Bool, list: WKContentRuleList?, on webView: WKWebView) {
-        guard let list else { return }
+    static func setContentBlocking(_ enabled: Bool, lists: [WKContentRuleList], on webView: WKWebView) {
         let controller = webView.configuration.userContentController
-        controller.remove(list)
-        if enabled { controller.add(list) }
+        controller.removeAllContentRuleLists()
+        if enabled { lists.forEach(controller.add) }
     }
 
     private static func installContent(
@@ -79,8 +81,8 @@ enum WebViewFactory {
         // reads as an embedded web view to every site that checks.
         config.applicationNameForUserAgent = BrowserUserAgent.safariApplicationName
         PageScripts.install(into: config.userContentController)
-        if blocksTrackers, let list = contentBlocker?.compiledList {
-            config.userContentController.add(list)
+        if blocksTrackers {
+            contentBlocker?.compiledLists.forEach(config.userContentController.add)
         }
     }
 }

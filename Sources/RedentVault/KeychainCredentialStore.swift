@@ -13,10 +13,8 @@ public actor KeychainCredentialStore: CredentialStoring {
         legacy = KeychainStore(service: service)
     }
 
-    public func credentials(for origin: Origin, in spaceID: UUID?) async throws -> [Credential] {
-        try await allCredentials().filter {
-            $0.origin.matches(origin) && (spaceID == nil || $0.spaceID == spaceID)
-        }
+    public func credentials(for origin: Origin) async throws -> [Credential] {
+        try await allCredentials().filter { $0.origin.matches(origin) }
     }
 
     public func allCredentials() async throws -> [Credential] {
@@ -61,7 +59,7 @@ public actor KeychainCredentialStore: CredentialStoring {
                 account: Self.vaultAccount,
                 label: "Thravik Password Vault"
             )
-            return try CredentialVaultCodec.decode(item.valueData)
+            return Self.dedupe(try CredentialVaultCodec.decode(item.valueData))
         } catch VaultError.itemNotFound {
             return try await migrateLegacy()
         }
@@ -85,8 +83,7 @@ public actor KeychainCredentialStore: CredentialStoring {
     private static func dedupe(_ credentials: [Credential]) -> [Credential] {
         var best: [String: Credential] = [:]
         for credential in credentials {
-            let space = credential.spaceID?.uuidString ?? "-"
-            let key = "\(space)|\(credential.origin.scheme)|\(credential.origin.host)|\(credential.username)"
+            let key = "\(credential.origin.scheme)|\(credential.origin.host)|\(credential.username)"
             if let old = best[key], old.createdAt >= credential.createdAt { continue }
             best[key] = credential
         }

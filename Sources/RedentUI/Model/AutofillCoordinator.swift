@@ -19,8 +19,6 @@ public final class AutofillCoordinator {
     let store: any CredentialStoring
     let logger: any EventLogging
     var isEnabled: Bool
-    /// The profile the window is in. Logins never cross it.
-    private(set) var spaceID: UUID?
     private var lastObservedOrigin: Origin??
 
     public init(store: any CredentialStoring, logger: any EventLogging, isEnabled: Bool = true) {
@@ -35,16 +33,6 @@ public final class AutofillCoordinator {
         lastUsername.isEmpty ? (suggestions.first?.username ?? "") : lastUsername
     }
     public var shouldOfferFill: Bool { isLoginFormPresent && hasSuggestions && pendingSave == nil }
-
-    /// Switching Space switches vaults, so anything on offer from the old one
-    /// has to go before the next page can be filled.
-    public func setSpace(_ id: UUID?) {
-        guard spaceID != id else { return }
-        spaceID = id
-        suggestions = []
-        pendingSave = nil
-        lastObservedOrigin = nil
-    }
 
     public func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
@@ -103,7 +91,7 @@ public final class AutofillCoordinator {
 
     func refreshSuggestions(for origin: Origin) async {
         do {
-            suggestions = try await store.credentials(for: origin, in: spaceID)
+            suggestions = try await store.credentials(for: origin)
             logger.debug("autofill: \(suggestions.count) credential(s) for \(origin.registrableDomain)")
         } catch {
             suggestions = []

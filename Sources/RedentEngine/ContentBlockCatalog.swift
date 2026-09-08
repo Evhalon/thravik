@@ -16,4 +16,20 @@ struct ContentBlockCatalog: Decodable, Equatable, Sendable {
         else { return nil }
         return try? JSONDecoder().decode(ContentBlockCatalog.self, from: data)
     }
+
+    func blocksPopup(_ url: URL, from topURL: URL?) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        if adDomains.contains(where: { host.matchesDomain($0) }) { return true }
+        let topHost = topURL?.host?.lowercased()
+        let isThirdParty = topHost.map { !host.matchesDomain($0) } ?? true
+        if isThirdParty, trackerDomains.contains(where: { host.matchesDomain($0) }) { return true }
+        let address = url.absoluteString.lowercased()
+        return isThirdParty && pathFilters.contains { address.contains($0.lowercased()) }
+    }
+}
+
+private extension String {
+    func matchesDomain(_ domain: String) -> Bool {
+        self == domain || hasSuffix(".\(domain)")
+    }
 }

@@ -3,6 +3,12 @@ import RedentKit
 
 /// When the workspace is written to disk, and on which thread.
 extension BrowserModel {
+    public func resetWorkspace() {
+        split = SplitLayout()
+        tabs.resetWorkspace()
+        persistSession()
+    }
+
     /// The explicit save: closing the window, or quitting. Synchronous, because
     /// the process may not live long enough for anything else to finish.
     public func persistSession() {

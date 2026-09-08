@@ -15,6 +15,8 @@ public protocol BrowserControlling: AnyObject {
     var onChange: (@MainActor () -> Void)? { get set }
     var onNavigation: (@MainActor (TabSnapshot, UUID) -> Void)? { get set }
     func apply(settings: BrowserSettings)
+    /// Restores starter Spaces with one blank tab and drops transient undo state.
+    func resetWorkspace()
     @discardableResult func newTab(url: URL?) -> any BrowserTab
     /// Opens a tab in the temporary role: excluded from history, session
     /// restore, and the reopen stack, with its own ephemeral storage.

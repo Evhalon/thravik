@@ -7,8 +7,8 @@ public struct Credential: Identifiable, Hashable, Sendable {
     public let origin: Origin
     public let username: String
     public let password: String
-    /// The Space this login belongs to. Logins saved before Spaces became
-    /// profiles decode as nil and are adopted by the Work Space.
+    /// Legacy profile metadata retained so existing vault payloads decode.
+    /// Password access is global; new entries leave this unset.
     public var spaceID: UUID?
     public let createdAt: Date
     public var lastUsedAt: Date?

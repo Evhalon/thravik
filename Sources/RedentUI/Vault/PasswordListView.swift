@@ -45,7 +45,6 @@ struct PasswordListView: View {
                     ForEach(group.items) { credential in
                         PasswordRow(
                             credential: credential,
-                            spaceName: model.spaceName(for: credential),
                             onCopyUsername: { model.copyUsername(credential) },
                             onCopyPassword: { model.copyPassword(credential) },
                             onDelete: { pendingDelete = credential }

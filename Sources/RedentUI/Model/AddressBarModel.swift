@@ -16,8 +16,13 @@ public final class AddressBarModel {
     /// Pulls the address in from the active tab — unless the user is mid-edit,
     /// in which case their typing wins.
     public func sync(with tab: (any BrowserTab)?) {
+        guard let tab else {
+            lastSyncedURL = nil
+            text = ""
+            return
+        }
         guard !isEditing else { return }
-        let url = tab?.url
+        let url = tab.url
         guard url != lastSyncedURL else { return }
         lastSyncedURL = url
         text = url.map(Self.prettyPrint) ?? ""

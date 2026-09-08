@@ -9,7 +9,7 @@ extension AutofillCoordinator {
     public func credentialSubmitted(_ candidate: CredentialCandidate) async {
         guard isEnabled else { return }
         captureIdentity(candidate.username)
-        let stored = (try? await store.credentials(for: candidate.origin, in: spaceID)) ?? []
+        let stored = (try? await store.credentials(for: candidate.origin)) ?? []
         let outcome = CredentialSaveDecider.outcome(
             for: candidate, stored: stored, identityHint: lastUsername
         )
@@ -20,11 +20,11 @@ extension AutofillCoordinator {
             try? await store.markUsed(id)
         case .save(let resolved):
             pendingSave = CredentialSaveRequest(
-                candidate: resolved, kind: .new, existing: nil, spaceID: spaceID
+                candidate: resolved, kind: .new, existing: nil
             )
         case .update(let existing, let resolved):
             pendingSave = CredentialSaveRequest(
-                candidate: resolved, kind: .updatedPassword, existing: existing, spaceID: spaceID
+                candidate: resolved, kind: .updatedPassword, existing: existing
             )
         }
     }

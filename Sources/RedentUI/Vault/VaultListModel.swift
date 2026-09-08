@@ -17,22 +17,13 @@ public final class VaultListModel {
 
     private let credentialStore: any CredentialStoring
     private let totpStore: any TOTPAccountStoring
-    private let spaceNames: [UUID: String]
 
     public init(
         credentialStore: any CredentialStoring,
-        totpStore: any TOTPAccountStoring,
-        spaceNames: [UUID: String] = [:]
+        totpStore: any TOTPAccountStoring
     ) {
         self.credentialStore = credentialStore
         self.totpStore = totpStore
-        self.spaceNames = spaceNames
-    }
-
-    /// The Space a login belongs to, when the window was given the names.
-    /// The manager lists every profile, so the row has to say which one.
-    public func spaceName(for credential: Credential) -> String? {
-        credential.spaceID.flatMap { spaceNames[$0] }
     }
 
     public func load() async {

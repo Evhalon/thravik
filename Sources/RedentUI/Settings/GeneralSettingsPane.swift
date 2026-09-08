@@ -5,6 +5,8 @@ import SwiftUI
 /// Search engine and homepage — the two settings people reach for first.
 struct GeneralSettingsPane: View {
     @Binding var settings: BrowserSettings
+    let onResetWorkspace: () -> Void
+    @State private var isConfirmingReset = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -33,6 +35,15 @@ struct GeneralSettingsPane: View {
                     .frame(height: Metric.controlHeight)
                     .background { fieldChrome }
             }
+            SettingsSection("RESET") {
+                resetRow
+            }
+        }
+        .alert("Reset workspace?", isPresented: $isConfirmingReset) {
+            Button("Cancel", role: .cancel) {}
+            Button("Reset Workspace", role: .destructive, action: onResetWorkspace)
+        } message: {
+            Text("This closes every tab and removes custom Spaces and tab groups. History, bookmarks, and passwords are kept.")
         }
     }
 
@@ -48,5 +59,20 @@ struct GeneralSettingsPane: View {
                 RoundedRectangle(cornerRadius: Metric.mediumRadius, style: .continuous)
                     .strokeBorder(Palette.hairline, lineWidth: Metric.hairWidth)
             }
+    }
+
+    private var resetRow: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Start with a clean workspace")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Palette.chromeText)
+                Text("Keeps history, bookmarks, and passwords.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Palette.chromeSecondaryText)
+            }
+            Spacer(minLength: Metric.gutter)
+            Button("Reset…", role: .destructive) { isConfirmingReset = true }
+        }
     }
 }

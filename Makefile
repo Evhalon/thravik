@@ -17,9 +17,9 @@ test:
 	swift test
 
 ## Bundle the SPM executable into a signed .app.
-## Keep the .app directory so Launch Services / TCC see the same app. Sign with
-## Apple Development when present — ad-hoc cdhash is unique per rebuild, so
-## Keychain, cookies, and authenticator look wiped on the next `make run`.
+## Keep the .app directory so Launch Services / TCC see the same app. Local
+## builds use an explicit stable designated requirement; release builds can
+## provide CODESIGN_IDENTITY and REQUIRE_SIGNING=1.
 app: build
 	@mkdir -p "$(APP_DIR)/Contents/MacOS" "$(APP_DIR)/Contents/Resources"
 	@rm -rf "$(APP_DIR)/Contents/MacOS/$(APP)" "$(APP_DIR)/Contents/Resources/"*.bundle

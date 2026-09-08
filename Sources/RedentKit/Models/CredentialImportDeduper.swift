@@ -14,10 +14,7 @@ public enum CredentialImportDeduper {
         return fresh
     }
 
-    /// The same login in two Spaces is two logins: a Space is a profile, and
-    /// importing a work account must not be swallowed by the personal one.
     private static func key(_ credential: Credential) -> String {
-        let space = credential.spaceID?.uuidString ?? "-"
-        return "\(space)|\(credential.origin.scheme)|\(credential.origin.host)|\(credential.username)"
+        "\(credential.origin.scheme)|\(credential.origin.host)|\(credential.username)"
     }
 }

@@ -14,7 +14,7 @@ struct PreviewCredentialStore: CredentialStoring {
         Credential(origin: Origin(scheme: "https", host: "example.com"), username: "jane@example.com", password: "swordfish")
     ]
 
-    func credentials(for origin: Origin, in spaceID: UUID?) async throws -> [Credential] {
+    func credentials(for origin: Origin) async throws -> [Credential] {
         sample.filter { $0.origin.matches(origin) }
     }
     func allCredentials() async throws -> [Credential] { sample }

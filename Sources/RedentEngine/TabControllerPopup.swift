@@ -3,6 +3,28 @@ import RedentKit
 import WebKit
 
 extension TabController {
+    func shouldBlockPopup(url: URL?, from topURL: URL?) -> Bool {
+        guard settings.blocksTrackers, let url,
+              let catalog = ContentBlockCatalog.load()
+        else { return false }
+        return catalog.blocksPopup(url, from: topURL)
+    }
+
+    func closePopup(_ id: UUID) {
+        guard let popup = webTabs.first(where: { $0.id == id }) else { return }
+        let groupID = popup.snapshot.groupID
+        let parentID = popup.snapshot.parentTabID
+        close(id)
+        guard let groupID, let parentID,
+              let parent = webTabs.first(where: { $0.id == parentID }),
+              parent.snapshot.groupID == groupID,
+              !webTabs.contains(where: { $0.snapshot.parentTabID == parentID })
+        else { return }
+        parent.snapshot.groupID = nil
+        workspace.groups.removeAll { $0.id == groupID }
+        changed()
+    }
+
     /// Adopts a window the page opened as a tab that keeps its opener.
     ///
     /// Handing WebKit back `nil` and loading the address in a fresh tab severs
