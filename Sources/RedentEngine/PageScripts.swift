@@ -25,7 +25,7 @@ enum PageScripts {
     }
 
     private static func loadSource() -> String? {
-        guard let url = Bundle.module.url(forResource: "redent-page", withExtension: "js"),
+        guard let url = EngineResources.url(forResource: "redent-page", withExtension: "js"),
               let data = try? Data(contentsOf: url)
         else { return nil }
         return String(data: data, encoding: .utf8)

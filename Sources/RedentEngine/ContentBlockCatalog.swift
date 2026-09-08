@@ -8,8 +8,10 @@ struct ContentBlockCatalog: Decodable, Equatable, Sendable {
     var pathFilters: [String]
     var hideSelectors: [String]
 
-    static func load(from bundle: Bundle = .module) -> ContentBlockCatalog? {
-        guard let url = bundle.url(forResource: "adblock-catalog", withExtension: "json"),
+    /// `bundle` is optional because the resource bundle can be missing from a
+    /// badly assembled `.app`; that degrades blocking, it does not crash.
+    static func load(from bundle: Bundle? = EngineResources.bundle) -> ContentBlockCatalog? {
+        guard let url = bundle?.url(forResource: "adblock-catalog", withExtension: "json"),
               let data = try? Data(contentsOf: url)
         else { return nil }
         return try? JSONDecoder().decode(ContentBlockCatalog.self, from: data)

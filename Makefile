@@ -26,7 +26,13 @@ app: build
 	@cp "$(BUILD_DIR)/$(EXECUTABLE)" "$(APP_DIR)/Contents/MacOS/$(APP)"
 	@cp Resources/Info.plist "$(APP_DIR)/Contents/Info.plist"
 	@if [ -f Resources/AppIcon.icns ]; then cp Resources/AppIcon.icns "$(APP_DIR)/Contents/Resources/"; fi
-	@for b in $(BUILD_DIR)/*.bundle; do [ -e "$$b" ] && cp -R "$$b" "$(APP_DIR)/Contents/Resources/" || true; done
+	@copied=0; \
+	for b in $(BUILD_DIR)/*.bundle; do \
+		[ -e "$$b" ] || continue; \
+		cp -R "$$b" "$(APP_DIR)/Contents/Resources/" || exit 1; copied=1; \
+	done; \
+	if [ "$$copied" -eq 0 ]; then \
+		echo "error: no SwiftPM resource bundle in $(BUILD_DIR) — the app would crash on launch"; exit 1; fi
 	@sh scripts/sign-app.sh "$(APP_DIR)" "$(BUNDLE_ID)" Resources/Redent.entitlements
 	@echo "built $(APP_DIR)"
 

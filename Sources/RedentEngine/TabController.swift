@@ -58,6 +58,9 @@ public final class TabController: BrowserControlling {
         contexts.sync(webTabs.map(\.snapshot.browsingContext))
         contentBlocker.onCompiled = { [weak self] in self?.installCompiledBlockList() }
         contentBlocker.startCompilingIfNeeded()
+        // Silence here would mean no ad blocking and no page bridge — so no
+        // autofill and no OTP detection — with nothing to show for it.
+        if EngineResources.bundle == nil { logger.error("engineResourceBundleMissing") }
     }
 
     /// Kept in sync by the app when settings change.
