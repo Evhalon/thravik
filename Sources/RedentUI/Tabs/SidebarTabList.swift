@@ -6,7 +6,13 @@ import SwiftUI
 struct SidebarTabList: View {
     @Bindable var model: BrowserModel
     var namespace: Namespace.ID
+
+    /// Named so a row's frame and the pointer are measured against the same
+    /// origin even after the list scrolls.
+    static let dragSpace = "sidebarTabs"
+
     @State private var collapsed = Set<UUID>()
+    @State private var drag = TabDragCoordinator(axis: .vertical)
 
     var body: some View {
         ScrollView {
@@ -21,6 +27,7 @@ struct SidebarTabList: View {
                 }
             }
             .padding(.vertical, 2)
+            .coordinateSpace(.named(Self.dragSpace))
         }
         .scrollIndicators(.never)
         .animation(.spring(duration: 0.3), value: model.tabs.selectedID)
@@ -58,6 +65,7 @@ struct SidebarTabList: View {
             isSelected: tab.id == model.tabs.selectedID,
             namespace: namespace,
             actions: actions(for: tab),
+            drag: drag,
             indent: indent
         )
     }
@@ -70,7 +78,7 @@ struct SidebarTabList: View {
             onTogglePin: { model.tabs.togglePin(tab.id) },
             onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
             onUngroup: grouped ? { try? model.tabs.perform(.moveTabToGroup(tabID: tab.id, groupID: nil)) } : nil,
-            onDropTab: { model.reorderTab($0, onto: tab.id) }
+            onMoveOnto: { model.reorderTab(tab.id, onto: $0) }
         )
     }
 

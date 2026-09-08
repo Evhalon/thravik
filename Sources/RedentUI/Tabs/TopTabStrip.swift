@@ -8,6 +8,11 @@ struct TopTabStrip: View {
     @Bindable var model: BrowserModel
     @Namespace private var selection
 
+    /// See `SidebarTabList.dragSpace`.
+    static let dragSpace = "topTabs"
+
+    @State private var drag = TabDragCoordinator(axis: .horizontal)
+
     var body: some View {
         HStack(spacing: Metric.tightGutter) {
             ScrollView(.horizontal) {
@@ -17,11 +22,13 @@ struct TopTabStrip: View {
                             tab: tab,
                             isSelected: tab.id == model.tabs.selectedID,
                             namespace: selection,
-                            actions: actions(for: tab)
+                            actions: actions(for: tab),
+                            drag: drag
                         )
                     }
                 }
                 .padding(.vertical, 5)
+                .coordinateSpace(.named(Self.dragSpace))
             }
             .scrollIndicators(.never)
 
@@ -38,7 +45,7 @@ struct TopTabStrip: View {
             onClose: { model.tabs.close(tab.id) },
             onTogglePin: { model.tabs.togglePin(tab.id) },
             onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
-            onDropTab: { model.reorderTab($0, onto: tab.id) }
+            onMoveOnto: { model.reorderTab(tab.id, onto: $0) }
         )
     }
 

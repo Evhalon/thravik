@@ -10,9 +10,9 @@ struct TopTabItem: View {
     let isSelected: Bool
     let namespace: Namespace.ID
     let actions: TabRowActions
+    let drag: TabDragCoordinator
 
     @State private var isHovering = false
-    @State private var isDropTarget = false
 
     private var width: CGFloat? { tab.isPinned ? Metric.tabRowHeight + 6 : 184 }
 
@@ -58,13 +58,13 @@ struct TopTabItem: View {
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.12)) { isHovering = hovering }
         }
-        .tabDragging(tab: tab, actions: actions, isTargeted: $isDropTarget)
+        .tabDragging(tab: tab, actions: actions, drag: drag, space: TopTabStrip.dragSpace)
         .contextMenu { TabRowMenu(isPinned: tab.isPinned, actions: actions) }
     }
 
     @ViewBuilder
     private var dropIndicator: some View {
-        if isDropTarget {
+        if drag.isTargeted(tab.id) {
             Capsule().fill(Palette.accent).frame(width: 2).padding(.vertical, 4)
         }
     }

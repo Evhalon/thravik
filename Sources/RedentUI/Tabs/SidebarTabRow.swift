@@ -12,10 +12,10 @@ struct SidebarTabRow: View {
     let isSelected: Bool
     let namespace: Namespace.ID
     let actions: TabRowActions
+    let drag: TabDragCoordinator
     var indent: CGFloat = 0
 
     @State private var isHovering = false
-    @State private var isDropTarget = false
 
     var body: some View {
         HStack(spacing: Metric.tightGutter + 2) {
@@ -33,13 +33,13 @@ struct SidebarTabRow: View {
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.14)) { isHovering = hovering }
         }
-        .tabDragging(tab: tab, actions: actions, isTargeted: $isDropTarget)
+        .tabDragging(tab: tab, actions: actions, drag: drag, space: SidebarTabList.dragSpace)
         .contextMenu { TabRowMenu(isPinned: tab.isPinned, actions: actions) }
     }
 
     @ViewBuilder
     private var dropIndicator: some View {
-        if isDropTarget {
+        if drag.isTargeted(tab.id) {
             Capsule().fill(Palette.accent).frame(height: 2).padding(.horizontal, 6)
         }
     }
