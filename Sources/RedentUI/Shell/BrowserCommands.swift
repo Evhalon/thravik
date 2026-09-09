@@ -52,7 +52,7 @@ public struct BrowserCommands: Commands {
                 .disabled(!model.split.isSplit)
             Divider()
             Button("Next Tab", action: model.tabs.selectNext)
-                .keyboardShortcut(.tab, modifiers: .control)
+                .keyboardShortcut("j")
             Button("Previous Tab", action: model.tabs.selectPrevious)
                 .keyboardShortcut(.tab, modifiers: [.control, .shift])
         }

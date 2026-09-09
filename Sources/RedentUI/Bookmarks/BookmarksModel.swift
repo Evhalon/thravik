@@ -57,6 +57,32 @@ public final class BookmarksModel {
         await load()
     }
 
+    @discardableResult
+    public func rename(_ bookmark: Bookmark, to title: String) async -> Bool {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return false }
+        var updated = bookmark
+        updated.title = title
+        await store.save(updated)
+        await load()
+        return true
+    }
+
+    @discardableResult
+    public func changeAddress(_ bookmark: Bookmark, to address: String) async -> Bool {
+        let address = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: address),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              url.host != nil
+        else { return false }
+        var updated = bookmark
+        updated.url = url
+        await store.save(updated)
+        await load()
+        return true
+    }
+
     /// Moves a saved page to another Space. The page itself is untouched: only
     /// which profile's manager and address bar will offer it changes.
     public func move(_ bookmark: Bookmark, to destination: UUID) async {

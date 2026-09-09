@@ -17,6 +17,7 @@ public struct SidebarOutline: Equatable, Sendable {
         var nodes: [SidebarNode] = visible.filter(\.isPinned).map { .tab($0.id) }
         var emitted = Set<UUID>()
         let present = Set(unpinned.map(\.id))
+        let hostGroups = automaticHostGroups(in: unpinned)
         for tab in unpinned {
             if emitted.contains(tab.id) { continue }
             if let groupID = tab.groupID {
@@ -24,9 +25,33 @@ public struct SidebarOutline: Equatable, Sendable {
                 continue
             }
             if let parentID = tab.parentTabID, present.contains(parentID) { continue }
+            if let host = tab.origin?.displayHost, let members = hostGroups[host] {
+                appendHostGroup(host, members: members, into: &nodes, emitted: &emitted)
+                continue
+            }
             appendRelatedOrTab(tab, from: unpinned, into: &nodes, emitted: &emitted)
         }
         return nodes
+    }
+
+    private static func automaticHostGroups(in tabs: [TabSnapshot]) -> [String: [TabSnapshot]] {
+        let candidates = tabs.filter { $0.groupID == nil && $0.parentTabID == nil }
+        let grouped = Dictionary(grouping: candidates) { $0.origin?.displayHost }
+        return grouped.reduce(into: [:]) { result, entry in
+            guard let host = entry.key, entry.value.count >= 2 else { return }
+            result[host] = entry.value
+        }
+    }
+
+    private static func appendHostGroup(
+        _ host: String,
+        members: [TabSnapshot],
+        into nodes: inout [SidebarNode],
+        emitted: inout Set<UUID>
+    ) {
+        guard let id = members.first?.id else { return }
+        members.forEach { emitted.insert($0.id) }
+        emit(.init(id: id, name: host, headerTabID: nil, memberIDs: members.map(\.id)), into: &nodes)
     }
 
     private static func appendGroup(

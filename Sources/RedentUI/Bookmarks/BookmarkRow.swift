@@ -14,6 +14,9 @@ struct BookmarkRow: View {
         let onOpen: () -> Void
         let onToggleFavorite: () -> Void
         let onMove: (UUID) -> Void
+        let onRename: () -> Void
+        let onEditAddress: () -> Void
+        let onCopyAddress: () -> Void
         let onDelete: () -> Void
     }
 
@@ -23,10 +26,15 @@ struct BookmarkRow: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(bookmark.displayTitle).font(.system(size: 12.5)).lineLimit(1)
-                Text(subtitle)
+                Text(address)
                     .font(.system(size: 10.5))
                     .foregroundStyle(Palette.chromeSecondaryText)
                     .lineLimit(1)
+                if let spaceName {
+                    Text(spaceName)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(Palette.chromeSecondaryText)
+                }
             }
 
             Spacer(minLength: Metric.gutter)
@@ -49,6 +57,10 @@ struct BookmarkRow: View {
         .onTapGesture(count: 2, perform: actions.onOpen)
         .contextMenu {
             Button("Open", action: actions.onOpen)
+            Divider()
+            Button("Rename…", action: actions.onRename)
+            Button("Edit Address…", action: actions.onEditAddress)
+            Button("Copy Address", action: actions.onCopyAddress)
             Menu("Move to Space") {
                 ForEach(spaces) { space in
                     Button(space.name) { actions.onMove(space.id) }
@@ -64,8 +76,8 @@ struct BookmarkRow: View {
         bookmark.origin?.displayHost ?? bookmark.url.absoluteString
     }
 
-    private var subtitle: String {
-        guard let spaceName else { return host }
-        return "\(host) · \(spaceName)"
+    private var address: String {
+        let url = bookmark.url.absoluteString
+        return url.isEmpty ? host : url
     }
 }

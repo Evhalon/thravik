@@ -1,9 +1,11 @@
+import AppKit
 import RedentDesign
 import SwiftUI
 
 /// The bookmarks manager: folders on the left, entries on the right.
 public struct BookmarksSheet: View {
     @State private var model: BookmarksModel
+    @State private var editor: BookmarkEditor.Mode?
     private let onOpen: (URL) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -22,10 +24,14 @@ public struct BookmarksSheet: View {
                 folderList.frame(minWidth: 160, idealWidth: 180)
                 entryList.frame(minWidth: 320)
             }
+            .padding(Metric.gutter)
         }
         .frame(minWidth: 640, minHeight: 420)
         .sheetCanvas(width: 720, height: 520)
         .task { await model.load() }
+        .sheet(item: $editor) { mode in
+            BookmarkEditor(mode: mode, onSave: save)
+        }
     }
 
     private var header: some View {
@@ -80,11 +86,29 @@ public struct BookmarksSheet: View {
                         onOpen: { onOpen(bookmark.url); dismiss() },
                         onToggleFavorite: { Task { await model.toggleFavorite(bookmark) } },
                         onMove: { destination in Task { await model.move(bookmark, to: destination) } },
+                        onRename: { editor = .rename(bookmark) },
+                        onEditAddress: { editor = .address(bookmark) },
+                        onCopyAddress: { copyAddress(bookmark.url) },
                         onDelete: { Task { await model.delete(bookmark) } }
                     )
                 )
             }
             .listStyle(.inset)
         }
+    }
+
+    private func save(_ mode: BookmarkEditor.Mode, value: String) async -> Bool {
+        switch mode {
+        case .rename(let bookmark):
+            return await model.rename(bookmark, to: value)
+        case .address(let bookmark):
+            return await model.changeAddress(bookmark, to: value)
+        }
+    }
+
+    private func copyAddress(_ url: URL) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(url.absoluteString, forType: .string)
     }
 }
