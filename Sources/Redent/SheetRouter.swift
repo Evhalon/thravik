@@ -5,10 +5,15 @@ import SwiftUI
 /// Maps a `SheetRoute` to the screen that serves it.
 ///
 /// Lives in the app target rather than in `RedentUI` so the window shell stays
-/// unaware of which concrete stores back each screen.
+/// unaware of which concrete stores back each screen. `app` holds what every
+/// window shares; `window` is the one that presented the sheet.
 struct SheetRouter: View {
     let route: SheetRoute
-    let container: AppContainer
+    let app: AppContainer
+    let window: WindowContainer
+    @Environment(\.openWindow) private var openWindow
+
+    private var model: BrowserModel { window.model }
 
     var body: some View {
         Group {
@@ -16,83 +21,81 @@ struct SheetRouter: View {
             case .settings:
                 SettingsSheet(
                     settings: settingsBinding,
-                    updates: container.updates,
-                    onOpenPasswords: { container.model.sheet = .passwords },
-                    onOpenAuthenticatorImport: { container.model.sheet = .importAuthenticator },
-                    onResetWorkspace: { container.model.resetWorkspace() }
+                    updates: app.updates,
+                    onOpenPasswords: { model.sheet = .passwords },
+                    onOpenAuthenticatorImport: { model.sheet = .importAuthenticator },
+                    onResetWorkspace: { model.resetWorkspace() }
                 )
 
             case .passwords, .authenticator:
                 VaultWindowView(
                     sources: VaultSources(
-                        credentials: container.credentials,
-                        totp: container.authenticator,
-                        generator: container.generator
+                        credentials: app.credentials,
+                        totp: app.authenticator,
+                        generator: app.generator
                     ),
                     initialTab: route == .authenticator ? .authenticator : .passwords,
-                    onImportAuthenticator: { container.model.sheet = .importAuthenticator }
+                    onImportAuthenticator: { model.sheet = .importAuthenticator }
                 )
 
             case .history:
-                HistoryBrowserView(history: container.history, spaceID: container.model.tabs.session.selectedSpaceID) { url in
-                    container.model.navigate(to: url)
-                    container.model.sheet = nil
+                HistoryBrowserView(history: app.history, spaceID: model.currentSpaceID) { url in
+                    model.navigate(to: url)
+                    model.sheet = nil
                 }
 
             case .spaces:
-                WorkspacePanel(model: container.model)
+                WorkspacePanel(model: model)
 
             case .groups:
-                TabGroupsPanel(controller: container.model.tabs)
+                TabGroupsPanel(controller: model.tabs)
 
             case .timeline:
-                if let tab = container.model.selectedTab {
+                if let tab = model.selectedTab {
                     TabTimelinePanel(tab: tab)
                 } else {
                     SheetPlaceholder(message: "Open a tab to see where it has been.")
                 }
 
             case .sitePrivacy:
-                if let model = container.sitePrivacyModel() {
-                    SitePrivacyPanel(model: model)
+                if let privacy = app.sitePrivacyModel(for: window) {
+                    SitePrivacyPanel(model: privacy)
                 } else {
                     SheetPlaceholder(message: "Open a website to see its privacy settings.")
                 }
 
             case .bookmarks:
                 BookmarksSheet(model: BookmarksModel(
-                    store: container.bookmarks,
-                    spaces: container.model.tabs.session.spaces,
-                    spaceID: container.model.currentSpaceID
+                    store: app.bookmarks,
+                    spaces: model.tabs.session.spaces,
+                    spaceID: model.currentSpaceID
                 )) { url in
-                    container.model.navigate(to: url)
+                    model.navigate(to: url)
+                } onOpenNewTab: { url in
+                    model.open(url, inNewTab: true)
+                } onOpenNewWindow: { url in
+                    openWindow(value: BrowserWindowSpec(isPrivate: model.isPrivate, startURL: url))
                 }
 
             case .importBrowser:
                 BrowserImportSheet(model: BrowserImportModel(
-                    importer: container.browserImporter,
-                    history: container.history,
-                    bookmarks: container.bookmarks,
-                    credentials: container.credentials,
+                    importer: app.browserImporter,
+                    history: app.history,
+                    bookmarks: app.bookmarks,
+                    credentials: app.credentials,
                     destination: ImportDestination(
-                        spaces: container.model.tabs.session.spaces,
-                        spaceID: container.model.currentSpaceID
+                        spaces: model.tabs.session.spaces,
+                        spaceID: model.currentSpaceID
                     )
                 ))
 
             case .importAuthenticator:
-                AuthenticatorImportView(
-                    importer: container.importer,
-                    store: container.authenticator
-                )
+                AuthenticatorImportView(importer: app.importer, store: app.authenticator)
             }
         }
     }
 
     private var settingsBinding: Binding<BrowserSettings> {
-        Binding(
-            get: { container.model.settings },
-            set: { container.model.settings = $0 }
-        )
+        Binding(get: { model.settings }, set: { model.settings = $0 })
     }
 }

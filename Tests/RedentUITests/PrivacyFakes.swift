@@ -55,6 +55,7 @@ final class FakeBrowser: BrowserControlling {
     var visibleTabs: [any BrowserTab] { [] }
     var canReopen = false
     var canUndo = false
+    var isPrivate = false
     var signalHandler: (any PageSignalHandling)?
     var onChange: (@MainActor () -> Void)?
     var onNavigation: (@MainActor (TabSnapshot, UUID) -> Void)?
@@ -97,6 +98,8 @@ final class InertTab: BrowserTab {
     var isHibernated = true
     var isPinned = false
     var origin: Origin? { nil }
+    var zoom: Double = PageZoom.identity
+    func setZoom(_ level: Double) { zoom = PageZoom.clamped(level) }
     func load(_ url: URL) {}
     func goBack() {}
     func goForward() {}

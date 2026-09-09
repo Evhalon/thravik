@@ -2,11 +2,12 @@ import RedentEngine
 import RedentKit
 import RedentUI
 
-/// Builds the per-site privacy screen for whatever the window is showing now.
+/// Builds the per-site privacy screen for whatever a window is showing now.
 /// Lives in the app target: only the composition root knows which concrete
 /// registry and store back the ports the screen talks to.
 extension AppContainer {
-    func sitePrivacyModel() -> SitePrivacyModel? {
+    func sitePrivacyModel(for window: WindowContainer) -> SitePrivacyModel? {
+        let model = window.model
         guard let tab = model.selectedTab, let origin = tab.origin else { return nil }
         return SitePrivacyModel(configuration: .init(
             origin: origin,

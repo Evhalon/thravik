@@ -3,16 +3,23 @@ import WebKit
 
 /// Resolves a `BrowsingContext` to the one `WKWebsiteDataStore` that serves it.
 ///
-/// The registry is the only place a store is created. Persistent Containers
-/// keep their store for the life of the app so a reopened tab still finds its
-/// cookies; an ephemeral store is dropped as soon as no tab references it,
-/// which is what makes a temporary session actually disappear.
+/// The registry is the only place a store is created, and there is exactly one
+/// registry for the process: two windows browsing the same Container must share
+/// its cookies, and two `WKWebsiteDataStore`s for one identifier would not.
+/// Persistent Containers keep their store for the life of the app so a reopened
+/// tab still finds its cookies; an ephemeral store is dropped as soon as no tab
+/// in any window references it, which is what makes a private session actually
+/// disappear.
 @MainActor
-final class BrowsingContextRegistry {
+public final class BrowsingContextRegistry {
     /// `private(set)` rather than `private`: the website-data face lives in a
     /// sibling file to stay under the line limit, and has to read it.
     private(set) var loadedStores: [BrowsingContext: WKWebsiteDataStore] = [:]
-    private var tabCounts: [BrowsingContext: Int] = [:]
+    /// Counts are kept per owning controller, so one window re-counting its own
+    /// tabs cannot report another window's tabs as gone.
+    private var tabCounts: [ObjectIdentifier: [BrowsingContext: Int]] = [:]
+
+    public init() {}
 
     func store(for context: BrowsingContext) -> WKWebsiteDataStore {
         if let existing = loadedStores[context] { return existing }
@@ -21,19 +28,26 @@ final class BrowsingContextRegistry {
         return store
     }
 
-    /// Re-counts every live tab in one pass. Called after any tab mutation, so
-    /// the registry cannot drift out of step with the tab list the way paired
-    /// retain/release calls would.
-    func sync(_ contexts: [BrowsingContext]) {
+    /// Re-counts one owner's live tabs in a single pass. Called after any tab
+    /// mutation, so the registry cannot drift out of step with the tab list the
+    /// way paired retain/release calls would.
+    func sync(_ contexts: [BrowsingContext], owner: ObjectIdentifier) {
         var counts: [BrowsingContext: Int] = [:]
         for context in contexts { counts[context, default: 0] += 1 }
-        for context in loadedStores.keys where counts[context] == nil && context.isEphemeral {
-            loadedStores[context] = nil
-        }
-        tabCounts = counts
+        tabCounts[owner] = counts
+        dropUnreferencedEphemeralStores()
     }
 
-    func tabCount(for context: BrowsingContext) -> Int { tabCounts[context] ?? 0 }
+    /// A window closed. Its ephemeral stores go with it, unless another window
+    /// is still browsing in them.
+    func release(owner: ObjectIdentifier) {
+        tabCounts[owner] = nil
+        dropUnreferencedEphemeralStores()
+    }
+
+    func tabCount(for context: BrowsingContext) -> Int {
+        tabCounts.values.reduce(0) { $0 + ($1[context] ?? 0) }
+    }
 
     func isLoaded(_ context: BrowsingContext) -> Bool { loadedStores[context] != nil }
 
@@ -54,6 +68,12 @@ final class BrowsingContextRegistry {
         }
         loadedStores[context] = nil
         try await WKWebsiteDataStore.remove(forIdentifier: id)
+    }
+
+    private func dropUnreferencedEphemeralStores() {
+        for context in loadedStores.keys where context.isEphemeral && tabCount(for: context) == 0 {
+            loadedStores[context] = nil
+        }
     }
 
     private static func makeStore(for context: BrowsingContext) -> WKWebsiteDataStore {

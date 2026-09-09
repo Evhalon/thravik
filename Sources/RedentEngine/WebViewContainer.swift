@@ -64,6 +64,15 @@ final class WebViewContainer: NSView {
         fillHostedView()
     }
 
+    /// A frame change does not schedule `layout()`, and SwiftUI only calls
+    /// `updateNSView` when something it observes changed — neither happens while
+    /// the user drags the window edge. Without this the web view kept the width
+    /// it was born with and the page had to be scrolled sideways to be read.
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        fillHostedView()
+    }
+
     private func fillHostedView() {
         guard let hosted = subviews.first, hosted.frame != bounds else { return }
         hosted.frame = bounds

@@ -1,8 +1,8 @@
 import RedentDesign
 import SwiftUI
 
-/// The page itself, floating as a card on the chrome, plus everything that
-/// hovers over it.
+/// The page itself, plus everything that hovers over it. The card it sits in
+/// is drawn by the window, because the toolbar row shares that same surface.
 ///
 /// Only what is on screen is kept in the view tree — rendering hidden web views
 /// is what makes other browsers cost a gigabyte at twenty tabs. A split window
@@ -13,7 +13,6 @@ struct ContentArea: View {
     var body: some View {
         SplitPageHost(model: model)
         .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
-        .pageCard(isInset: !model.isFocusMode)
         .overlay(alignment: .top) {
             VStack(spacing: Metric.gutter) {
                 PasswordSaveBar(model: model)

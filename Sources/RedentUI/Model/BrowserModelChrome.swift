@@ -31,6 +31,13 @@ extension BrowserModel {
         settings.tabLayout = .sidebar
     }
 
+    /// A private window: ephemeral storage, no history, no session restore.
+    public var isPrivate: Bool { tabs.isPrivate }
+
+    public func newWindow() { windowOpener?(false) }
+
+    public func newPrivateWindow() { windowOpener?(true) }
+
     public func openNewTab() {
         tabs.newTab(url: nil)
         requestCenterSearchFocus()

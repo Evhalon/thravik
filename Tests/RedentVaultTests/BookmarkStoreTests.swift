@@ -96,4 +96,14 @@ struct BookmarkStoreTests {
         let store = JSONBookmarkStore(fileURL: fileURL)
         #expect(await store.all(in: BrowserSpace.workID).count == 1)
     }
+
+    @Test("Empty folders persist with their Space")
+    func emptyFoldersPersist() async {
+        let store = makeStore()
+        let folder = BookmarkFolder(path: ["Bookmarks Bar", "Work"], spaceID: BrowserSpace.workID)
+        await store.saveFolder(folder)
+
+        #expect(await store.folders(in: BrowserSpace.workID).map(\.label) == ["Bookmarks Bar / Work"])
+        #expect(await store.folders(in: BrowserSpace.travelID).isEmpty)
+    }
 }

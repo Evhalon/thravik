@@ -1,10 +1,8 @@
-import AppKit
 import Foundation
 import Observation
-import SwiftUI
 import RedentEngine
-import RedentKit
 import RedentImport
+import RedentKit
 import RedentOTPAuth
 import RedentUI
 import RedentUpdate
@@ -12,9 +10,11 @@ import RedentVault
 
 /// The composition root. This is the ONLY type that names concrete adapters —
 /// everything above it depends on the ports in RedentKit (AGENTS.md §2).
+///
+/// It owns what the whole app shares; a window's own tabs and chrome live in
+/// the `WindowContainer` it hands out.
 @MainActor @Observable
 final class AppContainer {
-    let model: BrowserModel
     let credentials: any CredentialStoring
     let authenticator: any TOTPAccountStoring
     let generator: any TOTPGenerating
@@ -23,84 +23,94 @@ final class AppContainer {
     let bookmarks: any BookmarkStoring
     let browserImporter: any BrowserImporting
     let permissions: SitePermissionLedger
-    let siteData: any SiteDataManaging
-    let updates: UpdateModel
+    /// One per process, so two windows in the same Container share its cookies.
+    let contexts = BrowsingContextRegistry()
+    var siteData: any SiteDataManaging { contexts }
 
-    private let sessionStore: any SessionStoring
+    let settingsStore: any SettingsStoring
+    let sessionStore: any SessionStoring
+    let logger: any EventLogging
+
+    /// Restored once, and handed to the primary window whenever it is built.
+    private var restoredSession: Result<BrowserSession, any Error>
+    private var windows: [BrowserWindowSpec: WindowContainer] = [:]
+    /// Built on first use so its quit hook can reach every open window.
+    @ObservationIgnored private var updatesStorage: UpdateModel?
 
     init() {
         let logger = OSLogEventLogger(category: "browser")
-        let settingsStore = UserDefaultsSettingsStore()
+        self.logger = logger
+        self.settingsStore = UserDefaultsSettingsStore()
         let sessionStore = UserDefaultsSessionStore()
-        let settings = settingsStore.load()
+        self.sessionStore = sessionStore
+        self.restoredSession = Result { try sessionStore.loadRecoverable() }
 
         let credentials = KeychainCredentialStore()
-        let authenticator = KeychainTOTPStore()
-        let generator = SystemTOTPGenerator()
-        let history = SQLiteHistoryStore()
-        let bookmarks = JSONBookmarkStore()
-
-        let restored = Result { try sessionStore.loadRecoverable() }
-        let tabs = TabController(
-            session: (try? restored.get()) ?? BrowserSession(),
-            settings: settings,
-            logger: logger
-        )
-
         self.credentials = credentials
-        self.authenticator = authenticator
-        self.generator = generator
+        self.authenticator = KeychainTOTPStore()
+        self.generator = SystemTOTPGenerator()
         self.importer = OTPAuthImporter()
-        self.history = history
-        self.bookmarks = bookmarks
+        self.history = SQLiteHistoryStore()
+        self.bookmarks = JSONBookmarkStore()
         self.browserImporter = ChromiumImporter()
-        self.sessionStore = sessionStore
+
         let permissions = SitePermissionLedger(store: JSONSitePolicyStore())
         self.permissions = permissions
-        self.siteData = tabs.siteData
-
-        let services = BrowserServices(history: history, bookmarks: bookmarks,
-                                       settings: settingsStore, session: sessionStore, logger: logger)
-        let features = BrowserFeatures(
-            autofill: AutofillCoordinator(store: credentials, logger: logger, isEnabled: settings.offersPasswordSave),
-            otp: OTPCoordinator(store: authenticator, generator: generator, logger: logger),
-            suggestions: AddressSuggestionsModel(engine: SuggestionEngine(history: history, bookmarks: bookmarks))
-        )
-        let model = BrowserModel(tabs: tabs, services: services, features: features, settings: settings) { id in
-            AnyView(BrowserPageView(controller: tabs, tabID: id))
-        }
-        self.model = model
-        self.updates = Self.makeUpdateModel(presenting: model)
-
-        tabs.permissionDecider = { [weak permissions] key, permission in
-            permissions?.decision(key, permission) ?? .ask
-        }
         Task { await permissions.load() }
+    }
 
-        if case .failure = restored {
-            model.actionError = "Saved workspace could not be restored. Original data was preserved."
-        }
-        if tabs.tabs.isEmpty {
-            tabs.newTab(url: nil)
-        }
-        tabs.warmUp()
+    /// Memoised: SwiftUI re-evaluates a scene's body freely, and rebuilding a
+    /// window's tab controller there would throw away its live web views.
+    func window(for spec: BrowserWindowSpec) -> WindowContainer {
+        if let existing = windows[spec] { return existing }
+        let created = WindowContainer(spec: spec, app: self)
+        windows[spec] = created
+        return created
+    }
+
+    func releaseWindow(_ spec: BrowserWindowSpec) {
+        windows.removeValue(forKey: spec)?.retire()
+    }
+
+    /// What a freshly built window starts from: the saved workspace for the
+    /// primary window, a blank one for every other.
+    func startingSession(for spec: BrowserWindowSpec) -> BrowserSession {
+        guard spec.isPrimary else { return BrowserSession() }
+        return (try? restoredSession.get()) ?? BrowserSession()
+    }
+
+    /// The saved workspace could not be read. Reported once, by the window that
+    /// would have shown it.
+    func restoreFailureMessage(for spec: BrowserWindowSpec) -> String? {
+        guard spec.isPrimary, case .failure = restoredSession else { return nil }
+        return "Saved workspace could not be restored. Original data was preserved."
     }
 
     func persist() {
-        model.persistSession()
+        windows[.primary]?.model.persistSession()
     }
 
     /// Releases are published as signed disk images on GitHub; the installer
     /// swaps the running bundle and reopens it once this process exits.
-    private static func makeUpdateModel(presenting model: BrowserModel) -> UpdateModel {
-        UpdateModel(
-            currentVersion: installedVersion(),
+    var updates: UpdateModel {
+        if let updatesStorage { return updatesStorage }
+        let created = UpdateModel(
+            currentVersion: Self.installedVersion(),
             checker: GitHubReleaseFeed(repository: "Evhalon/thravik"),
             installer: DiskImageInstaller(),
-            // The restart is asked for from inside a sheet this model presents,
-            // so the quit path has to close it before AppKit will terminate.
-            quit: { AppTermination.quit(dismissing: model.dismissPresentations) }
+            // The restart is asked for from inside a sheet a window presents, so
+            // every window's binding has to be cleared before AppKit will
+            // terminate — not just the one the button was pressed in.
+            quit: { [weak self] in
+                AppTermination.quit(dismissing: { self?.dismissAllPresentations() })
+            }
         )
+        updatesStorage = created
+        return created
+    }
+
+    private func dismissAllPresentations() {
+        for window in windows.values { window.model.dismissPresentations() }
     }
 
     /// `nil` under `swift run`, which has no Info.plist and so no version to

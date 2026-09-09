@@ -34,6 +34,16 @@ public enum Palette {
         })
     }
 
+    /// The page card's own surface: the toolbar row sits on it, and the corners
+    /// the web view cannot reach are filled with it. Opaque, because the page
+    /// below is opaque — a glass strip on top of it reads as a separate slab
+    /// floating above the page rather than as the top of the same body.
+    public static var pageChrome: Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.isDark ? NSColor(white: 0.09, alpha: 1) : NSColor(white: 0.97, alpha: 1)
+        })
+    }
+
     /// Behind the page card — visible only at the rounded corners.
     public static var canvas: Color {
         Color(nsColor: NSColor(name: nil) { appearance in
@@ -61,6 +71,10 @@ public enum Palette {
 
     /// The default ambient hue, used until a page reports a theme color.
     public static var defaultAmbient: Color { Color(red: 0.36, green: 0.34, blue: 0.92) }
+
+    /// A private window keeps this hue whatever it is showing, so it can never
+    /// be mistaken for an ordinary one.
+    public static var privateAmbient: Color { Color(red: 0.30, green: 0.24, blue: 0.40) }
 }
 
 extension NSAppearance {

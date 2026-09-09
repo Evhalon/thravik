@@ -7,11 +7,20 @@ public struct BookmarksSheet: View {
     @State private var model: BookmarksModel
     @State private var editor: BookmarkEditor.Mode?
     private let onOpen: (URL) -> Void
+    private let onOpenNewTab: (URL) -> Void
+    private let onOpenNewWindow: (URL) -> Void
     @Environment(\.dismiss) private var dismiss
 
-    public init(model: BookmarksModel, onOpen: @escaping (URL) -> Void) {
+    public init(
+        model: BookmarksModel,
+        onOpen: @escaping (URL) -> Void,
+        onOpenNewTab: @escaping (URL) -> Void,
+        onOpenNewWindow: @escaping (URL) -> Void
+    ) {
         _model = State(initialValue: model)
         self.onOpen = onOpen
+        self.onOpenNewTab = onOpenNewTab
+        self.onOpenNewWindow = onOpenNewWindow
     }
 
     public var body: some View {
@@ -24,7 +33,6 @@ public struct BookmarksSheet: View {
                 folderList.frame(minWidth: 160, idealWidth: 180)
                 entryList.frame(minWidth: 320)
             }
-            .padding(Metric.gutter)
         }
         .frame(minWidth: 640, minHeight: 420)
         .sheetCanvas(width: 720, height: 520)
@@ -50,6 +58,14 @@ public struct BookmarksSheet: View {
             TextField("Search", text: $model.query)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 170)
+            Button { editor = .create(UUID()) } label: {
+                Image(systemName: "plus")
+            }
+            .help("Add bookmark")
+            Button { editor = .folder(UUID()) } label: {
+                Image(systemName: "folder.badge.plus")
+            }
+            .help("New folder")
             Button("Done") { dismiss() }
         }
     }
@@ -81,15 +97,16 @@ public struct BookmarksSheet: View {
                 BookmarkRow(
                     bookmark: bookmark,
                     spaceName: model.showsEverySpace ? model.name(ofSpace: bookmark.spaceID) : nil,
-                    spaces: model.spaces,
                     actions: .init(
                         onOpen: { onOpen(bookmark.url); dismiss() },
+                        onOpenNewTab: { onOpenNewTab(bookmark.url); dismiss() },
+                        onOpenNewWindow: { onOpenNewWindow(bookmark.url); dismiss() },
                         onToggleFavorite: { Task { await model.toggleFavorite(bookmark) } },
-                        onMove: { destination in Task { await model.move(bookmark, to: destination) } },
                         onRename: { editor = .rename(bookmark) },
                         onEditAddress: { editor = .address(bookmark) },
                         onCopyAddress: { copyAddress(bookmark.url) },
-                        onDelete: { Task { await model.delete(bookmark) } }
+                        onDelete: { Task { await model.delete(bookmark) } },
+                        onNewFolder: { editor = .folder(UUID()) }
                     )
                 )
             }
@@ -97,12 +114,16 @@ public struct BookmarksSheet: View {
         }
     }
 
-    private func save(_ mode: BookmarkEditor.Mode, value: String) async -> Bool {
+    private func save(_ mode: BookmarkEditor.Mode, title: String, address: String) async -> Bool {
         switch mode {
+        case .create:
+            return await model.create(title: title, address: address)
+        case .folder:
+            return await model.createFolder(named: title)
         case .rename(let bookmark):
-            return await model.rename(bookmark, to: value)
+            return await model.rename(bookmark, to: title)
         case .address(let bookmark):
-            return await model.changeAddress(bookmark, to: value)
+            return await model.changeAddress(bookmark, to: address)
         }
     }
 

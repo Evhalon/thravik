@@ -9,6 +9,9 @@ public protocol BrowserControlling: AnyObject {
     var visibleTabs: [any BrowserTab] { get }
     var canReopen: Bool { get }
     var canUndo: Bool { get }
+    /// A private window: every tab browses in one ephemeral session, nothing is
+    /// written to history, and the workspace is never saved.
+    var isPrivate: Bool { get }
     func perform(_ action: WorkspaceAction) throws
     func undo()
     var signalHandler: (any PageSignalHandling)? { get set }

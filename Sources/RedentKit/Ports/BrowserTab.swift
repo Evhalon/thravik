@@ -13,6 +13,9 @@ public protocol BrowserTab: AnyObject {
     var isHibernated: Bool { get }
     var isPinned: Bool { get }
     var origin: Origin? { get }
+    /// Page zoom, on `PageZoom`'s ladder.
+    var zoom: Double { get }
+    func setZoom(_ level: Double)
     func load(_ url: URL)
     func goBack()
     func goForward()

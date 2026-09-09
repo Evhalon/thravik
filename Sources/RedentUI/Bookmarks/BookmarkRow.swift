@@ -7,17 +7,19 @@ struct BookmarkRow: View {
     let bookmark: Bookmark
     /// Shown only while the manager is listing every Space at once.
     let spaceName: String?
-    let spaces: [BrowserSpace]
     let actions: Actions
+    @State private var showsActions = false
 
     struct Actions {
         let onOpen: () -> Void
+        let onOpenNewTab: () -> Void
+        let onOpenNewWindow: () -> Void
         let onToggleFavorite: () -> Void
-        let onMove: (UUID) -> Void
         let onRename: () -> Void
         let onEditAddress: () -> Void
         let onCopyAddress: () -> Void
         let onDelete: () -> Void
+        let onNewFolder: () -> Void
     }
 
     var body: some View {
@@ -46,30 +48,40 @@ struct BookmarkRow: View {
             .buttonStyle(.plain)
             .help(bookmark.isFavorite ? "Remove from new-tab favorites" : "Show on the new-tab page")
 
-            Button(action: actions.onDelete) {
-                Image(systemName: "trash").foregroundStyle(Palette.chromeSecondaryText)
+            Menu {
+                rowMenu
+            } label: {
+                Image(systemName: "ellipsis").foregroundStyle(Palette.chromeSecondaryText)
             }
-            .buttonStyle(.plain)
-            .help("Delete bookmark")
+            .menuStyle(.borderlessButton)
+            .help("Bookmark actions")
         }
         .padding(.vertical, 3)
         .contentShape(.rect)
+        .onTapGesture { showsActions = true }
         .onTapGesture(count: 2, perform: actions.onOpen)
         .contextMenu {
-            Button("Open", action: actions.onOpen)
-            Divider()
-            Button("Rename…", action: actions.onRename)
-            Button("Edit Address…", action: actions.onEditAddress)
-            Button("Copy Address", action: actions.onCopyAddress)
-            Menu("Move to Space") {
-                ForEach(spaces) { space in
-                    Button(space.name) { actions.onMove(space.id) }
-                        .disabled(space.id == bookmark.spaceID)
-                }
-            }
-            Divider()
-            Button("Delete", role: .destructive, action: actions.onDelete)
+            rowMenu
         }
+        .popover(isPresented: $showsActions, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 0) { rowMenu }
+                .padding(6)
+                .frame(width: 210)
+        }
+    }
+
+    @ViewBuilder
+    private var rowMenu: some View {
+        Button("Open in New Tab", action: actions.onOpenNewTab)
+        Button("Open in New Window", action: actions.onOpenNewWindow)
+        Divider()
+        Button("Rename…", action: actions.onRename)
+        Button("Edit Address…", action: actions.onEditAddress)
+        Divider()
+        Button("Copy Address", action: actions.onCopyAddress)
+        Button("Delete", role: .destructive, action: actions.onDelete)
+        Divider()
+        Button("New Folder", action: actions.onNewFolder)
     }
 
     private var host: String {

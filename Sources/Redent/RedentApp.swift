@@ -10,15 +10,18 @@ struct RedentApp: App {
     @State private var container: AppContainer?
 
     var body: some Scene {
-        WindowGroup {
-            RootScene(container: $container, delegate: delegate)
+        WindowGroup(for: BrowserWindowSpec.self) { $spec in
+            RootScene(container: $container, spec: spec, delegate: delegate)
                 .frame(minWidth: 760, minHeight: 480)
                 .ignoresSafeArea(.container, edges: .top)
+        } defaultValue: {
+            .primary
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1280, height: 840)
-        .commands {
-            if let container { BrowserCommands(model: container.model) }
-        }
+        // A secondary window's identity is a fresh UUID with no saved workspace
+        // behind it, so restoring one at launch would reopen an empty shell.
+        .restorationBehavior(.disabled)
+        .commands { BrowserCommands() }
     }
 }

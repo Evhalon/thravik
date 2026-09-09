@@ -4,6 +4,9 @@ import SwiftUI
 
 /// One browser window: a single glass slab, with the page floating on it.
 ///
+/// The window has no chrome above its own first row — the toolbar shares that
+/// line with the window buttons, and everything below it is page.
+///
 /// Modal screens arrive through `sheetContent` so this view stays independent
 /// of the concrete vault and scanner screens.
 public struct BrowserWindowView<Sheets: View>: View {
@@ -16,46 +19,35 @@ public struct BrowserWindowView<Sheets: View>: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            TitlebarStrip()
-            ZStack {
-                WindowBackdrop(tint: ambientTint).equatable()
-                WindowConfigurator().frame(width: 0, height: 0)
+        ZStack {
+            WindowBackdrop(tint: ambientTint).equatable()
+            WindowConfigurator().frame(width: 0, height: 0)
 
-                HStack(spacing: 0) {
-                    if usesSidebar {
-                        SidebarTabStrip(model: model)
-                            .frame(width: model.settings.sidebarWidth)
-                            // The width follows the pointer directly: animating it
-                            // makes the seam lag behind the cursor during a drag.
-                            .animation(nil, value: model.settings.sidebarWidth)
-                            .transition(.move(edge: .leading).combined(with: .opacity))
-                            .zIndex(2)
-                        SidebarResizeHandle(width: $model.settings.sidebarWidth)
-                            .zIndex(1)
-                    }
-                    pageColumn
-                        // Floor is zero so the pane shrinks to whatever the rail
-                        // leaves, instead of keeping the last full-window width.
-                        .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
-                        .layoutPriority(1)
-                        .zIndex(0)
+            HStack(spacing: 0) {
+                if usesSidebar {
+                    SidebarTabStrip(model: model)
+                        .frame(width: model.settings.sidebarWidth)
+                        // The width follows the pointer directly: animating it
+                        // makes the seam lag behind the cursor during a drag.
+                        .animation(nil, value: model.settings.sidebarWidth)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                        .zIndex(2)
+                    SidebarResizeHandle(width: $model.settings.sidebarWidth)
+                        .zIndex(1)
                 }
+                pageColumn
+                    // Floor is zero so the pane shrinks to whatever the rail
+                    // leaves, instead of keeping the last full-window width.
+                    .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
+                    .layoutPriority(1)
+                    .zIndex(0)
             }
-            .clipped()
         }
+        .clipped()
         .environment(\.ambientTint, ambientTint)
         .animation(.spring(duration: 0.34), value: usesSidebar)
         .animation(.spring(duration: 0.34), value: model.settings.tabLayout)
-        .overlay(alignment: .top) {
-            if model.showsCommandBar {
-                ZStack(alignment: .top) {
-                    Color.black.opacity(0.18).onTapGesture { model.dismissCommands() }
-                    CommandBarView(model: model.commandBar, onDismiss: model.dismissCommands)
-                        .padding(.top, 72)
-                }
-            }
-        }
+        .overlay(alignment: .top) { commandBar }
         .overlay(alignment: .bottom) { expiryBar }
         .onChange(of: model.selectedTab?.url) { _, _ in model.address.sync(with: model.selectedTab) }
         .onChange(of: model.tabs.selectedID) { _, _ in model.address.syncSelection(with: model.selectedTab) }
@@ -63,8 +55,22 @@ public struct BrowserWindowView<Sheets: View>: View {
             get: { model.actionError != nil }, set: { if !$0 { model.actionError = nil } }
         )) { Button("OK") { model.actionError = nil } } message: { Text(model.actionError ?? "") }
         .sheet(item: $model.sheet, content: sheetContent)
+        // Menu commands act on the window in front, never on whichever one the
+        // app happened to build first.
+        .focusedSceneValue(\.browserModel, model)
         .task(runClock)
         .onDisappear(perform: model.persistSession)
+    }
+
+    @ViewBuilder
+    private var commandBar: some View {
+        if model.showsCommandBar {
+            ZStack(alignment: .top) {
+                Color.black.opacity(0.18).onTapGesture { model.dismissCommands() }
+                CommandBarView(model: model.commandBar, onDismiss: model.dismissCommands)
+                    .padding(.top, 72)
+            }
+        }
     }
 
     @ViewBuilder
@@ -82,25 +88,15 @@ public struct BrowserWindowView<Sheets: View>: View {
     }
 
     private var pageColumn: some View {
-        VStack(spacing: 0) {
-            if usesTopStrip {
-                TopTabStrip(model: model)
-                TopToolbar(model: model)
-            }
-            ContentArea(model: model)
-                .overlay(alignment: .top) {
-                    if needsFloatingChrome {
-                        CompactChromeBar(model: model)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                }
-        }
+        PageColumn(model: model, usesTopStrip: usesTopStrip)
     }
 
     /// The chrome takes its color from the site's favicon, which is reliably
     /// the brand color; a declared `theme-color` is used only when the favicon
-    /// yields nothing, and Redent's own hue when neither does.
+    /// yields nothing, and Redent's own hue when neither does. A private window
+    /// keeps its own hue throughout, so it is never mistaken for a normal one.
     private var ambientTint: Color? {
+        guard !model.isPrivate else { return Palette.privateAmbient }
         guard let tab = model.selectedTab else { return Palette.defaultAmbient }
         return DominantColor.extract(from: tab.snapshot.faviconData)
             ?? Palette.defaultAmbient
@@ -112,11 +108,6 @@ public struct BrowserWindowView<Sheets: View>: View {
 
     private var usesTopStrip: Bool {
         model.showsTabStrip && model.settings.tabLayout == .top
-    }
-
-    /// With the rail hidden but focus mode off, the user still needs an address bar.
-    private var needsFloatingChrome: Bool {
-        !model.isFocusMode && !model.showsTabStrip
     }
 
     /// One clock for the window: TOTP countdowns, address sync, and the

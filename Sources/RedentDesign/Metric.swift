@@ -6,7 +6,8 @@ import Foundation
 /// of floating slabs, and small radii make a slab look like a mistake.
 public enum Metric {
     public static let tabRowHeight: CGFloat = 34
-    public static let toolbarHeight: CGFloat = 44
+    /// Clearance the rail leaves above its first row for the window buttons.
+    public static let toolbarHeight: CGFloat = 36
     public static let controlHeight: CGFloat = 30
 
     /// Large surfaces: the floating bar, sheets, the OTP capsule's bounding box.
@@ -22,8 +23,12 @@ public enum Metric {
     public static let tightGutter: CGFloat = 6
     /// The inset between the chrome and the page card, on every side.
     public static let pageInset: CGFloat = 3
-    /// Height of the full-width glass titlebar the window buttons sit on.
-    public static let titlebarInset: CGFloat = 30
+    /// The band along the top of the page that summons the toolbar. It takes no
+    /// layout space and no clicks — deep enough to cover the panel it reveals.
+    public static let chromeProbeHeight: CGFloat = 64
+    /// The sliver has to grow to this when the rail is not there to hold the
+    /// window buttons: a page drawn under them is unreadable.
+    public static let windowButtonsHeight: CGFloat = 28
 
     /// A true hairline at any scale factor.
     public static let hairWidth: CGFloat = 0.75

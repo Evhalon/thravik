@@ -43,7 +43,7 @@ extension TabController {
     /// `session`, so copying them in here on every change was work nobody read.
     func changed() {
         syncSelection()
-        contexts.sync(webTabs.map(\.snapshot.browsingContext))
+        contexts.sync(webTabs.map(\.snapshot.browsingContext), owner: ObjectIdentifier(self))
         onChange?()
     }
 

@@ -25,15 +25,16 @@ struct BrowsingContextRegistryTests {
     @Test("An ephemeral store is released once its last tab is gone")
     func ephemeralIsReleased() {
         let registry = BrowsingContextRegistry()
+        let owner = ObjectIdentifier(registry)
         let context = BrowsingContext.ephemeral(UUID())
         _ = registry.store(for: context)
-        registry.sync([context, context])
+        registry.sync([context, context], owner: owner)
         #expect(registry.tabCount(for: context) == 2)
 
-        registry.sync([context])
+        registry.sync([context], owner: owner)
         #expect(registry.isLoaded(context))
 
-        registry.sync([])
+        registry.sync([], owner: owner)
         #expect(registry.tabCount(for: context) == 0)
         #expect(!registry.isLoaded(context))
     }
@@ -41,8 +42,9 @@ struct BrowsingContextRegistryTests {
     @Test("A Container store in use cannot be retired out from under its tabs")
     func removalRequiresNoTabs() async {
         let registry = BrowsingContextRegistry()
+        let owner = ObjectIdentifier(registry)
         let context = BrowsingContext.container(UUID())
-        registry.sync([context])
+        registry.sync([context], owner: owner)
         await #expect(throws: BrowsingContextError.inUse) {
             try await registry.removeStore(for: context)
         }

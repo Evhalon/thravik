@@ -9,6 +9,7 @@ import RedentKit
 @MainActor @Observable
 public final class BookmarksModel {
     public private(set) var all: [Bookmark] = []
+    public private(set) var savedFolders: [BookmarkFolder] = []
     public var query: String = ""
     public var selectedFolder: String?
     public var showsEverySpace = false { didSet { Task { await load() } } }
@@ -30,12 +31,16 @@ public final class BookmarksModel {
     }
 
     public func load() async {
-        all = await store.all(in: showsEverySpace ? nil : spaceID)
+        async let bookmarks = store.all(in: showsEverySpace ? nil : spaceID)
+        async let folders = store.folders(in: showsEverySpace ? nil : spaceID)
+        all = await bookmarks
+        savedFolders = await folders
     }
 
     /// Folder paths present in the data, for the sidebar.
     public var folders: [String] {
-        Array(Set(all.map(\.folderLabel))).sorted()
+        Array(Set(all.filter { !$0.folderPath.isEmpty }.map(\.folderLabel))
+            .union(savedFolders.map(\.label))).sorted()
     }
 
     public var visible: [Bookmark] {
@@ -58,6 +63,26 @@ public final class BookmarksModel {
     }
 
     @discardableResult
+    public func create(title: String, address: String) async -> Bool {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, let url = validWebURL(address) else { return false }
+        await store.save(Bookmark(
+            url: url, title: title, folderPath: selectedFolderPath, spaceID: spaceID, isFavorite: true
+        ))
+        await load()
+        return true
+    }
+
+    @discardableResult
+    public func createFolder(named name: String) async -> Bool {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return false }
+        await store.saveFolder(BookmarkFolder(path: selectedFolderPath + [name], spaceID: spaceID))
+        await load()
+        return true
+    }
+
+    @discardableResult
     public func rename(_ bookmark: Bookmark, to title: String) async -> Bool {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return false }
@@ -70,12 +95,7 @@ public final class BookmarksModel {
 
     @discardableResult
     public func changeAddress(_ bookmark: Bookmark, to address: String) async -> Bool {
-        let address = address.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: address),
-              let scheme = url.scheme?.lowercased(),
-              ["http", "https"].contains(scheme),
-              url.host != nil
-        else { return false }
+        guard let url = validWebURL(address) else { return false }
         var updated = bookmark
         updated.url = url
         await store.save(updated)
@@ -96,5 +116,19 @@ public final class BookmarksModel {
     public func delete(_ bookmark: Bookmark) async {
         await store.delete(bookmark.id)
         await load()
+    }
+
+    private func validWebURL(_ address: String) -> URL? {
+        let address = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: address),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme), url.host != nil
+        else { return nil }
+        return url
+    }
+
+    private var selectedFolderPath: [String] {
+        guard let selectedFolder, selectedFolder != "All Bookmarks" else { return [] }
+        return selectedFolder.components(separatedBy: " / ")
     }
 }

@@ -20,10 +20,12 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
     /// The tab's own path. Excluded from persistence for temporary tabs, which
     /// never reach a saved snapshot at all.
     public var timeline = TabTimeline()
+    /// Page zoom, kept per tab so it survives hibernation and restart.
+    public var zoom: Double = PageZoom.identity
 
     private enum CodingKeys: String, CodingKey {
         case id, url, title, faviconData, isPinned, lastActiveAt
-        case spaceID, containerID, groupID, parentTabID, expiresAt, lifespan, timeline
+        case spaceID, containerID, groupID, parentTabID, expiresAt, lifespan, timeline, zoom
     }
 
     public init(
@@ -88,6 +90,7 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
             self.lifespan = lifespan
         }
         self.timeline = try values.decodeIfPresent(TabTimeline.self, forKey: .timeline) ?? TabTimeline()
+        self.zoom = PageZoom.clamped(try values.decodeIfPresent(Double.self, forKey: .zoom) ?? PageZoom.identity)
         self.parentTabID = try values.decodeIfPresent(UUID.self, forKey: .parentTabID)
     }
 
@@ -106,6 +109,7 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
         try values.encodeIfPresent(expiresAt, forKey: .expiresAt)
         try values.encode(lifespan, forKey: .lifespan)
         try values.encode(timeline.persistable(), forKey: .timeline)
+        try values.encode(zoom, forKey: .zoom)
     }
 
     public var expiresAt: Date? {

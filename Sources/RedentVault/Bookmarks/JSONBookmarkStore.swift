@@ -40,4 +40,12 @@ public struct JSONBookmarkStore: BookmarkStoring {
     public func delete(_ id: UUID) async {
         await store.delete(id)
     }
+
+    public func folders(in spaceID: UUID?) async -> [BookmarkFolder] {
+        await store.folders(in: spaceID)
+    }
+
+    public func saveFolder(_ folder: BookmarkFolder) async {
+        await store.saveFolder(folder)
+    }
 }

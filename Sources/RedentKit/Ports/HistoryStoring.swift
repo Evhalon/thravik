@@ -50,4 +50,11 @@ public protocol BookmarkStoring: Sendable {
     @discardableResult
     func merge(_ bookmarks: [Bookmark]) async -> Int
     func delete(_ id: UUID) async
+    func folders(in spaceID: UUID?) async -> [BookmarkFolder]
+    func saveFolder(_ folder: BookmarkFolder) async
+}
+
+public extension BookmarkStoring {
+    func folders(in spaceID: UUID?) async -> [BookmarkFolder] { [] }
+    func saveFolder(_ folder: BookmarkFolder) async {}
 }

@@ -65,6 +65,7 @@ extension WebTab {
         )
         signalRouter = router
 
+        view.pageZoom = zoom
         webView = view
         isHibernated = false
         setupObservers(on: view)

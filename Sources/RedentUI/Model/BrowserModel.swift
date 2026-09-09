@@ -29,6 +29,10 @@ public final class BrowserModel {
     /// sidebar address field after AppKit reassigns it.
     public var centerSearchFocusEpoch: UInt = 0
 
+    /// Opens another browser window. Set by the composition root, which is the
+    /// only layer that knows what a window is; nil in previews and tests.
+    @ObservationIgnored public var windowOpener: (@MainActor (_ isPrivate: Bool) -> Void)?
+
     @ObservationIgnored private let visits: VisitRecorder
     /// `internal` rather than `private`: the persistence policy lives in a
     /// sibling file to stay under the line limit.

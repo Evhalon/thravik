@@ -5,6 +5,18 @@ import Testing
 
 @Suite("Bookmarks manager")
 struct BookmarksModelTests {
+    @Test("Adding a bookmark saves it as a new-tab favorite") @MainActor
+    func create() async throws {
+        let store = BookmarkStoreFake(bookmarks: [])
+        let model = BookmarksModel(store: store, spaces: [], spaceID: BrowserSpace.workID)
+
+        #expect(await model.create(title: "Redent", address: "https://redent.app"))
+        let saved = try #require(await store.bookmarks.first)
+        #expect(saved.title == "Redent")
+        #expect(saved.isFavorite)
+        #expect(saved.spaceID == BrowserSpace.workID)
+    }
+
     @Test("Renaming keeps the address and persists the new title") @MainActor
     func rename() async throws {
         let bookmark = Bookmark(url: try #require(URL(string: "https://redent.app")), title: "Old")

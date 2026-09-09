@@ -22,6 +22,7 @@ public final class WebTab: Identifiable, BrowserTab {
     public internal(set) var canGoForward: Bool = false
     public internal(set) var isHibernated: Bool = true
     public internal(set) var themeColor: Color?
+    public internal(set) var zoom: Double
 
     public var isPinned: Bool {
         didSet { snapshot.isPinned = isPinned }
@@ -52,6 +53,7 @@ public final class WebTab: Identifiable, BrowserTab {
         self.url = snapshot.url
         self.origin = snapshot.url.flatMap(Origin.init(url:))
         self.isPinned = snapshot.isPinned
+        self.zoom = snapshot.zoom
         self.controller = controller
     }
 
@@ -84,6 +86,16 @@ public final class WebTab: Identifiable, BrowserTab {
 
     public func forgetTimeline(domain: String) {
         snapshot.timeline.forget(domain: domain)
+    }
+
+    /// Applied to the live view and stored on the snapshot, so a hibernated tab
+    /// comes back at the size the user left it.
+    public func setZoom(_ level: Double) {
+        let clamped = PageZoom.clamped(level)
+        guard clamped != zoom else { return }
+        zoom = clamped
+        snapshot.zoom = clamped
+        webView?.pageZoom = clamped
     }
 
     public func goBack() { webView?.goBack() }

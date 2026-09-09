@@ -25,7 +25,13 @@ public final class TabController: BrowserControlling {
     @ObservationIgnored
     public var permissionDecider: (@MainActor (SiteKey, SitePermission) -> PermissionDecision)?
 
-    @ObservationIgnored let contexts = BrowsingContextRegistry()
+    /// Shared with every other window: one registry per process (see
+    /// `BrowsingContextRegistry`).
+    @ObservationIgnored let contexts: BrowsingContextRegistry
+    /// Non-nil in a private window. Every tab it opens browses in this one
+    /// ephemeral session, so sibling tabs share a login and nothing outlives
+    /// the window.
+    @ObservationIgnored public let privateSessionID: UUID?
     @ObservationIgnored let warmer = WebViewWarmer()
     @ObservationIgnored let contentBlocker = ContentBlocker()
     @ObservationIgnored let faviconFetcher = FaviconFetcher()
@@ -35,8 +41,7 @@ public final class TabController: BrowserControlling {
     static let closedStackLimit = 10
     var workspace: BrowserSession
     let undoHistory = BrowserUndoHistory()
-    /// The website-data face of the context registry, for the privacy screens.
-    public var siteData: any SiteDataManaging { contexts }
+    public var isPrivate: Bool { privateSessionID != nil }
     public var canReopen: Bool { !closedStack.isEmpty }
     public var canUndo: Bool { undoHistory.canUndo }
     /// Filters `webTabs` rather than `tabs`: the latter boxes every tab into an
@@ -45,17 +50,25 @@ public final class TabController: BrowserControlling {
         webTabs.filter { $0.snapshot.spaceID == workspace.selectedSpaceID }
     }
 
-    public init(session: BrowserSession, settings: BrowserSettings, logger: any EventLogging) {
+    public init(
+        session: BrowserSession,
+        settings: BrowserSettings,
+        logger: any EventLogging,
+        contexts: BrowsingContextRegistry = BrowsingContextRegistry(),
+        privateSessionID: UUID? = nil
+    ) {
         // Through the reducer, so a restored selection that names a tab in
         // another Space cannot leave the window showing nothing.
         let normalized = WorkspaceState(session: session).session
+        self.contexts = contexts
+        self.privateSessionID = privateSessionID
         self.workspace = normalized
         self.settings = settings
         self.logger = logger
         self.selectedID = normalized.selectedTabID
         self.webTabs = normalized.tabs.map { WebTab(snapshot: $0, controller: nil) }
         for tab in webTabs { tab.controller = self }
-        contexts.sync(webTabs.map(\.snapshot.browsingContext))
+        contexts.sync(webTabs.map(\.snapshot.browsingContext), owner: ObjectIdentifier(self))
         contentBlocker.onCompiled = { [weak self] in self?.installCompiledBlockList() }
         contentBlocker.startCompilingIfNeeded()
         // Silence here would mean no ad blocking and no page bridge — so no
@@ -83,6 +96,9 @@ public final class TabController: BrowserControlling {
         var snapshot = TabSnapshot(url: url)
         snapshot.spaceID = workspace.selectedSpaceID
         snapshot.containerID = workspace.spaces.first { $0.id == workspace.selectedSpaceID }?.containerID
+        if let privateSessionID {
+            snapshot.lifespan = .temporary(sessionID: privateSessionID, expiresAt: nil, cleanupOnClose: true)
+        }
         let tab = WebTab(snapshot: snapshot, controller: self)
         webTabs.insert(tab, at: insertIndexAfterCurrent())
         selectedID = tab.id
@@ -104,6 +120,15 @@ public final class TabController: BrowserControlling {
         pruneRelatedAfterRemoval()
         if !tab.snapshot.isTemporary { pushClosed(tab.snapshot) }
         changed()
+    }
+
+    /// The window closed. Releasing the hold here rather than in `deinit` keeps
+    /// the ephemeral store's lifetime tied to the window the user closed, not to
+    /// whenever the last view referencing this controller happens to go away.
+    public func retire() {
+        for tab in webTabs { tab.hibernate() }
+        contexts.release(owner: ObjectIdentifier(self))
+        warmer.discard()
     }
 
     func pushClosed(_ snapshot: TabSnapshot) {

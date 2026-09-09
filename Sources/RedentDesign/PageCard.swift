@@ -7,7 +7,6 @@ import SwiftUI
 /// around it, so the chrome reads as holding it rather than abutting it.
 private struct PageCard: ViewModifier {
     let isInset: Bool
-    @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(
@@ -33,14 +32,10 @@ private struct PageCard: ViewModifier {
                     RoundedRectangle(cornerRadius: Metric.pageRadius, style: .continuous)
                         .path(in: bounds)
                 )
-                context.fill(path, with: .color(chromeFill), style: FillStyle(eoFill: true))
+                context.fill(path, with: .color(Palette.pageChrome), style: FillStyle(eoFill: true))
             }
             .allowsHitTesting(false)
         }
-    }
-
-    private var chromeFill: Color {
-        scheme == .dark ? Color(white: 0.09) : Color(white: 0.935)
     }
 
     /// The shadow belongs to a shape *behind* the card, not to the card itself.

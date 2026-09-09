@@ -3,87 +3,72 @@ import SwiftUI
 
 /// Menu-bar commands. Kept here rather than in the app target so the shortcuts
 /// live next to the chrome they drive.
+///
+/// Every item acts on the focused window, and does nothing when no browser
+/// window has focus — the items stay in the menu bar either way, so the user
+/// never watches the File menu shrink because a sheet took the focus.
 public struct BrowserCommands: Commands {
-    private let model: BrowserModel
+    @FocusedValue(\.browserModel) private var model
 
-    public init(model: BrowserModel) {
-        self.model = model
-    }
+    public init() {}
 
     public var body: some Commands {
-        CommandGroup(replacing: .newItem) {
-            Button("New Tab", action: model.openNewTab)
-                .keyboardShortcut("t")
-            Button("Close Tab") { model.tabs.selectedID.map(model.tabs.close) }
-                .keyboardShortcut("w")
-            Button("Reopen Closed Tab", action: model.tabs.reopenLastClosed)
-                .keyboardShortcut("t", modifiers: [.command, .shift])
-            Button("New Temporary Tab", action: model.openTemporaryTab)
-                .keyboardShortcut("n", modifiers: [.command, .shift])
-        }
+        CommandGroup(replacing: .newItem) { fileItems }
         CommandMenu("Browser") {
-            Button("Command Bar…", action: model.showCommands).keyboardShortcut("k")
-            Button("Undo Browser Action", action: model.tabs.undo)
+            Button("Command Bar…") { model?.showCommands() }
+                .keyboardShortcut("k")
+                .disabled(model == nil)
+            Button("Undo Browser Action") { model?.tabs.undo() }
                 .keyboardShortcut("z", modifiers: [.command, .option])
-                .disabled(!model.tabs.canUndo)
+                .disabled(!(model?.tabs.canUndo ?? false))
         }
         CommandGroup(replacing: .saveItem) {
-            Button(model.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar", action: model.toggleSidebar)
+            Button(sidebarTitle) { model?.toggleSidebar() }
                 .keyboardShortcut("s")
+                .disabled(model == nil)
         }
-        CommandMenu("View") {
-            Button(model.showsTabStrip ? "Hide Tabs" : "Show Tabs", action: model.toggleTabStrip)
-                .keyboardShortcut("\\", modifiers: .command)
-            Button(model.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar", action: model.toggleSidebar)
-            Button(model.isFocusMode ? "Exit Focus Mode" : "Focus Mode", action: model.toggleFocusMode)
-                .keyboardShortcut("f", modifiers: [.command, .shift])
-            Divider()
-            Picker("Tab Layout", selection: layoutBinding) {
-                ForEach(TabLayout.allCases) { Text($0.label).tag($0) }
-            }
-            Divider()
-            Divider()
-            Button(model.split.isSplit ? "Close Split" : "Split View", action: toggleSplit)
-                .keyboardShortcut("d", modifiers: [.command, .shift])
-            Button("Switch Pane", action: model.toggleActivePane)
-                .keyboardShortcut("]", modifiers: [.command, .option])
-                .disabled(!model.split.isSplit)
-            Button("Flip Split", action: model.toggleSplitOrientation)
-                .disabled(!model.split.isSplit)
-            Divider()
-            Button("Next Tab", action: model.tabs.selectNext)
-                .keyboardShortcut("j")
-            Button("Previous Tab", action: model.tabs.selectPrevious)
-                .keyboardShortcut(.tab, modifiers: [.control, .shift])
-        }
-        CommandMenu("Spaces") {
-            ForEach(Array(model.tabs.session.spaces.prefix(9).enumerated()), id: \.element.id) { index, space in
-                Button(space.name) { model.execute(.focusSpace(space.id)) }
-                    .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: [.control, .option])
-            }
-            Divider()
-            Button("Manage Spaces…") { model.sheet = .spaces }
-            Button("Tab Groups…") { model.sheet = .groups }
-                .keyboardShortcut("g", modifiers: [.control, .option])
-        }
-        CommandGroup(after: .appSettings) {
-            Button("Tab Timeline…") { model.sheet = .timeline }
-                .keyboardShortcut("y", modifiers: [.command, .shift])
-            Button("Site Privacy…") { model.sheet = .sitePrivacy }
-                .keyboardShortcut("i", modifiers: [.command, .shift])
-            Button("History…") { model.sheet = .history }
-            Button("Bookmarks…") { model.sheet = .bookmarks }
-            Button("Passwords…") { model.sheet = .passwords }
-            Button("Authenticator…") { model.sheet = .authenticator }
-            Button("Import from Another Browser…") { model.sheet = .importBrowser }
-        }
+        BrowserViewCommands(model: model)
+        BrowserSpaceCommands(model: model)
+        CommandGroup(after: .appSettings) { libraryItems }
     }
 
-    private func toggleSplit() {
-        if model.split.isSplit { model.closeSplit() } else { model.splitWithNextTab() }
+    @ViewBuilder
+    private var fileItems: some View {
+        Button("New Window") { model?.newWindow() }
+            .keyboardShortcut("n")
+            .disabled(model == nil)
+        Button("New Private Window") { model?.newPrivateWindow() }
+            .keyboardShortcut("n", modifiers: [.command, .shift])
+            .disabled(model == nil)
+        Divider()
+        Button("New Tab") { model?.openNewTab() }
+            .keyboardShortcut("t")
+            .disabled(model == nil)
+        Button("New Private Tab") { model?.openTemporaryTab() }
+            .keyboardShortcut("n", modifiers: [.command, .control])
+            .disabled(model == nil)
+        Button("Close Tab") { model.flatMap { $0.tabs.selectedID.map($0.tabs.close) } }
+            .keyboardShortcut("w")
+            .disabled(model == nil)
+        Button("Reopen Closed Tab") { model?.tabs.reopenLastClosed() }
+            .keyboardShortcut("t", modifiers: [.command, .shift])
+            .disabled(!(model?.tabs.canReopen ?? false))
     }
 
-    private var layoutBinding: Binding<TabLayout> {
-        Binding(get: { model.settings.tabLayout }, set: { model.settings.tabLayout = $0 })
+    @ViewBuilder
+    private var libraryItems: some View {
+        Button("Tab Timeline…") { model?.sheet = .timeline }
+            .keyboardShortcut("y", modifiers: [.command, .shift])
+        Button("Site Privacy…") { model?.sheet = .sitePrivacy }
+            .keyboardShortcut("i", modifiers: [.command, .shift])
+        Button("History…") { model?.sheet = .history }
+        Button("Bookmarks…") { model?.sheet = .bookmarks }
+        Button("Passwords…") { model?.sheet = .passwords }
+        Button("Authenticator…") { model?.sheet = .authenticator }
+        Button("Import from Another Browser…") { model?.sheet = .importBrowser }
+    }
+
+    private var sidebarTitle: String {
+        (model?.isSidebarVisible ?? false) ? "Hide Sidebar" : "Show Sidebar"
     }
 }

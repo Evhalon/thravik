@@ -25,6 +25,19 @@ struct WebViewContainerTests {
         #expect(webView.frame.size == CGSize(width: 900, height: 800))
     }
 
+    @Test("Resizing the container alone reflows the page, with no layout pass")
+    func hostedViewFollowsFrameChange() {
+        let container = WebViewContainer(frame: NSRect(x: 0, y: 0, width: 1200, height: 800))
+        let webView = makeView()
+        container.attach(webView)
+
+        container.setFrameSize(NSSize(width: 600, height: 800))
+        #expect(webView.frame.size == CGSize(width: 600, height: 800))
+
+        container.frame = NSRect(x: 0, y: 0, width: 300, height: 400)
+        #expect(webView.frame.size == CGSize(width: 300, height: 400))
+    }
+
     @Test("Container reports no intrinsic size even with a wide page")
     func containerIgnoresDocumentWidth() {
         let container = WebViewContainer(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
