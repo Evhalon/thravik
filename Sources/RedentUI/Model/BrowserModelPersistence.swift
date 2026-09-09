@@ -31,14 +31,13 @@ extension BrowserModel {
 
         let session = durableSession()
         let previous = saveTask
-        saveTask = Task.detached(priority: .utility) { [sessionStore, weak self] in
+        saveTask = Task { [sessionStore] in
             await previous?.value
-            do { try sessionStore.saveRecoverable(session) }
-            catch {
-                await MainActor.run {
-                    self?.actionError = "Workspace could not be saved. Existing saved data was preserved."
-                }
-            }
+            let saved = await Task.detached(priority: .utility) {
+                (try? sessionStore.saveRecoverable(session)) != nil
+            }.value
+            guard !saved else { return }
+            actionError = "Workspace could not be saved. Existing saved data was preserved."
         }
     }
 

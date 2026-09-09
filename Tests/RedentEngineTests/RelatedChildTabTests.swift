@@ -43,14 +43,14 @@ struct RelatedChildTabTests {
         let browser = controller()
         let parent = try #require(browser.newTab(url: URL(string: "https://example.com")) as? WebTab)
         parent.snapshot.title = "Parent"
+        let firstURL = try #require(URL(string: "https://example.com/a"))
         browser.openPopupTab(
-            configuration: WKWebViewConfiguration(),
-            url: try #require(URL(string: "https://example.com/a")), of: parent.snapshot
+            configuration: WKWebViewConfiguration(), url: firstURL, of: parent.snapshot
         )
         let liveParent = try #require(browser.webTabs.first)
+        let secondURL = try #require(URL(string: "https://example.com/b"))
         browser.openPopupTab(
-            configuration: WKWebViewConfiguration(),
-            url: try #require(URL(string: "https://example.com/b")), of: liveParent.snapshot
+            configuration: WKWebViewConfiguration(), url: secondURL, of: liveParent.snapshot
         )
         #expect(browser.session.groups.count == 1)
         #expect(browser.session.groups[0].tabIDs.count == 3)
@@ -72,9 +72,9 @@ struct RelatedChildTabTests {
         let browser = controller()
         let parent = try #require(browser.newTab(url: URL(string: "https://example.com")) as? WebTab)
         parent.snapshot.title = "Parent"
+        let childURL = try #require(URL(string: "https://example.com/a"))
         let child = browser.openPopupTab(
-            configuration: WKWebViewConfiguration(),
-            url: try #require(URL(string: "https://example.com/a")), of: parent.snapshot
+            configuration: WKWebViewConfiguration(), url: childURL, of: parent.snapshot
         )
         browser.close(parent.id)
         #expect(child.snapshot.parentTabID == nil)

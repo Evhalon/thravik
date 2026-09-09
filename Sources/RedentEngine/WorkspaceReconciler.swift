@@ -38,7 +38,7 @@ extension TabController {
         workspace.spaces = state.spaces
         workspace.selectedSpaceID = state.selectedSpaceID
         workspace.selectedTabID = state.selectedTabID
-        selectedID = state.selectedTabID
+        updateSelectedID(state.selectedTabID)
         touchActivity(of: selectedID)
         onChange?()
     }
@@ -74,7 +74,7 @@ extension TabController {
             return tab
         }
         workspace = state
-        selectedID = state.selectedTabID
+        updateSelectedID(state.selectedTabID)
         changed()
     }
 }

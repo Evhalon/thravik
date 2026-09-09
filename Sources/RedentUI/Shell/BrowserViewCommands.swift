@@ -32,6 +32,9 @@ struct BrowserViewCommands: Commands {
             Button("Previous Tab") { model?.tabs.selectPrevious() }
                 .keyboardShortcut(.tab, modifiers: [.control, .shift])
                 .disabled(model == nil)
+            Button("Last Active Tab") { model?.tabs.selectPreviouslyActiveTab() }
+                .keyboardShortcut(.tab, modifiers: .control)
+                .disabled(model == nil)
         }
     }
 

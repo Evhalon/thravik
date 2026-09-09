@@ -15,12 +15,23 @@ extension TabController {
     public func select(_ id: UUID) {
         guard selectedID != id, let tab = webTabs.first(where: { $0.id == id }) else { return }
         touchActivity(of: selectedID)
-        selectedID = id
+        updateSelectedID(id)
         if let spaceID = tab.snapshot.spaceID, workspace.selectedSpaceID != spaceID {
             workspace.selectedSpaceID = spaceID
         }
         touchActivity(of: id)
         selectionChanged()
+    }
+
+    /// Selecting this tab swaps the two most recently active tabs, which is
+    /// the behavior users expect from Control-Tab.
+    public func selectPreviouslyActiveTab() {
+        guard let id = previouslySelectedID else { return }
+        guard webTabs.contains(where: { $0.id == id }) else {
+            previouslySelectedID = nil
+            return
+        }
+        select(id)
     }
 
     public var session: BrowserSession {
@@ -60,5 +71,11 @@ extension TabController {
         if let index = workspace.spaces.firstIndex(where: { $0.id == workspace.selectedSpaceID }) {
             workspace.spaces[index].selectedTabID = selectedID
         }
+    }
+
+    func updateSelectedID(_ id: UUID?) {
+        guard selectedID != id else { return }
+        previouslySelectedID = selectedID
+        selectedID = id
     }
 }

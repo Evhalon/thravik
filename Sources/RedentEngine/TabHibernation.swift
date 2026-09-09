@@ -7,6 +7,7 @@ extension WebTab {
     /// `snapshot` intact. Idempotent.
     public func hibernate() {
         guard let view = webView else { return }
+        let host = view.superview as? WebViewHost
         teardownObservers()
         view.configuration.userContentController.removeScriptMessageHandler(
             forName: PageScripts.messageHandlerName, contentWorld: PageScripts.contentWorld
@@ -16,6 +17,7 @@ extension WebTab {
         view.navigationDelegate = nil
         view.uiDelegate = nil
         view.removeFromSuperview()
+        host?.removeFromSuperview()
         navigationDelegate = nil
         webView = nil
         isHibernated = true

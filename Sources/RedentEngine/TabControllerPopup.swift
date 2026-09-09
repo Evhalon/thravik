@@ -59,7 +59,7 @@ extension TabController {
         snapshot.groupID = parent.groupID
         let tab = WebTab(snapshot: snapshot, controller: self)
         webTabs.insert(tab, at: insertIndexAfterCurrent())
-        selectedID = tab.id
+        updateSelectedID(tab.id)
         return tab
     }
 

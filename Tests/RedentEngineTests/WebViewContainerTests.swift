@@ -75,6 +75,39 @@ struct WebViewContainerTests {
         #expect(webView.superview == nil)
     }
 
+    @Test("Attached Inspector stays with its tab between SwiftUI hosts")
+    func inspectorCompanionMovesWithWebView() {
+        let window = makeWindow()
+        let first = WebViewContainer(frame: window.contentView?.bounds ?? .zero)
+        window.contentView?.addSubview(first)
+        let webView = makeView()
+        first.attach(webView)
+        let inspector = NSView()
+        webView.superview?.addSubview(inspector)
+
+        first.removeFromSuperview()
+        let second = WebViewContainer(frame: window.contentView?.bounds ?? .zero)
+        window.contentView?.addSubview(second)
+        second.attach(webView)
+
+        #expect(inspector.superview === webView.superview)
+        #expect(webView.superview?.superview === second)
+    }
+
+    @Test("Attached Inspector receives a page frame change on resize")
+    func inspectorCompanionTracksHostResize() {
+        let container = WebViewContainer(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        let webView = makeView()
+        container.attach(webView)
+        let inspector = NSView()
+        webView.superview?.addSubview(inspector)
+        webView.frame = NSRect(x: 0, y: 0, width: 250, height: 300)
+
+        container.setFrameSize(NSSize(width: 600, height: 300))
+
+        #expect(webView.frame.size == CGSize(width: 450, height: 300))
+    }
+
     private func makeWindow() -> NSWindow {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),

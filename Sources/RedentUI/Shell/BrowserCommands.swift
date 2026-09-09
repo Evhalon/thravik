@@ -18,6 +18,9 @@ public struct BrowserCommands: Commands {
             Button("Command Bar…") { model?.showCommands() }
                 .keyboardShortcut("k")
                 .disabled(model == nil)
+            Button("Reload Page") { model?.selectedTab?.reload() }
+                .keyboardShortcut("r")
+                .disabled(model?.selectedTab == nil)
             Button("Undo Browser Action") { model?.tabs.undo() }
                 .keyboardShortcut("z", modifiers: [.command, .option])
                 .disabled(!(model?.tabs.canUndo ?? false))

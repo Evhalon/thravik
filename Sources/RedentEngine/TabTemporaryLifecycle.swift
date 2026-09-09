@@ -12,7 +12,7 @@ extension TabController {
         snapshot.lifespan = .temporary(sessionID: UUID(), expiresAt: expiresAt, cleanupOnClose: true)
         let tab = WebTab(snapshot: snapshot, controller: self)
         webTabs.insert(tab, at: insertIndexAfterCurrent())
-        selectedID = tab.id
+        updateSelectedID(tab.id)
         tab.wake(loading: url)
         changed()
         logger.notice("newTemporaryTab")

@@ -1,7 +1,7 @@
 import AppKit
 import WebKit
 
-/// Sizes its web view in `layout()` rather than with constraints.
+/// Sizes its WebKit host in `layout()` rather than with constraints.
 ///
 /// Constraints looked tidier but could not survive element fullscreen: WebKit
 /// lifts the web view out into its own window and hands it back afterwards, and
@@ -34,7 +34,7 @@ final class WebViewContainer: NSView {
     }
 
     func attach(_ webView: WKWebView?) {
-        guard subviews.first !== webView else { fillHostedView(); return }
+        guard hostedView?.webView !== webView else { fillHostedView(); return }
         if let webView {
             // WebKit lifts the view into its own window for element fullscreen
             // and returns it on exit; re-adopting it while it is up there would
@@ -43,11 +43,9 @@ final class WebViewContainer: NSView {
             // a tab changing panes, and this container has to take it.
             if let hostWindow = webView.window, let ownWindow = window, hostWindow !== ownWindow { return }
             parkHostedView()
-            webView.isHidden = false
-            webView.translatesAutoresizingMaskIntoConstraints = true
-            webView.setContentHuggingPriority(.defaultLow, for: .horizontal)
-            webView.setContentCompressionResistancePriority(.fittingSizeCompression, for: .horizontal)
-            addSubview(webView)
+            let host = WebViewHost.containing(webView) ?? WebViewHost(webView: webView)
+            host.isHidden = false
+            addSubview(host)
             fillHostedView()
             return
         }
@@ -66,7 +64,7 @@ final class WebViewContainer: NSView {
 
     /// A frame change does not schedule `layout()`, and SwiftUI only calls
     /// `updateNSView` when something it observes changed — neither happens while
-    /// the user drags the window edge. Without this the web view kept the width
+    /// the user drags the window edge. Without this the WebKit host kept the width
     /// it was born with and the page had to be scrolled sideways to be read.
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
@@ -74,46 +72,17 @@ final class WebViewContainer: NSView {
     }
 
     private func fillHostedView() {
-        guard let hosted = subviews.first, hosted.frame != bounds else { return }
+        guard let hosted = hostedView, hosted.frame != bounds else { return }
         hosted.frame = bounds
     }
 
     private func parkHostedView() {
-        guard let hosted = subviews.first as? WKWebView else {
+        guard let hosted = hostedView else {
             subviews.forEach { $0.removeFromSuperview() }
             return
         }
         WebViewWindowPark.park(hosted, from: window)
     }
-}
 
-/// SwiftUI tears the host down on every tab or Space switch. Leaving a live
-/// `WKWebView` with no window lets WebKit kill the content process, which is
-/// why coming back to a Space reloaded every page. The park stays in the
-/// window so the process stays.
-@MainActor
-private enum WebViewWindowPark {
-    static let identifier = NSUserInterfaceItemIdentifier("redent.web-park")
-
-    static func park(_ webView: WKWebView, from window: NSWindow?) {
-        webView.isHidden = true
-        webView.frame = .zero
-        guard let window, let park = host(in: window) else {
-            webView.removeFromSuperview()
-            return
-        }
-        if webView.superview !== park { park.addSubview(webView) }
-    }
-
-    private static func host(in window: NSWindow) -> NSView? {
-        let parent = window.contentView?.superview ?? window.contentView
-        if let existing = parent?.subviews.first(where: { $0.identifier == identifier }) {
-            return existing
-        }
-        let park = NSView(frame: .zero)
-        park.identifier = identifier
-        park.isHidden = true
-        parent?.addSubview(park)
-        return park
-    }
+    private var hostedView: WebViewHost? { subviews.first as? WebViewHost }
 }

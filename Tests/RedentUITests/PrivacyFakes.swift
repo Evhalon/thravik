@@ -71,6 +71,7 @@ final class FakeBrowser: BrowserControlling {
     func close(_ id: UUID) {}
     func closeOthers(than id: UUID) {}
     func select(_ id: UUID) {}
+    func selectPreviouslyActiveTab() {}
     func selectNext() {}
     func selectPrevious() {}
     func move(fromOffsets: IndexSet, toOffset: Int) {}

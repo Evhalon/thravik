@@ -37,7 +37,7 @@ extension TabController {
         }
         webTabs.removeAll { closingIDs.contains($0.id) }
         pruneRelatedAfterRemoval()
-        selectedID = id
+        updateSelectedID(id)
         changed()
     }
 
@@ -106,7 +106,7 @@ extension TabController {
         undoHistory.record(session)
         let tab = WebTab(snapshot: snapshot, controller: self)
         webTabs.insert(tab, at: insertIndexAfterCurrent())
-        selectedID = tab.id
+        updateSelectedID(tab.id)
         workspace.selectedSpaceID = snapshot.spaceID
         tab.wake(loading: nil)
         changed()

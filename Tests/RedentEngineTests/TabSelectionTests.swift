@@ -82,6 +82,18 @@ struct TabSelectionTests {
         browser.applyOrder([ids[2], ids[0]])
         #expect(browser.visibleTabs.map(\.id) == [ids[2], ids[1], ids[0]])
     }
+
+    @Test("Previously active tab toggles the last two selections")
+    func previousActiveTabTogglesSelections() {
+        let browser = controller(titles: ["One", "Two", "Three"])
+        let ids = browser.visibleTabs.map(\.id)
+        browser.select(ids[0])
+        browser.select(ids[1])
+        browser.selectPreviouslyActiveTab()
+        #expect(browser.selectedID == ids[0])
+        browser.selectPreviouslyActiveTab()
+        #expect(browser.selectedID == ids[1])
+    }
 }
 
 private struct MuteLogger: EventLogging {

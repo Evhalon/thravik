@@ -38,6 +38,7 @@ public final class TabController: BrowserControlling {
     @ObservationIgnored private(set) var settings: BrowserSettings
     @ObservationIgnored let logger: any EventLogging
     @ObservationIgnored var closedStack: [TabSnapshot] = []
+    @ObservationIgnored var previouslySelectedID: UUID?
     static let closedStackLimit = 10
     var workspace: BrowserSession
     let undoHistory = BrowserUndoHistory()
@@ -101,7 +102,7 @@ public final class TabController: BrowserControlling {
         }
         let tab = WebTab(snapshot: snapshot, controller: self)
         webTabs.insert(tab, at: insertIndexAfterCurrent())
-        selectedID = tab.id
+        updateSelectedID(tab.id)
         // A tab with no address shows Redent's own new-tab page, which is not a
         // web view. Building one anyway is what made ⌘T stutter.
         if let url { tab.wake(loading: url) } else { warmUp() }
@@ -114,7 +115,7 @@ public final class TabController: BrowserControlling {
         guard let index = webTabs.firstIndex(where: { $0.id == id }) else { return }
         let tab = webTabs[index]
         if !tab.snapshot.isTemporary { undoHistory.record(session) }
-        if selectedID == id { selectedID = selectionAfterClosing(id) }
+        if selectedID == id { updateSelectedID(selectionAfterClosing(id)) }
         tab.hibernate()
         webTabs.remove(at: index)
         pruneRelatedAfterRemoval()
