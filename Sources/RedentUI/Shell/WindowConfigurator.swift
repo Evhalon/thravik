@@ -28,7 +28,7 @@ struct WindowConfigurator: NSViewRepresentable {
         if window.titleVisibility != .hidden { window.titleVisibility = .hidden }
         // Deliberately NOT movable by background: the chrome is full of drag
         // targets (the sidebar seam, tab reordering), and window-dragging
-        // hijacks all of them. The titlebar strip still moves the window.
+        // hijacks all of them. Empty chrome uses `TitlebarDragRegion` instead.
         if window.isMovableByWindowBackground { window.isMovableByWindowBackground = false }
         // A hidden titlebar can leave the window without the behaviour that
         // makes the green button and ⌃⌘F enter full screen rather than zoom,

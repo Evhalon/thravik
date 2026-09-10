@@ -36,6 +36,8 @@ struct TopTabStrip: View {
         }
         .padding(.horizontal, Metric.gutter)
         .frame(height: Metric.tabRowHeight + 14)
+        .frame(maxWidth: .infinity)
+        .background { TitlebarDragRegion() }
         .animation(.spring(duration: 0.3), value: model.tabs.selectedID)
     }
 

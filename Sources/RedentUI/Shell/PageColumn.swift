@@ -49,6 +49,7 @@ struct PageColumn: View {
             ChromeBar(model: model)
         }
         .padding(.leading, model.isSidebarVisible ? 0 : Metric.windowButtonsWidth)
+        .background { TitlebarDragRegion() }
     }
 
     /// The sliver the page owes the window buttons while focus mode has put
@@ -56,7 +57,8 @@ struct PageColumn: View {
     @ViewBuilder
     private var windowButtonClearance: some View {
         if !model.isSidebarVisible {
-            Color.clear.frame(height: Metric.windowButtonsHeight)
+            TitlebarDragRegion()
+                .frame(height: Metric.windowButtonsHeight)
         }
     }
 

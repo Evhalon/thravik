@@ -25,6 +25,8 @@ struct ChromeBar: View {
         }
         .padding(.horizontal, Metric.tightGutter + 2)
         .padding(.vertical, Metric.tightGutter)
+        .frame(maxWidth: .infinity)
+        .background { TitlebarDragRegion() }
     }
 
     private var overflowMenu: some View {

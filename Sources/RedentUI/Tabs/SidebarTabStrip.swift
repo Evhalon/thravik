@@ -30,6 +30,10 @@ struct SidebarTabStrip: View {
         .background(alignment: .top) {
             SpaceWash(space: model.tabs.session.spaces.first { $0.id == model.tabs.session.selectedSpaceID })
         }
+        .overlay(alignment: .top) {
+            TitlebarDragRegion()
+                .frame(height: Metric.toolbarHeight)
+        }
         .overlay { swipeOverlay }
         .animation(.easeInOut(duration: 0.22), value: model.tabs.session.selectedSpaceID)
     }
