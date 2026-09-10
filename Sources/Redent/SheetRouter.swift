@@ -22,6 +22,7 @@ struct SheetRouter: View {
                 SettingsSheet(
                     settings: settingsBinding,
                     updates: app.updates,
+                    defaultBrowser: app.defaultBrowser,
                     onOpenPasswords: { model.sheet = .passwords },
                     onOpenAuthenticatorImport: { model.sheet = .importAuthenticator },
                     onResetWorkspace: { model.resetWorkspace() }
@@ -88,6 +89,12 @@ struct SheetRouter: View {
                         spaceID: model.currentSpaceID
                     )
                 ))
+
+            case .downloads:
+                DownloadsPanel(model: app.downloads)
+
+            case .defaultBrowser:
+                DefaultBrowserSheet(model: app.defaultBrowser)
 
             case .importAuthenticator:
                 AuthenticatorImportView(importer: app.importer, store: app.authenticator)

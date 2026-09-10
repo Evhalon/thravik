@@ -37,7 +37,8 @@ final class WindowContainer {
             // A private or secondary window's workspace is deliberately not
             // durable: only the primary window writes the saved session.
             session: spec.isPrimary ? app.sessionStore : EphemeralSessionStore(),
-            logger: app.logger
+            logger: app.logger,
+            downloads: app.downloads
         )
         let features = BrowserFeatures(
             autofill: AutofillCoordinator(
@@ -54,6 +55,7 @@ final class WindowContainer {
             AnyView(BrowserPageView(controller: controller, tabID: id))
         }
 
+        controller.downloads = app.downloadCoordinator
         controller.permissionDecider = { [weak app] key, permission in
             app?.permissions.decision(key, permission) ?? .ask
         }

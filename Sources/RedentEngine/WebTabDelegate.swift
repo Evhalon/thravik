@@ -9,7 +9,9 @@ import WebKit
 /// content process — alive forever, even past `hibernate()`.
 @MainActor
 final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
-    private weak var tab: WebTab?
+    /// Readable inside the module so the download hooks in a sibling file can
+    /// reach the tab that started the fetch.
+    private(set) weak var tab: WebTab?
 
     init(tab: WebTab) {
         self.tab = tab

@@ -45,14 +45,17 @@ struct SilentHistory: HistoryStoring {
 final class FakeBrowser: BrowserControlling {
     private(set) var forgottenDomains: [String] = []
     private let forgettable: Int
+    /// Seeded by the tests that need tabs to act on; empty otherwise.
+    var stubTabs: [InertTab] = []
+    private(set) var selectionCalls: [UUID] = []
 
     init(forgettable: Int = 0) { self.forgettable = forgettable }
 
-    var tabs: [any BrowserTab] { [] }
+    var tabs: [any BrowserTab] { stubTabs }
     var selectedID: UUID?
-    var selectedTab: (any BrowserTab)? { nil }
+    var selectedTab: (any BrowserTab)? { stubTabs.first { $0.id == selectedID } }
     var session = BrowserSession()
-    var visibleTabs: [any BrowserTab] { [] }
+    var visibleTabs: [any BrowserTab] { stubTabs }
     var canReopen = false
     var canUndo = false
     var isPrivate = false
@@ -70,7 +73,10 @@ final class FakeBrowser: BrowserControlling {
     func sweepExpiredTabs(now: Date) -> UUID? { nil }
     func close(_ id: UUID) {}
     func closeOthers(than id: UUID) {}
-    func select(_ id: UUID) {}
+    func select(_ id: UUID) {
+        selectionCalls.append(id)
+        selectedID = id
+    }
     func selectPreviouslyActiveTab() {}
     func selectNext() {}
     func selectPrevious() {}

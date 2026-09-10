@@ -18,6 +18,23 @@
     <string>Thravik uses the camera only to scan the QR code you export from Google Authenticator. Nothing is recorded or sent anywhere.</string>
     <key>NSAppTransportSecurity</key>
     <dict><key>NSAllowsArbitraryLoads</key><true/></dict>
+    <key>LSApplicationCategoryType</key>            <string>public.app-category.productivity</string>
+    <!-- Declared so macOS lists Thravik among the browsers a web link can be
+         handed to, and so an .html file on disk can open here. -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleTypeName</key><string>Web page</string>
+        <key>CFBundleTypeRole</key><string>Viewer</string>
+        <key>LSHandlerRank</key><string>Alternate</string>
+        <key>LSItemContentTypes</key>
+        <array>
+          <string>public.html</string>
+          <string>public.xhtml</string>
+          <string>org.w3.xhtml</string>
+        </array>
+      </dict>
+    </array>
     <key>CFBundleURLTypes</key>
     <array>
       <dict>

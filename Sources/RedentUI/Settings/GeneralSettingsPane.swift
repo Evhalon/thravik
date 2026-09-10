@@ -5,6 +5,7 @@ import SwiftUI
 /// Search engine and homepage — the two settings people reach for first.
 struct GeneralSettingsPane: View {
     @Binding var settings: BrowserSettings
+    let defaultBrowser: DefaultBrowserModel
     let onResetWorkspace: () -> Void
     @State private var isConfirmingReset = false
 
@@ -34,6 +35,9 @@ struct GeneralSettingsPane: View {
                     .padding(.horizontal, 12)
                     .frame(height: Metric.controlHeight)
                     .background { fieldChrome }
+            }
+            SettingsSection("DEFAULT BROWSER") {
+                DefaultBrowserRow(model: defaultBrowser)
             }
             SettingsSection("RESET") {
                 resetRow

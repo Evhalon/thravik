@@ -42,6 +42,11 @@ extension BrowserModel {
         case .goForward: selectedTab?.goForward()
         case .toggleFocusMode: toggleFocusMode()
         case .toggleSidebar: toggleSidebar()
+        case .reloadPage: reloadPage()
+        case .bookmarkPage: Task { await toggleBookmark() }
+        case .findOnPage: showFindBar()
+        case .printPage: printPage()
+        case .showScreen(let screen): sheet = SheetRoute(screen)
         }
     }
 

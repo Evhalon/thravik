@@ -30,9 +30,12 @@ public struct BrowserCommands: Commands {
                 .keyboardShortcut("s")
                 .disabled(model == nil)
         }
+        BrowserEditCommands(model: model)
         BrowserViewCommands(model: model)
+        BrowserTabCommands(model: model)
+        BrowserPageCommands(model: model)
+        BrowserLibraryCommands(model: model)
         BrowserSpaceCommands(model: model)
-        CommandGroup(after: .appSettings) { libraryItems }
     }
 
     @ViewBuilder
@@ -56,19 +59,6 @@ public struct BrowserCommands: Commands {
         Button("Reopen Closed Tab") { model?.tabs.reopenLastClosed() }
             .keyboardShortcut("t", modifiers: [.command, .shift])
             .disabled(!(model?.tabs.canReopen ?? false))
-    }
-
-    @ViewBuilder
-    private var libraryItems: some View {
-        Button("Tab Timeline…") { model?.sheet = .timeline }
-            .keyboardShortcut("y", modifiers: [.command, .shift])
-        Button("Site Privacy…") { model?.sheet = .sitePrivacy }
-            .keyboardShortcut("i", modifiers: [.command, .shift])
-        Button("History…") { model?.sheet = .history }
-        Button("Bookmarks…") { model?.sheet = .bookmarks }
-        Button("Passwords…") { model?.sheet = .passwords }
-        Button("Authenticator…") { model?.sheet = .authenticator }
-        Button("Import from Another Browser…") { model?.sheet = .importBrowser }
     }
 
     private var sidebarTitle: String {

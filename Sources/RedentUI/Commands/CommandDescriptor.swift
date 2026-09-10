@@ -72,6 +72,15 @@ public enum DefaultCommandDescriptors {
             guard context.spaces.count > 1, let id = context.selectedSpaceID else { return nil }
             return .deleteSpace(id)
         },
+        CommandDescriptor(id: "reload", title: "Reload Page", keywords: ["refresh"], symbol: "arrow.clockwise") { _, _ in .reloadPage },
+        CommandDescriptor(id: "bookmark", title: "Bookmark Page", keywords: ["save", "star", "favorite"], symbol: "star") { _, _ in .bookmarkPage },
+        CommandDescriptor(id: "find", title: "Find on Page", keywords: ["search", "text"], symbol: "text.magnifyingglass") { _, _ in .findOnPage },
+        CommandDescriptor(id: "print", title: "Print Page", keywords: ["pdf", "paper"], symbol: "printer") { _, _ in .printPage },
+        CommandDescriptor(id: "downloads", title: "Downloads", keywords: ["files", "saved"], symbol: "arrow.down.circle") { _, _ in .showScreen(.downloads) },
+        CommandDescriptor(id: "bookmarks", title: "Bookmarks", keywords: ["saved", "library"], symbol: "book") { _, _ in .showScreen(.bookmarks) },
+        CommandDescriptor(id: "history", title: "History", keywords: ["visited", "recent"], symbol: "clock.arrow.circlepath") { _, _ in .showScreen(.history) },
+        CommandDescriptor(id: "passwords", title: "Passwords", keywords: ["logins", "vault"], symbol: "key") { _, _ in .showScreen(.passwords) },
+        CommandDescriptor(id: "settings", title: "Settings", keywords: ["preferences", "options"], symbol: "gearshape") { _, _ in .showScreen(.settings) },
         CommandDescriptor(id: "move-tab", title: "Move Tab", keywords: ["space", "to"], symbol: "arrow.right") { context, query in
             guard let tabID = context.selectedTabID,
                   let name = CommandArguments.after("move tab to", in: query),

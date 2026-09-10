@@ -1,5 +1,16 @@
 import Foundation
 
+/// A screen the chrome can put in front of the user. Named here rather than in
+/// the UI layer so an action can ask for one without the domain knowing what a
+/// sheet is.
+public enum BrowserScreen: String, Hashable, Sendable, CaseIterable {
+    case downloads
+    case bookmarks
+    case history
+    case passwords
+    case settings
+}
+
 /// An intent emitted by menus, gestures, and the Command Bar.
 public enum BrowserAction: Hashable, Sendable {
     case newTab(URL?)
@@ -17,4 +28,10 @@ public enum BrowserAction: Hashable, Sendable {
     case goForward
     case toggleFocusMode
     case toggleSidebar
+    case reloadPage
+    /// Adds the current page to bookmarks, or removes the bookmark it has.
+    case bookmarkPage
+    case findOnPage
+    case printPage
+    case showScreen(BrowserScreen)
 }
