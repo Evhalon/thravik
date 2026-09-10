@@ -3,10 +3,9 @@ import SwiftUI
 
 /// The window's one toolbar row.
 ///
-/// It owns no space of its own: `PageColumn` floats it over the top of the page
-/// and only while the pointer is up there, so the body keeps the whole card.
-/// The same row serves both tab layouts, so the address never moves when the
-/// rail is toggled.
+/// `PageColumn` gives it a row above the page card rather than floating it over
+/// the content, so it never covers a site's own header. The same row serves both
+/// tab layouts, so the address never moves when the rail is toggled.
 struct ChromeBar: View {
     @Bindable var model: BrowserModel
 

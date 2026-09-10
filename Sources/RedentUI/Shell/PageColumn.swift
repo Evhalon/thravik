@@ -1,52 +1,35 @@
 import RedentDesign
 import SwiftUI
 
-/// The page, and the chrome that floats over the top of it.
+/// The chrome, and the page underneath it.
 ///
-/// The toolbar owns no height: the body runs flush to the top of the card, and
-/// the toolbar arrives as a floating panel over it when the pointer reaches the
-/// top band. Overlaid rather than inserted, so revealing it never reflows the
-/// page underneath — a web view relaid out on every hover is both expensive and
-/// visibly jumpy.
+/// The toolbar owns a row of its own at the top of the column: it is always on
+/// screen and the page begins below it. Overlaying it on the page cost nothing
+/// in height but covered the top of every site — headers, banners and sticky
+/// navigation bars sat under a panel that came and went with the pointer.
+///
+/// Focus mode is the one case that still gives the row back to the page.
 struct PageColumn: View {
     @Bindable var model: BrowserModel
     let usesTopStrip: Bool
 
-    @State private var isProbeHovered = false
-    @State private var isChromeHovered = false
-
     var body: some View {
-        ZStack(alignment: .top) {
-            page
-            probe
+        VStack(spacing: 0) {
             chrome
+            page
         }
-        .background(Palette.pageChrome)
-        .pageCard(isInset: !model.isFocusMode)
-        .animation(.easeOut(duration: 0.16), value: isRevealed)
+        .animation(.spring(duration: 0.28), value: model.isFocusMode)
     }
 
-    /// Without the rail there is nothing left to hold the window buttons, so the
-    /// page gives up that much of its top edge. With it, the page is flush.
-    @ViewBuilder
     private var page: some View {
-        if model.isSidebarVisible {
-            ContentArea(model: model)
-        } else {
-            VStack(spacing: 0) {
-                Color.clear.frame(height: Metric.windowButtonsHeight)
-                ContentArea(model: model)
-            }
-        }
+        ContentArea(model: model)
+            .background(Palette.pageChrome)
+            .pageCard(isInset: !model.isFocusMode)
     }
 
-    /// Deep enough to cover the panel it summons, so the pointer never crosses a
-    /// dead band on its way down to the address field.
-    private var probe: some View {
-        HoverProbe { isProbeHovered = $0 }
-            .frame(height: Metric.chromeProbeHeight)
-    }
-
+    /// Without the rail there is nothing else holding the window buttons, so the
+    /// row starts clear of them. With it, they sit over the rail and the row
+    /// runs to the seam.
     @ViewBuilder
     private var chrome: some View {
         if !model.isFocusMode {
@@ -54,22 +37,8 @@ struct PageColumn: View {
                 if usesTopStrip { TopTabStrip(model: model) }
                 ChromeBar(model: model)
             }
-            .floatingGlass(in: RoundedRectangle(cornerRadius: Metric.cornerRadius, style: .continuous))
-            .frame(maxWidth: 780)
-            .padding(.top, Metric.tightGutter)
-            .opacity(isRevealed ? 1 : 0)
-            .offset(y: isRevealed ? 0 : -Metric.gutter)
-            .onHover { isChromeHovered = $0 }
-            .allowsHitTesting(isRevealed)
+            .padding(.leading, model.isSidebarVisible ? 0 : Metric.windowButtonsWidth)
+            .transition(.move(edge: .top).combined(with: .opacity))
         }
-    }
-
-    /// Anything the user is in the middle of pins the chrome open: an address
-    /// they are typing must not vanish because the pointer drifted onto the page.
-    private var isRevealed: Bool {
-        isProbeHovered
-            || isChromeHovered
-            || model.address.isEditing
-            || model.suggestions.isOpen(for: .addressBar)
     }
 }

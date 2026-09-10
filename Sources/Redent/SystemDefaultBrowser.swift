@@ -12,11 +12,18 @@ struct SystemDefaultBrowser: DefaultBrowserManaging {
     /// "did the call succeed" but "does a web link arrive here".
     private static let probe = URL(string: "https://example.com")
 
+    /// Compared by bundle identifier rather than by path, because that is what
+    /// Launch Services itself keys on: with a copy installed in Applications
+    /// and another running from a build directory, macOS hands links to the
+    /// one it prefers, and a path comparison then reports a switch that did
+    /// work as one that did not. An update swaps the bundle in place for the
+    /// same reason — the identifier is the stable half.
     func isDefault() async -> Bool {
         guard let probe = Self.probe,
-              let handler = NSWorkspace.shared.urlForApplication(toOpen: probe)
+              let handler = NSWorkspace.shared.urlForApplication(toOpen: probe),
+              let handlerID = Bundle(url: handler)?.bundleIdentifier
         else { return false }
-        return handler.standardizedFileURL == Bundle.main.bundleURL.standardizedFileURL
+        return handlerID == Bundle.main.bundleIdentifier
     }
 
     /// macOS puts up its own confirmation panel, and a decline comes back as a
