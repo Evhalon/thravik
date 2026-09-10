@@ -23,9 +23,15 @@ public enum Metric {
     public static let tightGutter: CGFloat = 6
     /// The inset between the chrome and the page card, on every side.
     public static let pageInset: CGFloat = 3
+    /// The band along the top of the page that summons the toolbar. It takes no
+    /// layout space and no clicks — deep enough to cover the row it reveals.
+    public static let chromeProbeHeight: CGFloat = 64
     /// Clearance the toolbar row leaves on its left when the rail is not there
     /// to hold the window buttons: chrome drawn under them is unclickable.
     public static let windowButtonsWidth: CGFloat = 76
+    /// What the page gives up along its top edge while neither the rail nor the
+    /// toolbar is there to hold the window buttons.
+    public static let windowButtonsHeight: CGFloat = 28
 
     /// A true hairline at any scale factor.
     public static let hairWidth: CGFloat = 0.75
