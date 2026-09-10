@@ -7,6 +7,7 @@ import SwiftUI
 /// next step, so the page offers it rather than showing an empty grid.
 struct NewTabEmptyState: View {
     let onImport: () -> Void
+    let onCreateFolder: () -> Void
 
     var body: some View {
         VStack(spacing: Metric.gutter + 2) {
@@ -24,9 +25,14 @@ struct NewTabEmptyState: View {
                     .foregroundStyle(Palette.chromeSecondaryText)
             }
 
-            Button("Import…", action: onImport)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
+            HStack(spacing: Metric.tightGutter) {
+                Button("Import…", action: onImport)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+                Button("New Favorites Folder", action: onCreateFolder)
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+            }
         }
         .padding(.vertical, 22)
         .padding(.horizontal, 34)

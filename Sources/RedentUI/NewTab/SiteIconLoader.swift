@@ -40,6 +40,16 @@ public actor SiteIconLoader {
         return data
     }
 
+    /// Warms the small set of icons a hovered folder is about to reveal.
+    public func preload(hosts: [String]) async {
+        let candidates = Array(Set(hosts).prefix(12))
+        await withTaskGroup(of: Void.self) { group in
+            for host in candidates {
+                group.addTask { [self] in _ = await icon(for: host) }
+            }
+        }
+    }
+
     private func download(host: String) async -> Data? {
         var tried = Set<URL>()
         for url in SiteIconProbe.urls(for: host) {

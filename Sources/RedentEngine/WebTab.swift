@@ -16,6 +16,7 @@ public final class WebTab: Identifiable, BrowserTab {
     public internal(set) var snapshot: TabSnapshot
     public internal(set) var title: String
     public internal(set) var url: URL?
+    public internal(set) var pageTrustIssue: PageTrustIssue?
     public internal(set) var progress: Double = 0
     public internal(set) var isLoading: Bool = false
     public internal(set) var canGoBack: Bool = false
@@ -38,6 +39,8 @@ public final class WebTab: Identifiable, BrowserTab {
 
     @ObservationIgnored let navigationEvents = TabNavigationEvents()
     @ObservationIgnored let timelineRecorder = TabTimelineRecorder()
+    @ObservationIgnored var attemptedURL: URL?
+    @ObservationIgnored var acceptedInvalidCertificateKeys: Set<SiteKey> = []
     /// Bounded by the timeline's own cap, and released with the web view: these
     /// keep a whole back/forward list alive otherwise.
     @ObservationIgnored var liveItems: [UUID: WKBackForwardListItem] = [:]
@@ -51,6 +54,8 @@ public final class WebTab: Identifiable, BrowserTab {
         self.snapshot = snapshot
         self.title = snapshot.title
         self.url = snapshot.url
+        self.pageTrustIssue = nil
+        self.attemptedURL = snapshot.url
         self.origin = snapshot.url.flatMap(Origin.init(url:))
         self.isPinned = snapshot.isPinned
         self.zoom = snapshot.zoom
@@ -58,6 +63,7 @@ public final class WebTab: Identifiable, BrowserTab {
     }
 
     public func load(_ url: URL) {
+        beginNavigation(to: url)
         if webView == nil {
             wake(loading: url)
         } else if let webView {
@@ -98,12 +104,39 @@ public final class WebTab: Identifiable, BrowserTab {
         webView?.pageZoom = clamped
     }
 
-    public func goBack() { webView?.goBack() }
-    public func goForward() { webView?.goForward() }
+    public func goBack() {
+        beginNavigation()
+        webView?.goBack()
+    }
+
+    public func goForward() {
+        beginNavigation()
+        webView?.goForward()
+    }
     public func reload() {
         guard let webView else { return }
-        BrowserUserAgent.apply(to: webView, for: webView.url ?? url)
+        let target = webView.url ?? url
+        beginNavigation(to: target)
+        BrowserUserAgent.apply(to: webView, for: target)
         webView.reload()
     }
     public func stopLoading() { webView?.stopLoading() }
+
+    func beginNavigation(to url: URL? = nil) {
+        pageTrustIssue = nil
+        guard let url else { return }
+        attemptedURL = url
+        self.url = url
+        snapshot.url = url
+        origin = Origin(url: url)
+    }
+
+    func handleProvisionalFailure(_ error: any Error) {
+        guard let trustIssue = PageTrustIssueResolver.resolve(error) else { return }
+        pageTrustIssue = trustIssue
+        beginNavigation(to: attemptedURL)
+        pageTrustIssue = trustIssue
+    }
+
+    func finishNavigation() { attemptedURL = nil }
 }

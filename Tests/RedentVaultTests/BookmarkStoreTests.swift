@@ -106,4 +106,19 @@ struct BookmarkStoreTests {
         #expect(await store.folders(in: BrowserSpace.workID).map(\.label) == ["Bookmarks Bar / Work"])
         #expect(await store.folders(in: BrowserSpace.travelID).isEmpty)
     }
+
+    @Test("Deleting a folder leaves its bookmarks untouched")
+    func deletesFolder() async throws {
+        let store = makeStore()
+        let folder = BookmarkFolder(path: ["Reading"], spaceID: BrowserSpace.workID)
+        await store.saveFolder(folder)
+        await store.save(Bookmark(
+            url: try url("https://example.com"), folderPath: folder.path, spaceID: folder.spaceID
+        ))
+
+        await store.deleteFolder(folder)
+
+        #expect(await store.folders(in: folder.spaceID).isEmpty)
+        #expect(await store.all(in: folder.spaceID).count == 1)
+    }
 }

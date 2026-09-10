@@ -6,12 +6,13 @@ import RedentKit
 @MainActor @Observable
 public final class NewTabModel {
     public private(set) var favorites: [Bookmark] = []
+    public private(set) var savedFolders: [BookmarkFolder] = []
     public private(set) var frequent: [HistoryEntry] = []
     public private(set) var hasLoaded = false
 
     private let history: any HistoryStoring
-    private let bookmarks: any BookmarkStoring
-    private var spaceID: UUID?
+    let bookmarks: any BookmarkStoring
+    var spaceID: UUID?
 
     public init(history: any HistoryStoring, bookmarks: any BookmarkStoring) {
         self.history = history
@@ -20,13 +21,17 @@ public final class NewTabModel {
 
     /// True before anything has ever been visited or imported — the page shows
     /// an invitation to import instead of an empty grid.
-    public var isBare: Bool { hasLoaded && favorites.isEmpty && frequent.isEmpty }
+    public var isBare: Bool {
+        hasLoaded && favorites.isEmpty && frequent.isEmpty && savedFolders.isEmpty
+    }
 
     public func load(in spaceID: UUID?) async {
         self.spaceID = spaceID
         async let saved = bookmarks.favorites(in: spaceID)
+        async let folders = bookmarks.folders(in: spaceID)
         async let visited = frequentSites(in: spaceID)
-        favorites = Array(await saved.prefix(Self.tileLimit))
+        favorites = await saved
+        savedFolders = await folders
         frequent = await visited
         hasLoaded = true
     }
@@ -43,6 +48,29 @@ public final class NewTabModel {
         await load(in: spaceID)
     }
 
+    public var favoriteFolders: [FavoriteFolder] {
+        let paths = Set(savedFolders.map(\.path)).union(
+            favorites.filter { !$0.folderPath.isEmpty }.map(\.folderPath)
+        )
+        return paths.sorted { $0.joined(separator: "/") < $1.joined(separator: "/") }
+            .map { path in
+                FavoriteFolder(path: path, favoriteCount: favorites.count { $0.folderPath == path })
+            }
+    }
+
+    public var rootFavoriteTiles: [NewTabTile] {
+        favoriteTiles(from: favorites.filter(\.folderPath.isEmpty), limit: Self.tileLimit, uniquingHosts: true)
+    }
+
+    public var frequentTiles: [NewTabTile] {
+        let savedHosts = Set(favorites.compactMap { $0.origin?.displayHost })
+        return frequentTiles(excluding: savedHosts, limit: Self.tileLimit)
+    }
+
+    public func favoriteTiles(in folder: FavoriteFolder) -> [NewTabTile] {
+        favoriteTiles(from: favorites.filter { $0.folderPath == folder.path }, limit: nil, uniquingHosts: false)
+    }
+
     /// Most-visited sites counted within the Space being viewed, so a work
     /// Space never suggests what was browsed in a personal one.
     private func frequentSites(in spaceID: UUID?) async -> [HistoryEntry] {
@@ -57,11 +85,20 @@ public final class NewTabModel {
     /// The tiles actually rendered: favorites first, topped up with
     /// most-visited sites so a fresh profile still has something useful.
     public var tiles: [NewTabTile] {
+        let favorites = rootFavoriteTiles
+        let hosts = Set(favorites.map(\.host))
+        return favorites + frequentTiles(excluding: hosts, limit: Self.tileLimit - favorites.count)
+    }
+
+    private func favoriteTiles(
+        from bookmarks: [Bookmark], limit: Int?, uniquingHosts: Bool
+    ) -> [NewTabTile] {
         var seen = Set<String>()
-        var result: [NewTabTile] = []
-        for bookmark in favorites {
-            guard let host = bookmark.origin?.displayHost, seen.insert(host).inserted else { continue }
-            result.append(NewTabTile(
+        var tiles: [NewTabTile] = []
+        for bookmark in bookmarks.sorted(by: { $0.addedAt > $1.addedAt }) {
+            guard let host = bookmark.origin?.displayHost else { continue }
+            if uniquingHosts && !seen.insert(host).inserted { continue }
+            tiles.append(NewTabTile(
                 url: bookmark.url,
                 title: bookmark.displayTitle,
                 host: host,
@@ -69,20 +106,19 @@ public final class NewTabModel {
                 isFavorite: true,
                 bookmarkID: bookmark.id
             ))
+            if let limit, tiles.count == limit { break }
         }
+        return tiles
+    }
+    private func frequentTiles(excluding hosts: Set<String>, limit: Int) -> [NewTabTile] {
+        guard limit > 0 else { return [] }
+        var seen = hosts
+        var tiles: [NewTabTile] = []
         for entry in frequent {
-            guard result.count < Self.tileLimit,
-                  let host = entry.origin?.displayHost,
-                  seen.insert(host).inserted
-            else { continue }
-            result.append(NewTabTile(
-                url: entry.url,
-                title: entry.displayTitle,
-                host: host,
-                faviconData: nil,
-                isFavorite: false
-            ))
+            guard let host = entry.origin?.displayHost, seen.insert(host).inserted else { continue }
+            tiles.append(NewTabTile(url: entry.url, title: entry.displayTitle, host: host, faviconData: nil))
+            if tiles.count == limit { break }
         }
-        return result
+        return tiles
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// One cell on the new-tab grid: a favorite, or a most-visited stand-in.
+/// A destination shown on the new-tab surface.
 public struct NewTabTile: Identifiable, Hashable, Sendable {
     public let url: URL
     public let title: String
@@ -9,14 +9,12 @@ public struct NewTabTile: Identifiable, Hashable, Sendable {
     public let isFavorite: Bool
     public let bookmarkID: UUID?
 
-    public var id: String { url.absoluteString }
-
     public init(
         url: URL,
         title: String,
         host: String,
         faviconData: Data?,
-        isFavorite: Bool,
+        isFavorite: Bool = false,
         bookmarkID: UUID? = nil
     ) {
         self.url = url
@@ -26,4 +24,5 @@ public struct NewTabTile: Identifiable, Hashable, Sendable {
         self.isFavorite = isFavorite
         self.bookmarkID = bookmarkID
     }
+    public var id: String { bookmarkID?.uuidString ?? url.absoluteString }
 }

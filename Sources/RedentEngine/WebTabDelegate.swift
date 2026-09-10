@@ -42,6 +42,7 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
             }
             return .cancel
         }
+        tab?.beginNavigation(to: navigationAction.request.url)
         BrowserUserAgent.applyBeforeNavigation(navigationAction, on: webView)
         tab?.timelineRecorder.willNavigate(navigationAction.navigationType)
         return .allow
@@ -53,7 +54,16 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        tab?.beginNavigation()
         tab?.navigationEvents.started()
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        didFailProvisionalNavigation navigation: WKNavigation!,
+        withError error: any Error
+    ) {
+        tab?.handleProvisionalFailure(error)
     }
 
     func webView(
@@ -69,6 +79,7 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
             tab.timelineRecorder.finished(tab, webView: webView)
             tab.snapshot.url = webView.url
             tab.snapshot.title = webView.title ?? tab.title
+            tab.finishNavigation()
             tab.navigationEvents.finished(tab)
         }
     }
@@ -94,7 +105,7 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
     }
 
     func webViewDidClose(_ webView: WKWebView) {
-        guard let tab else { return }
+        guard let tab, tab.pageTrustIssue == nil else { return }
         tab.controller?.closePopup(tab.id)
     }
 

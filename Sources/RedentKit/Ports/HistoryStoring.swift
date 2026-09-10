@@ -52,9 +52,11 @@ public protocol BookmarkStoring: Sendable {
     func delete(_ id: UUID) async
     func folders(in spaceID: UUID?) async -> [BookmarkFolder]
     func saveFolder(_ folder: BookmarkFolder) async
+    func deleteFolder(_ folder: BookmarkFolder) async
 }
 
 public extension BookmarkStoring {
     func folders(in spaceID: UUID?) async -> [BookmarkFolder] { [] }
     func saveFolder(_ folder: BookmarkFolder) async {}
+    func deleteFolder(_ folder: BookmarkFolder) async {}
 }
