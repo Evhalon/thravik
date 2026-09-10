@@ -20,7 +20,7 @@ public struct DefaultBrowserSheet: View {
                 .foregroundStyle(Palette.accent)
 
             SheetHeading(
-                title: "Make Redent your default browser?",
+                title: "Make \(AppIdentity.displayName) your default browser?",
                 subtitle: "Links you open in Mail, Messages and everywhere else will "
                     + "come here instead of Safari. macOS will ask you to confirm."
             )
@@ -50,7 +50,7 @@ public struct DefaultBrowserSheet: View {
 
             Spacer()
             Button("Not Now") { dismiss() }
-            Button("Use Redent", action: makeDefault)
+            Button("Use \(AppIdentity.displayName)", action: makeDefault)
                 .keyboardShortcut(.defaultAction)
                 .disabled(model.isWorking)
         }

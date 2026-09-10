@@ -1,4 +1,5 @@
 import RedentDesign
+import RedentKit
 import SwiftUI
 
 /// The find-in-page strip. Floats over the top-right of the page, the way
@@ -23,6 +24,8 @@ struct FindBar: View {
                 .onExitCommand(perform: model.closeFindBar)
                 .onChange(of: model.chrome.findQuery) { _, _ in model.findNext(forward: true) }
                 .onChange(of: model.chrome.findFocusEpoch) { _, _ in isFocused = true }
+
+            counter
 
             stepper(symbol: "chevron.up") { model.findNext(forward: false) }
             stepper(symbol: "chevron.down") { model.findNext(forward: true) }
@@ -51,6 +54,24 @@ struct FindBar: View {
                 .foregroundStyle(Palette.chromeSecondaryText)
         }
         .buttonStyle(PressScaleStyle())
-        .disabled(model.chrome.findQuery.isEmpty)
+        .disabled(hasNoMatches)
+    }
+
+    /// "3/12", the way every other browser reports where the reader is. Absent
+    /// until the page has answered, so it never shows a count for a query that
+    /// has already been typed over.
+    @ViewBuilder private var counter: some View {
+        if let matches = model.chrome.findMatches, !model.chrome.findQuery.isEmpty {
+            Text("\(matches.current)/\(matches.total)")
+                .font(.system(size: 11, weight: .medium).monospacedDigit())
+                .foregroundStyle(matches.isEmpty ? Palette.danger : Palette.chromeSecondaryText)
+                .contentTransition(.numericText())
+                .animation(.snappy(duration: 0.18), value: matches)
+                .fixedSize()
+        }
+    }
+
+    private var hasNoMatches: Bool {
+        model.chrome.findQuery.isEmpty || model.chrome.findMatches?.isEmpty == true
     }
 }

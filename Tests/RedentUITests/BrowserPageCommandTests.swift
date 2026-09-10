@@ -64,9 +64,12 @@ struct BrowserPageCommandTests {
         model.showFindBar()
         #expect(model.chrome.isFindBarVisible)
 
-        model.chrome.findFailed = true
+        model.chrome.findMatches = .empty
+        #expect(model.chrome.findFailed)
+
         model.closeFindBar()
         #expect(!model.chrome.isFindBarVisible)
+        #expect(model.chrome.findMatches == nil)
         #expect(!model.chrome.findFailed)
     }
 

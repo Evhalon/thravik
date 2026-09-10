@@ -9,7 +9,9 @@ struct DefaultBrowserRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(model.isDefault ? "Redent is your default browser" : "Open web links in Redent")
+                Text(model.isDefault
+                     ? "\(AppIdentity.displayName) is your default browser"
+                     : "Open web links in \(AppIdentity.displayName)")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Palette.chromeText)
                 Text("Links from other apps open here. macOS asks you to confirm.")

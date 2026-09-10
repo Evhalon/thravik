@@ -51,7 +51,12 @@ extension BrowserModel {
 
     public func showFindBar() {
         guard hasPage else { return }
+        let wasHidden = !chrome.isFindBarVisible
         chrome.showFindBar()
+        // Reopening over the query still in the field lights the page back up
+        // instead of waiting for a keystroke. ⌘F on an open bar only takes the
+        // caret back — it must not step to the next match.
+        if wasHidden, !chrome.findQuery.isEmpty { findNext() }
     }
 
     public func closeFindBar() {
@@ -62,8 +67,20 @@ extension BrowserModel {
     /// - Parameter forward: ⌘G searches on, ⇧⌘G searches back.
     public func findNext(forward: Bool = true) {
         let query = chrome.findQuery
-        guard let tab = selectedTab, !query.isEmpty else { return }
-        Task { chrome.findFailed = !(await tab.findInPage(query, forward: forward)) }
+        guard let tab = selectedTab else { return }
+        guard !query.isEmpty else { return clearFindMatches(on: tab) }
+        chrome.findInFlight = Task {
+            let matches = await tab.findInPage(query, forward: forward)
+            // Typing outruns the page: a stale answer must not overwrite the
+            // count for the query the reader has since typed.
+            guard chrome.findQuery == query else { return }
+            chrome.findMatches = matches
+        }
+    }
+
+    private func clearFindMatches(on tab: any BrowserTab) {
+        chrome.findMatches = nil
+        tab.clearFindHighlight()
     }
 
     /// ⌘1…⌘8 pick a tab in the current Space; ⌘9 is always the last one.

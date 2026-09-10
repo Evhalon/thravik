@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import RedentKit
 
 /// Chrome state that belongs to the page rather than to the window: the find
 /// bar, the bookmark star, and the requests to move the caret.
@@ -14,9 +15,15 @@ public final class PageChromeModel {
 
     public var isFindBarVisible = false
     public var findQuery = ""
+    /// What the page answered for the query on screen — `nil` until it has
+    /// answered at all, so the field never flashes red mid-keystroke.
+    public var findMatches: FindMatches?
+    /// The search the page has not answered yet. Held so a caller can tell
+    /// whether the count on screen belongs to the query in the field.
+    @ObservationIgnored public var findInFlight: Task<Void, Never>?
     /// The last search matched nothing — the field turns red rather than
     /// silently doing nothing.
-    public var findFailed = false
+    public var findFailed: Bool { findMatches?.isEmpty == true }
     /// Bumped to ask the find field for first responder, including when the
     /// bar is already open and ⌘F is pressed again.
     public var findFocusEpoch: UInt = 0
@@ -34,6 +41,6 @@ public final class PageChromeModel {
 
     public func hideFindBar() {
         isFindBarVisible = false
-        findFailed = false
+        findMatches = nil
     }
 }

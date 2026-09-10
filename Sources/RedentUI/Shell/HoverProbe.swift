@@ -4,10 +4,9 @@ import SwiftUI
 /// Reports the pointer entering and leaving a band, without taking a single
 /// click from whatever is underneath it.
 ///
-/// SwiftUI's `.onHover` cannot do this over a web view. A SwiftUI strip has to
-/// be hit-testable to report hover, which steals clicks from the page — and if
-/// it is laid out beside the page instead, it costs the page that much height.
-/// A tracking area is notified from geometry alone, so this view sits on top of
+/// SwiftUI's `.onHover` cannot do this over a web view: a SwiftUI strip has to
+/// be hit-testable to report hover, which steals clicks from the page. A
+/// tracking area is notified from geometry alone, so this view sits on top of
 /// the page, refuses every hit test, and still knows the pointer is there.
 struct HoverProbe: NSViewRepresentable {
     let onChange: (Bool) -> Void
