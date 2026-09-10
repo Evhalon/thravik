@@ -23,10 +23,10 @@ public protocol BrowserTab: AnyObject {
     /// Reloads past the cache, the way ⇧⌘R does in every other browser.
     func reloadIgnoringCache()
     func stopLoading()
-    /// Highlights the next match for `query` in the page.
-    /// - Returns: whether anything matched.
-    func findInPage(_ query: String, forward: Bool) async -> Bool
-    /// Drops the highlight `findInPage` left behind.
+    /// Paints every match for `query` and steps the active one on.
+    /// - Returns: how many matches the page holds, and which one is active.
+    func findInPage(_ query: String, forward: Bool) async -> FindMatches
+    /// Drops the highlights `findInPage` left behind.
     func clearFindHighlight()
     /// Puts the page on the system print panel.
     func printPage()
@@ -45,7 +45,7 @@ public protocol BrowserTab: AnyObject {
 /// test, or a page the engine cannot search. Each is a no-op, never a crash.
 public extension BrowserTab {
     func reloadIgnoringCache() { reload() }
-    func findInPage(_ query: String, forward: Bool) async -> Bool { false }
+    func findInPage(_ query: String, forward: Bool) async -> FindMatches { .empty }
     func clearFindHighlight() {}
     func printPage() {}
 }

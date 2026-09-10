@@ -112,6 +112,15 @@ final class InertTab: BrowserTab {
     func goForward() {}
     func reload() {}
     func stopLoading() {}
+    /// What the page will claim to have found; the tests set it per case.
+    var findResult: FindMatches = .empty
+    private(set) var findQueries: [String] = []
+    private(set) var findHighlightClears = 0
+    func findInPage(_ query: String, forward: Bool) async -> FindMatches {
+        findQueries.append(query)
+        return findResult
+    }
+    func clearFindHighlight() { findHighlightClears += 1 }
     func fillCredential(username: String, password: String) async {}
     func fillOTPCode(_ code: String) async {}
     func hibernate() {}
