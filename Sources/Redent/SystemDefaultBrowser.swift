@@ -26,30 +26,35 @@ struct SystemDefaultBrowser: DefaultBrowserManaging {
         return handlerID == Bundle.main.bundleIdentifier
     }
 
-    /// macOS puts up its own confirmation panel, and a decline comes back as a
-    /// thrown error — a "no", not a failure worth reporting.
-    ///
     /// One call carries the whole switch: the browser is a single setting, and
-    /// a second call naming the other scheme is refused outright. Reporting
-    /// that refusal is what made a switch that *had* happened look like one
-    /// that had not, so the outcome is read back from Launch Services instead
-    /// of taken from the call.
+    /// a second call naming the other scheme is refused outright.
+    ///
+    /// The call comes back as soon as macOS has *raised* its confirmation
+    /// panel — often reporting an error — not once the panel has been
+    /// answered. So neither its return nor its error decides anything: the
+    /// outcome is read back from Launch Services for as long as answering a
+    /// panel takes.
     @discardableResult
     func makeDefault() async -> Bool {
-        try? await NSWorkspace.shared.setDefaultApplication(
-            at: Bundle.main.bundleURL, toOpenURLsWithScheme: "http"
+        await DefaultBrowserSwitch.apply(
+            request: {
+                try await NSWorkspace.shared.setDefaultApplication(
+                    at: Bundle.main.bundleURL, toOpenURLsWithScheme: "http"
+                )
+            },
+            probes: .init(isDefault: isDefault, isPanelUp: Self.isPanelUp, wait: Self.pause)
         )
-        return await settled()
     }
 
-    /// Launch Services publishes the change after the panel closes, not during
-    /// it: asking straight away answers with the old handler and would report a
-    /// switch that did work as a failure.
-    private func settled() async -> Bool {
-        for _ in 0..<20 {
-            if await isDefault() { return true }
-            try? await Task.sleep(for: .milliseconds(100))
-        }
-        return false
+    /// The confirmation belongs to another process, so raising it takes key
+    /// away from this app and answering it hands key back. That hand-back is
+    /// the earliest honest sign that a decline was a decline — without it, a
+    /// no costs the person who said it the whole read-back window.
+    private static func isPanelUp() async -> Bool {
+        await MainActor.run { !NSApplication.shared.isActive }
+    }
+
+    private static func pause() async {
+        try? await Task.sleep(for: DefaultBrowserSwitch.interval)
     }
 }

@@ -70,6 +70,20 @@ struct AddressBarModelTests {
         #expect(model.isUserChange("https://advert.example/landing?q=user"))
     }
 
+    @Test("Losing focus ends the edit and puts the compact address back")
+    func focusLossEndsEditing() throws {
+        let tab = InertTab()
+        tab.url = try url("https://www.example.com/path")
+        let model = AddressBarModel()
+        model.beginEditing(with: tab)
+        model.text = "half typed"
+
+        model.cancelEditing(restoringFrom: tab)
+
+        #expect(!model.isEditing)
+        #expect(model.text == "example.com/path")
+    }
+
     @Test("Closing the last tab clears a stale address")
     func closingLastTab() throws {
         let tab = InertTab()

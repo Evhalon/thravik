@@ -13,8 +13,9 @@ public final class DefaultBrowserModel {
     /// Whether macOS currently hands web links to this app. Refreshed on
     /// demand — Launch Services has no change notification worth listening to.
     public private(set) var isDefault = false
-    /// Set when the system declined or the user backed out of its panel, so
-    /// the sheet can say so instead of closing as though it worked.
+    /// Set when the user answered the system's panel with a no, so the sheet
+    /// can say so instead of closing as though it worked. Cleared while a new
+    /// attempt is in flight: the last answer is not this one's.
     public private(set) var didFail = false
 
     private let manager: any DefaultBrowserManaging
@@ -52,6 +53,7 @@ public final class DefaultBrowserModel {
     /// - Returns: whether the system agreed, so the caller knows to dismiss.
     public func makeDefault() async -> Bool {
         isWorking = true
+        didFail = false
         defer { isWorking = false }
         let succeeded = await manager.makeDefault()
         isDefault = succeeded

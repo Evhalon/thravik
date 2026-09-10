@@ -19,12 +19,9 @@ struct AddressField: View {
                 .foregroundStyle(Palette.chromeText)
                 .focused($isFocused)
                 .onSubmit(model.submitAddress)
-                .onExitCommand {
-                    model.suggestions.close(from: .addressBar)
-                    model.address.cancelEditing(restoringFrom: model.selectedTab)
-                }
+                .onExitCommand(perform: endEditing)
                 .onChange(of: isFocused) { _, focused in
-                    guard focused else { return model.suggestions.close(from: .addressBar) }
+                    guard focused else { return endEditing() }
                     model.address.beginEditing(with: model.selectedTab)
                 }
                 .onChange(of: address.text) { _, text in
@@ -57,6 +54,14 @@ struct AddressField: View {
         .overlay(alignment: .bottomLeading) { progressBar }
         .overlay(alignment: .topLeading) { dropdown }
         .animation(.easeOut(duration: 0.18), value: isFocused)
+    }
+
+    /// Losing focus ends the edit, whatever took it away — a click on the page,
+    /// another field, another window. Closing the dropdown alone left the field
+    /// "being typed", so the compact host never came back.
+    private func endEditing() {
+        model.suggestions.close(from: .addressBar)
+        model.address.cancelEditing(restoringFrom: model.selectedTab)
     }
 
     private var pill: some View {
