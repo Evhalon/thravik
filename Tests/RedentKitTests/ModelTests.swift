@@ -52,5 +52,10 @@ struct ModelTests {
         #expect(HibernationPolicy.off.idleThreshold == nil)
         #expect(HibernationPolicy.balanced.idleThreshold == 900)
         #expect(HibernationPolicy.aggressive.idleThreshold == 180)
+        #expect(BrowserSettings(hibernation: .thirtyMinutes).hibernationIdleThreshold == 1_800)
+        #expect(BrowserSettings(hibernation: .fortyFiveMinutes).hibernationIdleThreshold == 2_700)
+        #expect(BrowserSettings(hibernation: .sixtyMinutes).hibernationIdleThreshold == 3_600)
+        #expect(BrowserSettings(hibernation: .custom, customHibernationMinutes: 75).hibernationIdleThreshold == 4_500)
+        #expect(BrowserSettings(hibernation: .custom, customHibernationMinutes: 0).hibernationIdleThreshold == 60)
     }
 }

@@ -55,7 +55,8 @@ public struct TabGroupsPanel: View {
                     GroupManageRow(
                         group: group,
                         onRename: { renameID = group.id; groupName = group.name },
-                        onDelete: { perform(.deleteGroup(id: group.id)) }
+                        onDelete: { perform(.deleteGroup(id: group.id)) },
+                        onClose: { controller.closeTabs(Set(group.tabIDs)) }
                     )
                 }
                 ForEach(activeTabs.filter { $0.snapshot.groupID == nil }, id: \.id) { tab in

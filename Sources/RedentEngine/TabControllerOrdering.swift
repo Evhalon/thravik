@@ -41,6 +41,26 @@ extension TabController {
         changed()
     }
 
+    public func closeTabs(_ ids: Set<UUID>) {
+        let closing = webTabs.filter { ids.contains($0.id) }
+        guard !closing.isEmpty else { return }
+        if closing.contains(where: { !$0.snapshot.isTemporary }) {
+            undoHistory.record(session)
+        }
+        let closingIDs = Set(closing.map(\.id))
+        let selectedWasClosed = selectedID.map(closingIDs.contains) ?? false
+        for tab in closing {
+            tab.hibernate()
+            if !tab.snapshot.isTemporary { pushClosed(tab.snapshot) }
+        }
+        webTabs.removeAll { closingIDs.contains($0.id) }
+        pruneRelatedAfterRemoval()
+        if selectedWasClosed {
+            updateSelectedID(visibleTabs.first?.id)
+        }
+        changed()
+    }
+
     public func selectNext() {
         guard let index = currentIndex(), !visibleTabs.isEmpty else { return }
         select(visibleTabs[(index + 1) % visibleTabs.count].id)
@@ -127,5 +147,4 @@ extension TabController {
         guard let id = selectedID else { return nil }
         return visibleTabs.firstIndex { $0.id == id }
     }
-
 }

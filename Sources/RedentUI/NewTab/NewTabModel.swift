@@ -24,10 +24,19 @@ public final class NewTabModel {
 
     public func load(in spaceID: UUID?) async {
         self.spaceID = spaceID
+        guard let spaceID else {
+            favorites = []
+            frequent = []
+            hasLoaded = true
+            return
+        }
         async let saved = bookmarks.favorites(in: spaceID)
         async let visited = frequentSites(in: spaceID)
-        favorites = Array(await saved.prefix(Self.tileLimit))
-        frequent = await visited
+        let loadedFavorites = Array(await saved.prefix(Self.tileLimit))
+        let loadedFrequent = await visited
+        guard !Task.isCancelled, self.spaceID == spaceID else { return }
+        favorites = loadedFavorites
+        frequent = loadedFrequent
         hasLoaded = true
     }
 

@@ -27,6 +27,10 @@ public enum HibernationPolicy: String, Codable, Sendable, CaseIterable, Identifi
     case off
     case balanced
     case aggressive
+    case thirtyMinutes
+    case fortyFiveMinutes
+    case sixtyMinutes
+    case custom
 
     public var id: String { rawValue }
 
@@ -36,6 +40,10 @@ public enum HibernationPolicy: String, Codable, Sendable, CaseIterable, Identifi
         case .off: nil
         case .balanced: 15 * 60
         case .aggressive: 3 * 60
+        case .thirtyMinutes: 30 * 60
+        case .fortyFiveMinutes: 45 * 60
+        case .sixtyMinutes: 60 * 60
+        case .custom: nil
         }
     }
 
@@ -44,8 +52,16 @@ public enum HibernationPolicy: String, Codable, Sendable, CaseIterable, Identifi
         case .off: "Never"
         case .balanced: "After 15 min"
         case .aggressive: "After 3 min"
+        case .thirtyMinutes: "After 30 min"
+        case .fortyFiveMinutes: "After 45 min"
+        case .sixtyMinutes: "After 60 min"
+        case .custom: "Custom"
         }
     }
+
+    public static let selectableCases: [Self] = [
+        .off, .balanced, .thirtyMinutes, .fortyFiveMinutes, .sixtyMinutes, .custom
+    ]
 }
 
 public struct BrowserSettings: Codable, Sendable, Equatable {
@@ -53,6 +69,7 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
     public var isTabStripVisible: Bool
     public var sidebarWidth: Double
     public var hibernation: HibernationPolicy
+    public var customHibernationMinutes: Int?
     /// Ads and trackers. On by default, like Brave Shields.
     public var blocksTrackers: Bool
     public var offersPasswordSave: Bool
@@ -67,6 +84,7 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
         isTabStripVisible: Bool = true,
         sidebarWidth: Double = 248,
         hibernation: HibernationPolicy = .balanced,
+        customHibernationMinutes: Int? = 15,
         blocksTrackers: Bool = true,
         offersPasswordSave: Bool = true,
         showsTOTPButton: Bool = true,
@@ -77,11 +95,17 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
         self.isTabStripVisible = isTabStripVisible
         self.sidebarWidth = sidebarWidth.clamped(to: Self.sidebarWidthRange)
         self.hibernation = hibernation
+        self.customHibernationMinutes = customHibernationMinutes
         self.blocksTrackers = blocksTrackers
         self.offersPasswordSave = offersPasswordSave
         self.showsTOTPButton = showsTOTPButton
         self.searchEngine = searchEngine
         self.homepage = homepage
+    }
+
+    public var hibernationIdleThreshold: TimeInterval? {
+        guard hibernation == .custom else { return hibernation.idleThreshold }
+        return TimeInterval(max(customHibernationMinutes ?? 15, 1) * 60)
     }
 
     /// Picking an engine moves the homepage with it, so the two do not disagree.

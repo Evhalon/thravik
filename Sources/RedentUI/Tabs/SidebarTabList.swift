@@ -50,7 +50,11 @@ struct SidebarTabList: View {
             iconTab: tab(cluster.headerTabID ?? cluster.memberIDs.first),
             isSelected: cluster.headerTabID == model.tabs.selectedID,
             isCollapsed: folded,
-            actions: .init(onSelect: { selectHeader(cluster) }, onToggle: { toggle(cluster.id) })
+            actions: .init(
+                onSelect: { selectHeader(cluster) },
+                onToggle: { toggle(cluster.id) },
+                onClose: { model.tabs.closeTabs(Set(clusterTabIDs(cluster))) }
+            )
         )
         // A header the drag does not know about is a dead band the pointer has
         // to cross blind, so it joins the geometry like any other row.
@@ -68,6 +72,10 @@ struct SidebarTabList: View {
     private func headerTabs(_ cluster: SidebarNode.Cluster, folded: Bool) -> [UUID] {
         let header = cluster.headerTabID.map { [$0] } ?? []
         return folded ? header + cluster.memberIDs : header
+    }
+
+    private func clusterTabIDs(_ cluster: SidebarNode.Cluster) -> [UUID] {
+        (cluster.headerTabID.map { [$0] } ?? []) + cluster.memberIDs
     }
 
     private func row(_ tab: any BrowserTab, indent: CGFloat) -> some View {
