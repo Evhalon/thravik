@@ -10,6 +10,7 @@ import SwiftUI
 struct NewTabTileView: View {
     let tile: NewTabTile
     let onOpen: (_ commandHeld: Bool) -> Void
+    var onRemoveFavorite: (() -> Void)?
 
     @State private var isHovering = false
     @State private var fetchedIcon: Data?
@@ -31,13 +32,31 @@ struct NewTabTileView: View {
         .animation(.spring(duration: 0.25), value: isHovering)
         .onHover { isHovering = $0 }
         .help(tile.title)
-        .task(id: tile.host) {
-            guard tile.faviconData == nil else { return }
-            fetchedIcon = await SiteIconLoader.shared.icon(for: tile.host)
+        .contextMenu { menu }
+        .task(id: tile.host) { await loadIcon() }
+    }
+
+    @ViewBuilder
+    private var menu: some View {
+        if tile.isFavorite, let onRemoveFavorite {
+            Button("Remove from Favorites", role: .destructive, action: onRemoveFavorite)
         }
     }
 
-    private var iconData: Data? { tile.faviconData ?? fetchedIcon }
+    private func loadIcon() async {
+        if Self.canDraw(tile.faviconData) { return }
+        fetchedIcon = await SiteIconLoader.shared.icon(for: tile.host)
+    }
+
+    private static func canDraw(_ data: Data?) -> Bool {
+        guard let data, !data.isEmpty, let image = NSImage(data: data) else { return false }
+        return image.isValid
+    }
+
+    private var iconData: Data? {
+        if Self.canDraw(tile.faviconData) { return tile.faviconData }
+        return fetchedIcon
+    }
 
     private var icon: some View {
         let accent = DominantColor.extract(from: iconData) ?? Palette.defaultAmbient

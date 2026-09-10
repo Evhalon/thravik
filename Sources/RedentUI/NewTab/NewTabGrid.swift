@@ -5,6 +5,7 @@ import SwiftUI
 struct NewTabGrid: View {
     let tiles: [NewTabTile]
     let onOpen: (NewTabTile, Bool) -> Void
+    var onRemoveFavorite: (NewTabTile) -> Void = { _ in }
 
     private let columns = [GridItem(.adaptive(minimum: 96, maximum: 96), spacing: 18)]
 
@@ -18,7 +19,11 @@ struct NewTabGrid: View {
 
             LazyVGrid(columns: columns, alignment: .leading, spacing: 22) {
                 ForEach(tiles) { tile in
-                    NewTabTileView(tile: tile) { onOpen(tile, $0) }
+                    NewTabTileView(
+                        tile: tile,
+                        onOpen: { onOpen(tile, $0) },
+                        onRemoveFavorite: tile.isFavorite ? { onRemoveFavorite(tile) } : nil
+                    )
                 }
             }
         }

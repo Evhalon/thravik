@@ -65,6 +65,7 @@ extension WebTab {
         }
     }
 
+    /// Prefer PNG/SVG over the first `rel=icon`, which is often a tiny `.ico`.
     private static let faviconLookupJS =
-        "(function(){var l=document.querySelector('link[rel~=\"icon\"]');return l?l.href:'';})();"
+        "(function(){var n=document.querySelectorAll('link[rel~=\"icon\"],link[rel=\"apple-touch-icon\"]');var b='',s=-1;for(var i=0;i<n.length;i++){var l=n[i],h=l.href;if(!h)continue;var k=(l.getAttribute('type')||'')+h;var v=parseInt((l.getAttribute('sizes')||'0').split('x')[0],10)||0;if(/png/i.test(k))v+=10000;else if(/svg/i.test(k))v+=5000;if(v>s){s=v;b=h;}}return b;})();"
 }

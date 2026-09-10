@@ -11,6 +11,7 @@ public final class NewTabModel {
 
     private let history: any HistoryStoring
     private let bookmarks: any BookmarkStoring
+    private var spaceID: UUID?
 
     public init(history: any HistoryStoring, bookmarks: any BookmarkStoring) {
         self.history = history
@@ -22,11 +23,24 @@ public final class NewTabModel {
     public var isBare: Bool { hasLoaded && favorites.isEmpty && frequent.isEmpty }
 
     public func load(in spaceID: UUID?) async {
+        self.spaceID = spaceID
         async let saved = bookmarks.favorites(in: spaceID)
         async let visited = frequentSites(in: spaceID)
         favorites = Array(await saved.prefix(Self.tileLimit))
         frequent = await visited
         hasLoaded = true
+    }
+
+    /// Unstar a home tile. The bookmark stays in the manager; it just leaves
+    /// the grid.
+    public func removeFavorite(_ tile: NewTabTile) async {
+        guard let id = tile.bookmarkID,
+              var bookmark = favorites.first(where: { $0.id == id }),
+              bookmark.isFavorite
+        else { return }
+        bookmark.isFavorite = false
+        await bookmarks.save(bookmark)
+        await load(in: spaceID)
     }
 
     /// Most-visited sites counted within the Space being viewed, so a work
@@ -52,7 +66,8 @@ public final class NewTabModel {
                 title: bookmark.displayTitle,
                 host: host,
                 faviconData: bookmark.faviconData,
-                isFavorite: true
+                isFavorite: true,
+                bookmarkID: bookmark.id
             ))
         }
         for entry in frequent {
@@ -70,14 +85,4 @@ public final class NewTabModel {
         }
         return result
     }
-}
-
-public struct NewTabTile: Identifiable, Hashable, Sendable {
-    public let url: URL
-    public let title: String
-    public let host: String
-    public let faviconData: Data?
-    public let isFavorite: Bool
-
-    public var id: String { url.absoluteString }
 }

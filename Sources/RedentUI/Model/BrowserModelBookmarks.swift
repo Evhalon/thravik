@@ -24,7 +24,13 @@ extension BrowserModel {
             await bookmarks.delete(existing.id)
         } else {
             await bookmarks.save(
-                Bookmark(url: url, title: tab.title, spaceID: spaceID, isFavorite: true)
+                Bookmark(
+                    url: url,
+                    title: tab.title,
+                    spaceID: spaceID,
+                    isFavorite: true,
+                    faviconData: tab.snapshot.faviconData
+                )
             )
         }
         await refreshBookmarkState()

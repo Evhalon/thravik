@@ -71,9 +71,11 @@ struct NewTabPage: View {
         if newTab.isBare {
             NewTabEmptyState { model.sheet = .importBrowser }
         } else {
-            NewTabGrid(tiles: newTab.tiles) { tile, inNewTab in
-                model.open(tile.url, inNewTab: inNewTab)
-            }
+            NewTabGrid(
+                tiles: newTab.tiles,
+                onOpen: { tile, inNewTab in model.open(tile.url, inNewTab: inNewTab) },
+                onRemoveFavorite: { tile in Task { await newTab.removeFavorite(tile) } }
+            )
         }
     }
 

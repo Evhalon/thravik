@@ -83,10 +83,12 @@ struct BrowserPageCommandTests {
     }
 
     @Test("⌘D saves the page, then removes what it saved")
-    func bookmarkToggle() async {
+    func bookmarkToggle() async throws {
         let browser = FakeBrowser()
         let tab = InertTab()
         tab.url = URL(string: "https://example.com/article")
+        let icon = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+        tab.snapshot.faviconData = icon
         browser.stubTabs = [tab]
         browser.selectedID = tab.id
         let store = ToggleBookmarkStore()
@@ -94,7 +96,8 @@ struct BrowserPageCommandTests {
 
         await model.toggleBookmark()
         #expect(model.chrome.isBookmarked)
-        #expect(await store.all(in: nil).count == 1)
+        let saved = try #require(await store.all(in: nil).first)
+        #expect(saved.faviconData == icon)
 
         await model.toggleBookmark()
         #expect(!model.chrome.isBookmarked)

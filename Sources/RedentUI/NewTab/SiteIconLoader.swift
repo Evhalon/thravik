@@ -10,7 +10,7 @@ public actor SiteIconLoader {
     public static let shared = SiteIconLoader()
 
     private var memory: [String: Data] = [:]
-    private var inFlight: Set<String> = []
+    private var inflight: [String: Task<Data?, Never>] = [:]
     private let directory: URL
 
     private static let maxBytes = 200_000
@@ -25,32 +25,72 @@ public actor SiteIconLoader {
 
     public func icon(for host: String) async -> Data? {
         if let cached = memory[host] { return cached.isEmpty ? nil : cached }
-        if let onDisk = try? Data(contentsOf: fileURL(for: host)) {
+        if let onDisk = readDisk(host) {
             memory[host] = onDisk
-            return onDisk.isEmpty ? nil : onDisk
+            return onDisk
         }
-        guard !inFlight.contains(host) else { return nil }
-        inFlight.insert(host)
-        defer { inFlight.remove(host) }
+        if let existing = inflight[host] { return await existing.value }
 
-        let data = await download(host: host)
-        // An empty entry is a negative cache: a site with no icon must not be
-        // re-fetched on every render.
+        let task = Task { await self.download(host: host) }
+        inflight[host] = task
+        let data = await task.value
+        inflight[host] = nil
         memory[host] = data ?? Data()
-        try? (data ?? Data()).write(to: fileURL(for: host), options: .atomic)
+        if let data { try? data.write(to: fileURL(for: host), options: .atomic) }
         return data
     }
 
     private func download(host: String) async -> Data? {
-        guard let url = URL(string: "https://\(host)/favicon.ico") else { return nil }
+        var tried = Set<URL>()
+        for url in SiteIconProbe.urls(for: host) {
+            tried.insert(url)
+            if let data = await fetch(url) { return data }
+        }
+        guard let html = await homepage(host) else { return nil }
+        for url in SiteIconHTML.iconURLs(in: html, host: host) where tried.insert(url).inserted {
+            if let data = await fetch(url) { return data }
+        }
+        return nil
+    }
+
+    private func homepage(_ host: String) async -> String? {
+        guard let url = URL(string: "https://\(host)/") else { return nil }
         var request = URLRequest(url: url)
-        request.timeoutInterval = 6
+        request.timeoutInterval = 4
         request.httpShouldHandleCookies = false
         guard let (data, response) = try? await URLSession.shared.data(for: request),
-              let http = response as? HTTPURLResponse, http.statusCode == 200,
-              !data.isEmpty, data.count <= Self.maxBytes
+              let http = response as? HTTPURLResponse,
+              (200..<300).contains(http.statusCode),
+              let html = String(data: data.prefix(80_000), encoding: .utf8)
+        else { return nil }
+        return html
+    }
+
+    private func fetch(_ url: URL) async -> Data? {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 4
+        request.httpShouldHandleCookies = false
+        request.setValue(
+            "image/png,image/x-icon,image/svg+xml,image/webp,image/*;q=0.8,*/*;q=0.5",
+            forHTTPHeaderField: "Accept"
+        )
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse,
+              (200..<300).contains(http.statusCode),
+              data.count <= Self.maxBytes,
+              SiteIconProbe.isImage(data)
         else { return nil }
         return data
+    }
+
+    private func readDisk(_ host: String) -> Data? {
+        let url = fileURL(for: host)
+        guard let onDisk = try? Data(contentsOf: url), !onDisk.isEmpty else { return nil }
+        guard SiteIconProbe.isImage(onDisk) else {
+            try? FileManager.default.removeItem(at: url)
+            return nil
+        }
+        return onDisk
     }
 
     private func fileURL(for host: String) -> URL {
