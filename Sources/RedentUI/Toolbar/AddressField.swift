@@ -107,11 +107,13 @@ struct AddressField: View {
 
     private var securitySymbol: String {
         guard model.selectedTab?.url != nil else { return "magnifyingglass" }
+        if model.selectedTab?.pageTrustIssue != nil { return "exclamationmark.triangle.fill" }
         return isSecure ? "lock.fill" : "exclamationmark.triangle.fill"
     }
 
     private var securityTint: Color {
         guard model.selectedTab?.url != nil else { return Palette.chromeSecondaryText }
+        if model.selectedTab?.pageTrustIssue != nil { return Palette.danger }
         return isSecure ? Palette.chromeSecondaryText : Palette.danger
     }
 }

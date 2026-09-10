@@ -43,6 +43,22 @@ struct SitePolicyTests {
         #expect(!policy.isEmpty)
     }
 
+    @Test("A certificate exception is a durable site decision")
+    func certificateExceptionIsNotEmpty() {
+        var policy = SitePolicy(key: SiteKey(origin: origin("internal.example"), containerID: BrowserContainer.defaultID))
+        policy.allowsInvalidCertificate = true
+        #expect(!policy.isEmpty)
+    }
+
+    @Test("Policies written before certificate exceptions still decode")
+    func decodesLegacyPolicy() throws {
+        let encoded = """
+        {"key":{"scheme":"https","host":"example.com","containerID":"\(UUID())"},"permissions":[]}
+        """
+        let policy = try JSONDecoder().decode(SitePolicy.self, from: Data(encoded.utf8))
+        #expect(!policy.allowsInvalidCertificate)
+    }
+
     @Test("A report with nothing found says so instead of claiming an erasure")
     func honestReport() {
         var report = ForgetSiteReport(domain: "example.com")

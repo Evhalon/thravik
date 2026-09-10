@@ -125,7 +125,8 @@ public final class BrowserModel {
         otp.dismissIfPageChanged(selectedTab?.url)
         tabs.sweepHibernation(now: date, keeping: split.visibleTabIDs(primary: tabs.selectedID))
         if let expired = tabs.sweepExpiredTabs(now: date) { expiredTabID = expired }
-        autofill.observe(selectedTab?.origin)
+        let origin = selectedTab?.pageTrustIssue == nil ? selectedTab?.origin : nil
+        autofill.observe(origin)
         persistIfNeeded(date)
     }
 

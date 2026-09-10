@@ -24,6 +24,10 @@ public final class TabController: BrowserControlling {
     /// site's camera or microphone belongs to the user's stored policy.
     @ObservationIgnored
     public var permissionDecider: (@MainActor (SiteKey, SitePermission) -> PermissionDecision)?
+    @ObservationIgnored
+    public var invalidCertificateAllowed: (@MainActor (SiteKey) -> Bool)?
+    @ObservationIgnored
+    public var trustInvalidCertificate: (@MainActor (SiteKey) -> Void)?
 
     /// Where a file the page hands over goes. Shared with every other window,
     /// and set by the composition root; nil in tests, where a download is

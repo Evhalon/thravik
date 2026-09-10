@@ -59,6 +59,14 @@ final class WindowContainer {
         controller.permissionDecider = { [weak app] key, permission in
             app?.permissions.decision(key, permission) ?? .ask
         }
+        if !spec.isPrivate {
+            controller.invalidCertificateAllowed = { [weak app] key in
+                app?.permissions.allowsInvalidCertificate(at: key) ?? false
+            }
+            controller.trustInvalidCertificate = { [weak app] key in
+                app?.permissions.allowInvalidCertificate(at: key)
+            }
+        }
         if controller.tabs.isEmpty { controller.newTab(url: spec.startURL) }
         if let message = app.restoreFailureMessage(for: spec) { model.actionError = message }
         controller.warmUp()

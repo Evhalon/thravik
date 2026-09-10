@@ -48,4 +48,8 @@ public struct JSONBookmarkStore: BookmarkStoring {
     public func saveFolder(_ folder: BookmarkFolder) async {
         await store.saveFolder(folder)
     }
+
+    public func deleteFolder(_ folder: BookmarkFolder) async {
+        await store.deleteFolder(folder)
+    }
 }

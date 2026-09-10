@@ -26,17 +26,22 @@ public struct SitePolicy: Codable, Sendable, Hashable, Identifiable {
     /// `nil` means "follow the global tracker setting" — an unset override, not
     /// a decision to allow trackers.
     public var blocksTrackers: Bool?
+    /// The user explicitly chose to continue despite this origin's bad TLS
+    /// certificate. This never extends to a sibling host.
+    public var allowsInvalidCertificate: Bool
 
     public var id: SiteKey { key }
 
     public init(
         key: SiteKey,
         permissions: [SitePermission: PermissionDecision] = [:],
-        blocksTrackers: Bool? = nil
+        blocksTrackers: Bool? = nil,
+        allowsInvalidCertificate: Bool = false
     ) {
         self.key = key
         self.permissions = permissions
         self.blocksTrackers = blocksTrackers
+        self.allowsInvalidCertificate = allowsInvalidCertificate
     }
 
     public func decision(for permission: SitePermission) -> PermissionDecision {
@@ -45,6 +50,26 @@ public struct SitePolicy: Codable, Sendable, Hashable, Identifiable {
 
     /// Nothing decided and nothing overridden: not worth storing.
     public var isEmpty: Bool {
-        blocksTrackers == nil && permissions.values.allSatisfy { $0 == .ask }
+        blocksTrackers == nil && !allowsInvalidCertificate && permissions.values.allSatisfy { $0 == .ask }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case key, permissions, blocksTrackers, allowsInvalidCertificate
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        key = try container.decode(SiteKey.self, forKey: .key)
+        permissions = try container.decodeIfPresent([SitePermission: PermissionDecision].self, forKey: .permissions) ?? [:]
+        blocksTrackers = try container.decodeIfPresent(Bool.self, forKey: .blocksTrackers)
+        allowsInvalidCertificate = try container.decodeIfPresent(Bool.self, forKey: .allowsInvalidCertificate) ?? false
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(key, forKey: .key)
+        try container.encode(permissions, forKey: .permissions)
+        try container.encodeIfPresent(blocksTrackers, forKey: .blocksTrackers)
+        try container.encode(allowsInvalidCertificate, forKey: .allowsInvalidCertificate)
     }
 }

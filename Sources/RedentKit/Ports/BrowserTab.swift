@@ -6,6 +6,7 @@ public protocol BrowserTab: AnyObject {
     var snapshot: TabSnapshot { get }
     var title: String { get }
     var url: URL? { get }
+    var pageTrustIssue: PageTrustIssue? { get }
     var progress: Double { get }
     var isLoading: Bool { get }
     var canGoBack: Bool { get }
@@ -17,6 +18,8 @@ public protocol BrowserTab: AnyObject {
     var zoom: Double { get }
     func setZoom(_ level: Double)
     func load(_ url: URL)
+    /// Reloads after the user explicitly accepts an invalid TLS certificate.
+    func proceedThroughInvalidCertificate()
     func goBack()
     func goForward()
     func reload()
@@ -44,6 +47,8 @@ public protocol BrowserTab: AnyObject {
 /// Defaults for the capabilities a tab may simply not have — a stand-in in a
 /// test, or a page the engine cannot search. Each is a no-op, never a crash.
 public extension BrowserTab {
+    var pageTrustIssue: PageTrustIssue? { nil }
+    func proceedThroughInvalidCertificate() {}
     func reloadIgnoringCache() { reload() }
     func findInPage(_ query: String, forward: Bool) async -> FindMatches { .empty }
     func clearFindHighlight() {}

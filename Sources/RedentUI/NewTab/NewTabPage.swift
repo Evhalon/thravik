@@ -8,6 +8,7 @@ struct NewTabPage: View {
     @State private var newTab: NewTabModel
     @FocusState private var isSearchFocused: Bool
     @State private var query = ""
+    @State private var showsFolderEditor = false
 
     init(model: BrowserModel) {
         self.model = model
@@ -35,6 +36,9 @@ struct NewTabPage: View {
             // and the grid scrolls inside it rather than spilling past it.
             .frame(maxWidth: .infinity, maxHeight: restingHeight)
             .defaultFocus($isSearchFocused, true)
+        }
+        .sheet(isPresented: $showsFolderEditor) {
+            FavoriteFolderEditor { await newTab.createFavoriteFolder(named: $0) }
         }
         .task(id: model.currentSpaceID) { await newTab.load(in: model.currentSpaceID) }
         .onAppear { isSearchFocused = true }
@@ -69,11 +73,28 @@ struct NewTabPage: View {
     @ViewBuilder
     private var content: some View {
         if newTab.isBare {
-            NewTabEmptyState { model.sheet = .importBrowser }
+            NewTabEmptyState(
+                onImport: { model.sheet = .importBrowser },
+                onCreateFolder: { showsFolderEditor = true }
+            )
         } else {
-            NewTabGrid(tiles: newTab.tiles) { tile, inNewTab in
-                model.open(tile.url, inNewTab: inNewTab)
-            }
+            NewTabGrid(
+                favorites: newTab.rootFavoriteTiles,
+                folders: newTab.favoriteFolders,
+                frequent: newTab.frequentTiles,
+                tilesForFolder: newTab.favoriteTiles(in:),
+                onOpen: { tile, inNewTab in model.open(tile.url, inNewTab: inNewTab) },
+                onCreateFolder: { showsFolderEditor = true },
+                onMoveFavorite: { id, folder in
+                    Task { await newTab.moveFavorite(id, into: folder) }
+                },
+                onRemoveFavorite: { id in
+                    Task { await newTab.removeFavoriteFromFolder(id) }
+                },
+                onDeleteFolder: { folder in
+                    Task { await newTab.deleteFavoriteFolder(folder) }
+                }
+            )
         }
     }
 

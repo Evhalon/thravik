@@ -27,6 +27,17 @@ public final class SitePermissionLedger {
         policies[key] ?? SitePolicy(key: key)
     }
 
+    public func allowsInvalidCertificate(at key: SiteKey) -> Bool {
+        policy(for: key).allowsInvalidCertificate
+    }
+
+    public func allowInvalidCertificate(at key: SiteKey) {
+        var policy = policy(for: key)
+        policy.allowsInvalidCertificate = true
+        policies[key] = policy
+        Task { [store] in await store.save(policy) }
+    }
+
     public func set(_ decision: PermissionDecision, for permission: SitePermission, at key: SiteKey) {
         var policy = policy(for: key)
         policy.permissions[permission] = decision

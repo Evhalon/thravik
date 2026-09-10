@@ -85,6 +85,12 @@ actor BookmarkFileStore {
         persist(archive)
     }
 
+    func deleteFolder(_ folder: BookmarkFolder) {
+        var archive = loaded()
+        archive.folders.removeAll { $0.spaceID == folder.spaceID && $0.path == folder.path }
+        persist(archive)
+    }
+
     /// The same page in two Spaces is two bookmarks, so the Space is part of
     /// the key: importing into Personal must not be swallowed by Work.
     private static func dedupeKey(_ bookmark: Bookmark) -> String {
