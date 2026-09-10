@@ -11,11 +11,26 @@ import SwiftUI
 struct PageColumn: View {
     @Bindable var model: BrowserModel
     let usesTopStrip: Bool
+    @State private var addressFieldFrame: CGRect = .zero
 
     var body: some View {
         VStack(spacing: 0) {
-            if showsChrome { chrome } else { windowButtonClearance }
+            if showsChrome { chrome.zIndex(1) } else { windowButtonClearance }
             page
+        }
+        .coordinateSpace(.named(AddressFieldFrameKey.space))
+        .onPreferenceChange(AddressFieldFrameKey.self) { addressFieldFrame = $0 }
+        .overlay(alignment: .topLeading) { addressSuggestions }
+    }
+
+    /// Lives on the column, not the field: a list drawn inside the toolbar row
+    /// is clipped under the page that sits below it.
+    @ViewBuilder
+    private var addressSuggestions: some View {
+        if model.suggestions.isOpen(for: .addressBar), addressFieldFrame != .zero {
+            SuggestionList(model: model)
+                .frame(width: 360, alignment: .leading)
+                .offset(x: addressFieldFrame.minX, y: addressFieldFrame.maxY + 5)
         }
     }
 

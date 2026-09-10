@@ -5,6 +5,7 @@ import SwiftUI
 struct AddressField: View {
     @Bindable var model: BrowserModel
     @FocusState private var isFocused: Bool
+    @State private var blurCommit: Task<Void, Never>?
 
     var body: some View {
         @Bindable var address = model.address
@@ -21,8 +22,7 @@ struct AddressField: View {
                 .onSubmit(model.submitAddress)
                 .onExitCommand(perform: endEditing)
                 .onChange(of: isFocused) { _, focused in
-                    guard focused else { return endEditing() }
-                    model.address.beginEditing(with: model.selectedTab)
+                    handleFocus(focused)
                 }
                 .onChange(of: address.text) { _, text in
                     guard isFocused, model.address.isUserChange(text) else { return }
@@ -51,17 +51,44 @@ struct AddressField: View {
         .padding(.horizontal, Metric.gutter)
         .frame(height: Metric.controlHeight)
         .background { pill }
+        .background { reportFrame }
         .overlay(alignment: .bottomLeading) { progressBar }
-        .overlay(alignment: .topLeading) { dropdown }
         .animation(.easeOut(duration: 0.18), value: isFocused)
+    }
+
+    /// A suggestion tap lives outside this field, so blur would close the list
+    /// before the click landed. Escape and a later blur still end the edit.
+    private func handleFocus(_ focused: Bool) {
+        blurCommit?.cancel()
+        guard focused else {
+            blurCommit = Task { await commitBlur() }
+            return
+        }
+        model.address.beginEditing(with: model.selectedTab)
+    }
+
+    private func commitBlur() async {
+        try? await Task.sleep(for: .milliseconds(150))
+        guard !Task.isCancelled else { return }
+        endEditing()
     }
 
     /// Losing focus ends the edit, whatever took it away — a click on the page,
     /// another field, another window. Closing the dropdown alone left the field
     /// "being typed", so the compact host never came back.
     private func endEditing() {
+        blurCommit?.cancel()
         model.suggestions.close(from: .addressBar)
         model.address.cancelEditing(restoringFrom: model.selectedTab)
+    }
+
+    private var reportFrame: some View {
+        GeometryReader { geometry in
+            Color.clear.preference(
+                key: AddressFieldFrameKey.self,
+                value: geometry.frame(in: .named(AddressFieldFrameKey.space))
+            )
+        }
     }
 
     private var pill: some View {
@@ -79,17 +106,6 @@ struct AddressField: View {
             )
         }
         .shadow(color: Palette.accent.opacity(isFocused ? 0.28 : 0), radius: 9)
-    }
-
-    /// Anchored below the field, drawn above everything else in the window.
-    @ViewBuilder
-    private var dropdown: some View {
-        if model.suggestions.isOpen(for: .addressBar) {
-            SuggestionList(model: model)
-                .frame(width: 360, alignment: .leading)
-                .offset(y: Metric.controlHeight + 5)
-                .zIndex(10)
-        }
     }
 
     @ViewBuilder
