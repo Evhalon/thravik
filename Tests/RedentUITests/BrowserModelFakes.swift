@@ -6,15 +6,18 @@ import SwiftUI
 /// A window model wired entirely to in-memory doubles, so window-level state can
 /// be exercised without a Keychain, a database, or a WebKit process.
 @MainActor
-func makeTestBrowserModel(tabs: any BrowserControlling = FakeBrowser()) -> BrowserModel {
+func makeTestBrowserModel(
+    tabs: any BrowserControlling = FakeBrowser(),
+    bookmarks: any BookmarkStoring = InertBookmarkStore()
+) -> BrowserModel {
     let history = SilentHistory()
-    let bookmarks = InertBookmarkStore()
     let services = BrowserServices(
         history: history,
         bookmarks: bookmarks,
         settings: InertSettingsStore(),
         session: InertSessionStore(),
-        logger: SilentLogger()
+        logger: SilentLogger(),
+        downloads: DownloadsModel()
     )
     let features = BrowserFeatures(
         autofill: AutofillCoordinator(store: FakeCredentialStore(), logger: SilentLogger()),

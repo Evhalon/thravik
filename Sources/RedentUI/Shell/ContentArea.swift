@@ -22,6 +22,15 @@ struct ContentArea: View {
             .animation(.spring(duration: 0.3), value: model.autofill.pendingSave?.id)
             .animation(.spring(duration: 0.3), value: model.autofill.shouldOfferFill)
         }
+        .overlay(alignment: .topTrailing) {
+            if model.chrome.isFindBarVisible {
+                FindBar(model: model)
+                    .padding(.top, Metric.gutter + Metric.pageInset)
+                    .padding(.trailing, Metric.gutter)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(duration: 0.26), value: model.chrome.isFindBarVisible)
         .overlay(alignment: .bottom) {
             OTPFloatingButton(model: model)
                 .padding(.bottom, Metric.gutter + Metric.pageInset)

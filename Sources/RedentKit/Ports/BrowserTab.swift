@@ -20,7 +20,16 @@ public protocol BrowserTab: AnyObject {
     func goBack()
     func goForward()
     func reload()
+    /// Reloads past the cache, the way ⇧⌘R does in every other browser.
+    func reloadIgnoringCache()
     func stopLoading()
+    /// Highlights the next match for `query` in the page.
+    /// - Returns: whether anything matched.
+    func findInPage(_ query: String, forward: Bool) async -> Bool
+    /// Drops the highlight `findInPage` left behind.
+    func clearFindHighlight()
+    /// Puts the page on the system print panel.
+    func printPage()
     func fillCredential(username: String, password: String) async
     func fillOTPCode(_ code: String) async
     func hibernate()
@@ -30,4 +39,13 @@ public protocol BrowserTab: AnyObject {
     func travel(to entry: NavigationEntry)
     /// Drops timeline entries for a forgotten site.
     func forgetTimeline(domain: String)
+}
+
+/// Defaults for the capabilities a tab may simply not have — a stand-in in a
+/// test, or a page the engine cannot search. Each is a no-op, never a crash.
+public extension BrowserTab {
+    func reloadIgnoringCache() { reload() }
+    func findInPage(_ query: String, forward: Bool) async -> Bool { false }
+    func clearFindHighlight() {}
+    func printPage() {}
 }

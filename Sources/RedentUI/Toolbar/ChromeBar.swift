@@ -21,6 +21,7 @@ struct ChromeBar: View {
                 .frame(maxWidth: 720)
                 .zIndex(2)
             if model.isPrivate { ChromeBadge("PRIVATE", tint: Palette.accent) }
+            DownloadsButton(model: model)
             overflowMenu
         }
         .padding(.horizontal, Metric.tightGutter + 2)
@@ -31,6 +32,10 @@ struct ChromeBar: View {
         Menu {
             Button("New Window", action: model.newWindow)
             Button("New Private Window", action: model.newPrivateWindow)
+            Divider()
+            Button("Downloads…") { model.sheet = .downloads }
+            Button("Bookmarks…") { model.sheet = .bookmarks }
+            Button("History…") { model.sheet = .history }
             Divider()
             Button("Passwords…") { model.sheet = .passwords }
             Button("Authenticator…") { model.sheet = .authenticator }

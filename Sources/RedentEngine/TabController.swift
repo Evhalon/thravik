@@ -25,6 +25,11 @@ public final class TabController: BrowserControlling {
     @ObservationIgnored
     public var permissionDecider: (@MainActor (SiteKey, SitePermission) -> PermissionDecision)?
 
+    /// Where a file the page hands over goes. Shared with every other window,
+    /// and set by the composition root; nil in tests, where a download is
+    /// simply declined.
+    @ObservationIgnored public weak var downloads: DownloadCoordinator?
+
     /// Shared with every other window: one registry per process (see
     /// `BrowsingContextRegistry`).
     @ObservationIgnored let contexts: BrowsingContextRegistry

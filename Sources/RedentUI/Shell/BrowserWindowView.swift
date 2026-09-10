@@ -50,6 +50,7 @@ public struct BrowserWindowView<Sheets: View>: View {
         .overlay(alignment: .top) { commandBar }
         .overlay(alignment: .bottom) { expiryBar }
         .onChange(of: model.selectedTab?.url) { _, _ in model.address.sync(with: model.selectedTab) }
+        .task(id: model.selectedTab?.url) { await model.refreshBookmarkState() }
         .onChange(of: model.tabs.selectedID) { _, _ in model.address.syncSelection(with: model.selectedTab) }
         .alert("Action unavailable", isPresented: Binding(
             get: { model.actionError != nil }, set: { if !$0 { model.actionError = nil } }

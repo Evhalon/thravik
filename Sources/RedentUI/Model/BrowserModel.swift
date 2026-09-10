@@ -13,6 +13,7 @@ public final class BrowserModel {
     public let suggestions: AddressSuggestionsModel
     public let history: any HistoryStoring
     public let bookmarks: any BookmarkStoring
+    public let downloads: DownloadsModel
 
     public var settings: BrowserSettings { didSet { settingsChanged(from: oldValue) } }
     public var sheet: SheetRoute?
@@ -21,6 +22,9 @@ public final class BrowserModel {
     /// The temporary tab whose deadline passed while the user was reading it.
     public var expiredTabID: UUID?
     public let commandBar: CommandBarModel
+    /// Find bar, bookmark star, and caret requests — everything the chrome
+    /// shows about the page in front of the user.
+    public let chrome = PageChromeModel()
     /// Chrome hidden entirely — "widen the screen and hide the tabs".
     public var isFocusMode: Bool = false
     /// Which tabs this window shows side by side, and which pane has the chrome.
@@ -55,6 +59,7 @@ public final class BrowserModel {
         self.suggestions = features.suggestions
         self.history = services.history
         self.bookmarks = services.bookmarks
+        self.downloads = services.downloads
         self.visits = VisitRecorder(history: services.history)
         self.settings = settings
         self.settingsStore = services.settings

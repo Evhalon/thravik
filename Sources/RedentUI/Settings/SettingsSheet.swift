@@ -15,6 +15,7 @@ public struct SettingsSheet: View {
 
     @Binding private var settings: BrowserSettings
     private let updates: UpdateModel
+    private let defaultBrowser: DefaultBrowserModel
     private let onOpenPasswords: () -> Void
     private let onOpenAuthenticatorImport: () -> Void
     private let onResetWorkspace: () -> Void
@@ -24,12 +25,14 @@ public struct SettingsSheet: View {
     public init(
         settings: Binding<BrowserSettings>,
         updates: UpdateModel,
+        defaultBrowser: DefaultBrowserModel,
         onOpenPasswords: @escaping () -> Void,
         onOpenAuthenticatorImport: @escaping () -> Void,
         onResetWorkspace: @escaping () -> Void
     ) {
         self._settings = settings
         self.updates = updates
+        self.defaultBrowser = defaultBrowser
         self.onOpenPasswords = onOpenPasswords
         self.onOpenAuthenticatorImport = onOpenAuthenticatorImport
         self.onResetWorkspace = onResetWorkspace
@@ -67,7 +70,11 @@ public struct SettingsSheet: View {
     private var paneContent: some View {
         switch pane {
         case .general:
-            GeneralSettingsPane(settings: $settings, onResetWorkspace: onResetWorkspace)
+            GeneralSettingsPane(
+                settings: $settings,
+                defaultBrowser: defaultBrowser,
+                onResetWorkspace: onResetWorkspace
+            )
         case .appearance:
             AppearanceSettingsPane(settings: $settings)
         case .privacy:
@@ -103,6 +110,18 @@ private struct QuietUpdateInstaller: UpdateInstalling {
     func stage(_ release: AppRelease) async throws {}
 }
 
+private struct QuietDefaultBrowser: DefaultBrowserManaging {
+    func isDefault() async -> Bool { false }
+    func makeDefault() async -> Bool { false }
+}
+
+private struct QuietPromptStore: DefaultBrowserPromptStoring {
+    var lastPromptedVersion: String? { nil }
+    var isSilenced: Bool { true }
+    func recordPrompt(for version: String?) {}
+    func silence() {}
+}
+
 #Preview {
     @Previewable @State var settings = BrowserSettings()
     return SettingsSheet(
@@ -112,6 +131,11 @@ private struct QuietUpdateInstaller: UpdateInstalling {
             checker: QuietUpdateChecker(),
             installer: QuietUpdateInstaller(),
             quit: {}
+        ),
+        defaultBrowser: DefaultBrowserModel(
+            manager: QuietDefaultBrowser(),
+            store: QuietPromptStore(),
+            installedVersion: "0.1.2"
         ),
         onOpenPasswords: {},
         onOpenAuthenticatorImport: {},

@@ -23,6 +23,12 @@ final class AppContainer {
     let bookmarks: any BookmarkStoring
     let browserImporter: any BrowserImporting
     let permissions: SitePermissionLedger
+    /// One list for the whole app: a download outlives the window that started
+    /// it, and the engine side of it outlives the tab.
+    let downloads = DownloadsModel()
+    let downloadCoordinator: DownloadCoordinator
+    /// The once-per-release offer to take over web links.
+    let defaultBrowser: DefaultBrowserModel
     /// One per process, so two windows in the same Container share its cookies.
     let contexts = BrowsingContextRegistry()
     var siteData: any SiteDataManaging { contexts }
@@ -31,11 +37,20 @@ final class AppContainer {
     let sessionStore: any SessionStoring
     let logger: any EventLogging
 
+    /// Links from another app that arrived before a window existed to show
+    /// them. Drained by the first window that appears.
+    @ObservationIgnored var pendingLinks: [URL] = []
+
     /// Restored once, and handed to the primary window whenever it is built.
     private var restoredSession: Result<BrowserSession, any Error>
-    private var windows: [BrowserWindowSpec: WindowContainer] = [:]
+    /// Readable beyond this file, and only here: the update wiring in a
+    /// sibling file has to reach every window to clear its sheet before the
+    /// process can quit.
+    private(set) var windows: [BrowserWindowSpec: WindowContainer] = [:]
     /// Built on first use so its quit hook can reach every open window.
-    @ObservationIgnored private var updatesStorage: UpdateModel?
+    /// `internal` rather than `private`: the update wiring lives in a sibling
+    /// file to stay under the line limit.
+    @ObservationIgnored var updatesStorage: UpdateModel?
 
     init() {
         let logger = OSLogEventLogger(category: "browser")
@@ -56,6 +71,15 @@ final class AppContainer {
 
         let permissions = SitePermissionLedger(store: JSONSitePolicyStore())
         self.permissions = permissions
+        let coordinator = DownloadCoordinator(logger: logger)
+        self.downloadCoordinator = coordinator
+        self.defaultBrowser = DefaultBrowserModel(
+            manager: SystemDefaultBrowser(),
+            store: DefaultBrowserPromptStore(),
+            installedVersion: Self.installedVersionString()
+        )
+        coordinator.observer = downloads
+        downloads.commands = coordinator
         Task { await permissions.load() }
     }
 
@@ -86,38 +110,13 @@ final class AppContainer {
         return "Saved workspace could not be restored. Original data was preserved."
     }
 
+    /// The window a link from another app lands in: the primary one, or
+    /// whichever is open if that one is not.
+    var primaryWindow: WindowContainer? {
+        windows[.primary] ?? windows.values.first
+    }
+
     func persist() {
         windows[.primary]?.model.persistSession()
-    }
-
-    /// Releases are published as signed disk images on GitHub; the installer
-    /// swaps the running bundle and reopens it once this process exits.
-    var updates: UpdateModel {
-        if let updatesStorage { return updatesStorage }
-        let created = UpdateModel(
-            currentVersion: Self.installedVersion(),
-            checker: GitHubReleaseFeed(repository: "Evhalon/thravik"),
-            installer: DiskImageInstaller(),
-            // The restart is asked for from inside a sheet a window presents, so
-            // every window's binding has to be cleared before AppKit will
-            // terminate — not just the one the button was pressed in.
-            quit: { [weak self] in
-                AppTermination.quit(dismissing: { self?.dismissAllPresentations() })
-            }
-        )
-        updatesStorage = created
-        return created
-    }
-
-    private func dismissAllPresentations() {
-        for window in windows.values { window.model.dismissPresentations() }
-    }
-
-    /// `nil` under `swift run`, which has no Info.plist and so no version to
-    /// compare — a dev build is never offered an update.
-    private static func installedVersion() -> AppVersion? {
-        guard let raw = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-        else { return nil }
-        return AppVersion(raw)
     }
 }

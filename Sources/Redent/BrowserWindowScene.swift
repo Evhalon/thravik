@@ -19,6 +19,10 @@ struct BrowserWindowScene: View {
             SheetRouter(route: route, app: app, window: window)
         }
         .onAppear { window.model.windowOpener = open(isPrivate:) }
+        .task {
+            app.drainPendingLinks()
+            await app.offerDefaultBrowserIfNeeded(in: window)
+        }
         .onDisappear { app.releaseWindow(spec) }
     }
 

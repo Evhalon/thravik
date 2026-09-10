@@ -34,6 +34,9 @@ struct AddressField: View {
                 .onChange(of: model.centerSearchFocusEpoch) { _, _ in
                     isFocused = false
                 }
+                .onChange(of: model.chrome.addressFocusEpoch) { _, _ in
+                    isFocused = true
+                }
                 .onKeyPress(.downArrow) {
                     model.moveSuggestionHighlight(by: 1, from: .addressBar) ? .handled : .ignored
                 }

@@ -22,6 +22,9 @@ struct RedentApp: App {
         // A secondary window's identity is a fresh UUID with no saved workspace
         // behind it, so restoring one at launch would reopen an empty shell.
         .restorationBehavior(.disabled)
-        .commands { BrowserCommands() }
+        .commands {
+            BrowserCommands()
+            QuitCommand(container: container)
+        }
     }
 }

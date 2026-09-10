@@ -128,14 +128,7 @@ public final class CommandBarModel {
     }
 
     private func isValid(_ action: BrowserAction) -> Bool {
-        switch action {
-        case .focusTab(let id), .closeTab(let id), .pinTab(let id, _): return context.tabs.contains { $0.id == id }
-        case .focusSpace(let id), .deleteSpace(let id): return context.spaces.contains { $0.id == id }
-        case .renameSpace(let id, let name): return !name.isEmpty && context.spaces.contains { $0.id == id }
-        case .moveTab(let tabID, let spaceID): return context.tabs.contains { $0.id == tabID } && context.spaces.contains { $0.id == spaceID }
-        case .createSpace(let name): return !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .newTab, .navigate, .reopenLastClosed, .goBack, .goForward, .toggleFocusMode, .toggleSidebar: return true
-        }
+        CommandValidity.isValid(action, in: context)
     }
 }
 

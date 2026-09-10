@@ -2,41 +2,18 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// The star in the address bar. Owns its own lookup rather than pushing
-/// bookmark state into the browser model, since only this control cares.
+/// The star in the address bar. The lookup and the toggle live on the window
+/// model, so this control and ⌘D can never disagree about what is saved.
 struct BookmarkToggleButton: View {
     @Bindable var model: BrowserModel
-    @State private var existing: Bookmark?
 
     var body: some View {
-        Button(action: toggle) {
-            Image(systemName: existing == nil ? "star" : "star.fill")
+        Button { Task { await model.toggleBookmark() } } label: {
+            Image(systemName: model.chrome.isBookmarked ? "star.fill" : "star")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(existing == nil ? Palette.chromeSecondaryText : Palette.accent)
+                .foregroundStyle(model.chrome.isBookmarked ? Palette.accent : Palette.chromeSecondaryText)
         }
         .buttonStyle(PressScaleStyle())
-        .help(existing == nil ? "Bookmark this page" : "Remove bookmark")
-        .task(id: model.selectedTab?.url) { await refresh() }
-    }
-
-    private func refresh() async {
-        guard let url = model.selectedTab?.url else { return existing = nil }
-        existing = await model.bookmarks.bookmark(for: url, in: model.currentSpaceID)
-    }
-
-    private func toggle() {
-        guard let tab = model.selectedTab, let url = tab.url else { return }
-        let title = tab.title
-        let spaceID = model.currentSpaceID
-        Task {
-            if let existing {
-                await model.bookmarks.delete(existing.id)
-            } else {
-                await model.bookmarks.save(
-                    Bookmark(url: url, title: title, spaceID: spaceID, isFavorite: true)
-                )
-            }
-            await refresh()
-        }
+        .help(model.chrome.isBookmarked ? "Remove bookmark (⌘D)" : "Bookmark this page (⌘D)")
     }
 }
