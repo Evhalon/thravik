@@ -54,7 +54,7 @@ extension TabController {
     /// idle past the current hibernation policy's threshold. `.off` (a `nil`
     /// threshold) does nothing.
     public func sweepHibernation(now: Date, keeping visible: Set<UUID>) {
-        guard let threshold = settings.hibernation.idleThreshold else { return }
+        guard let threshold = settings.hibernationIdleThreshold else { return }
         let onScreen = visible.union([selectedID].compactMap { $0 })
         for tab in webTabs {
             if onScreen.contains(tab.id) {

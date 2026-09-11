@@ -7,6 +7,7 @@ struct GroupManageRow: View {
     let group: BrowserGroup
     let onRename: () -> Void
     let onDelete: () -> Void
+    let onClose: () -> Void
     @State private var isHovering = false
 
     var body: some View {
@@ -20,6 +21,7 @@ struct GroupManageRow: View {
             Spacer(minLength: 0)
             ManageRowMenu {
                 Button("Rename…", action: onRename)
+                Button("Close All Tabs", role: .destructive, action: onClose)
                 Button("Delete Group", role: .destructive, action: onDelete)
             }
             .opacity(isHovering ? 1 : 0.35)

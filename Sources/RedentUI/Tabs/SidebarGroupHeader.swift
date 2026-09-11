@@ -13,6 +13,7 @@ struct SidebarGroupHeader: View {
     struct Actions {
         let onSelect: () -> Void
         let onToggle: () -> Void
+        let onClose: () -> Void
     }
 
     var body: some View {
@@ -38,6 +39,9 @@ struct SidebarGroupHeader: View {
         }
         .contentShape(.rect)
         .onTapGesture(perform: actions.onSelect)
+        .contextMenu {
+            Button("Close Group", role: .destructive, action: actions.onClose)
+        }
         .animation(.easeOut(duration: 0.16), value: isCollapsed)
     }
 

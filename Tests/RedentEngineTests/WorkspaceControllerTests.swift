@@ -68,6 +68,19 @@ struct WorkspaceControllerTests {
         #expect(browser.tabs.contains { $0.id == other })
     }
 
+    @Test func closeTabsIsOneUndoableOperation() throws {
+        let browser = controller()
+        let first = try #require(browser.selectedID)
+        let second = browser.newTab(url: nil).id
+
+        browser.closeTabs([first, second])
+
+        #expect(browser.visibleTabs.isEmpty)
+        browser.undo()
+        #expect(Set(browser.visibleTabs.map(\.id)) == [first, second])
+        #expect(browser.selectedID == second)
+    }
+
     @Test func resetWorkspaceRestoresStarterStateAndClearsUndo() throws {
         let browser = controller()
         let oldIDs = Set(browser.tabs.map(\.id))

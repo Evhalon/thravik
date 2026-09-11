@@ -72,6 +72,7 @@ final class FakeBrowser: BrowserControlling {
     func keepTab(_ id: UUID) {}
     func sweepExpiredTabs(now: Date) -> UUID? { nil }
     func close(_ id: UUID) {}
+    func closeTabs(_ ids: Set<UUID>) {}
     func closeOthers(than id: UUID) {}
     func select(_ id: UUID) {
         selectionCalls.append(id)

@@ -39,13 +39,18 @@ struct NewTabModelTests {
     @Test("Favorite tiles keep the bookmark's own favicon")
     func favoriteKeepsFavicon() async throws {
         let icon = Data([0x00, 0x00, 0x01, 0x00])
-        let bookmark = Bookmark(url: try page("https://www.github.com"), isFavorite: true, faviconData: icon)
+        let bookmark = Bookmark(
+            url: try page("https://www.github.com"),
+            spaceID: BrowserSpace.workID,
+            isFavorite: true,
+            faviconData: icon
+        )
         let store = ListedBookmarkStore(bookmarks: [bookmark])
         let model = NewTabModel(
             history: SpacedHistoryStore(bySpace: [:]),
             bookmarks: store
         )
-        await model.load(in: nil)
+        await model.load(in: BrowserSpace.workID)
         #expect(model.tiles.map(\.host) == ["github.com"])
         #expect(model.tiles.first?.faviconData == icon)
         #expect(model.tiles.first?.isFavorite == true)
@@ -57,6 +62,7 @@ struct NewTabModelTests {
         let bookmark = Bookmark(
             url: try page("https://ordigo.app"),
             title: "OrdiGO",
+            spaceID: BrowserSpace.workID,
             isFavorite: true
         )
         let store = ListedBookmarkStore(bookmarks: [bookmark])
@@ -64,16 +70,31 @@ struct NewTabModelTests {
             history: SpacedHistoryStore(bySpace: [:]),
             bookmarks: store
         )
-        await model.load(in: nil)
+        await model.load(in: BrowserSpace.workID)
         let tile = try #require(model.tiles.first)
         await model.removeFavorite(tile)
         #expect(model.tiles.filter(\.isFavorite).isEmpty)
         #expect(await store.bookmarks.first?.isFavorite == false)
         #expect(await store.bookmarks.first?.url == bookmark.url)
     }
+
+    @Test("No selected Space never exposes favorites from every Space")
+    func missingSpaceStaysEmpty() async throws {
+        let bookmark = Bookmark(
+            url: try page("https://bmed.example"),
+            spaceID: BrowserSpace.workID,
+            isFavorite: true
+        )
+        let model = NewTabModel(
+            history: SpacedHistoryStore(bySpace: [:]),
+            bookmarks: ListedBookmarkStore(bookmarks: [bookmark])
+        )
+        await model.load(in: nil)
+        #expect(model.tiles.isEmpty)
+        #expect(model.isBare)
+    }
 }
 
-/// History that answers scoped queries the way the SQLite store does.
 private struct SpacedHistoryStore: HistoryStoring {
     let bySpace: [UUID: [HistoryEntry]]
 

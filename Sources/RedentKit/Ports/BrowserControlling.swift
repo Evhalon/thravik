@@ -31,6 +31,8 @@ public protocol BrowserControlling: AnyObject {
     /// - Returns: the selected tab now asking to be kept or closed, if any.
     @discardableResult func sweepExpiredTabs(now: Date) -> UUID?
     func close(_ id: UUID)
+    /// Closes several tabs as one reversible operation.
+    func closeTabs(_ ids: Set<UUID>)
     func closeOthers(than id: UUID)
     func select(_ id: UUID)
     func selectPreviouslyActiveTab()
