@@ -42,11 +42,20 @@ public actor SiteIconLoader {
 
     /// Warms the small set of icons a hovered folder is about to reveal.
     public func preload(hosts: [String]) async {
+        _ = await icons(for: hosts)
+    }
+
+    public func icons(for hosts: [String]) async -> [String: Data] {
         let candidates = Array(Set(hosts).prefix(12))
-        await withTaskGroup(of: Void.self) { group in
+        return await withTaskGroup(of: (String, Data?).self, returning: [String: Data].self) { group in
             for host in candidates {
-                group.addTask { [self] in _ = await icon(for: host) }
+                group.addTask { [self] in (host, await icon(for: host)) }
             }
+            var icons: [String: Data] = [:]
+            for await (host, data) in group {
+                if let data { icons[host] = data }
+            }
+            return icons
         }
     }
 

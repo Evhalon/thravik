@@ -1,42 +1,35 @@
 import RedentDesign
+import RedentKit
 import SwiftUI
 
-/// The new tab's own light. The chrome's ambient color is derived from the
-/// current page, and a new tab has none — so this page brings its own, which
-/// also makes opening one feel like arriving somewhere rather than at a void.
+/// The active Space sets the home page's ambient light, so switching profiles
+/// feels like arriving somewhere distinct without changing the chrome.
 struct NewTabBackdrop: View {
+    let space: BrowserSpace?
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         ZStack {
             Palette.canvas
             RadialGradient(
-                colors: [Palette.accent.opacity(scheme == .dark ? 0.32 : 0.20), .clear],
-                center: UnitPoint(x: 0.5, y: 0.12),
-                startRadius: 10,
-                endRadius: 520
+                colors: [ambientColor.opacity(scheme == .dark ? 0.32 : 0.20), .clear],
+                center: UnitPoint(x: 0.5, y: 0.12), startRadius: 10, endRadius: 520
             )
             RadialGradient(
-                colors: [Palette.defaultAmbient.opacity(scheme == .dark ? 0.22 : 0.12), .clear],
-                center: UnitPoint(x: 0.12, y: 0.9),
-                startRadius: 10,
-                endRadius: 460
+                colors: [ambientColor.opacity(scheme == .dark ? 0.22 : 0.12), .clear],
+                center: UnitPoint(x: 0.12, y: 0.9), startRadius: 10, endRadius: 460
             )
             NoiseOverlay(opacity: 0.04)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.25), value: colorToken)
     }
-}
 
-/// A greeting that tracks the clock, because a browser opened at 2am and one
-/// opened at 9am are not the same moment.
-enum Greeting {
-    static func current(at date: Date = .now, calendar: Calendar = .current) -> String {
-        switch calendar.component(.hour, from: date) {
-        case 5..<12: "Good morning"
-        case 12..<18: "Good afternoon"
-        case 18..<23: "Good evening"
-        default: "Still up?"
-        }
+    private var colorToken: String {
+        guard let space else { return "" }
+        return SpaceIdentity.look(id: space.id, icon: space.icon, colorToken: space.colorToken).colorToken
     }
+
+    private var ambientColor: Color { SpacePalette.color(colorToken) }
 }

@@ -12,7 +12,7 @@ struct PagePane: View {
     var body: some View {
         content
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
-            .background(Palette.canvas)
+            .background { if tab?.url != nil { Palette.canvas } }
             .overlay(alignment: .top) { activeEdge }
             .contentShape(.rect)
             .onTapGesture { focusIfNeeded() }

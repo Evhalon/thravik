@@ -8,7 +8,7 @@ struct FavoriteFolderSheet: View {
     let onOpen: (NewTabTile, Bool) -> Void
     let onRemoveFromFolder: (UUID) -> Void
     let onDeleteFolder: (FavoriteFolder) -> Void
-    @Environment(\.dismiss) private var dismiss
+    let onDismiss: () -> Void
     @State private var confirmsDeletion = false
 
     private let columns = [GridItem(.adaptive(minimum: 96, maximum: 96), spacing: 18)]
@@ -27,7 +27,7 @@ struct FavoriteFolderSheet: View {
                     Image(systemName: "trash")
                 }
                 .help("Delete folder")
-                Button("Done") { dismiss() }
+                Button("Done", action: onDismiss)
             }
             Divider()
             ScrollView {
@@ -35,7 +35,7 @@ struct FavoriteFolderSheet: View {
                     ForEach(tiles) { tile in
                         NewTabTileView(tile: tile) { commandHeld in
                             onOpen(tile, commandHeld)
-                            dismiss()
+                            onDismiss()
                         }
                         .contextMenu { removeFromFolderAction(for: tile) }
                     }
@@ -45,11 +45,16 @@ struct FavoriteFolderSheet: View {
         }
         .padding(20)
         .frame(width: 520, height: 390, alignment: .topLeading)
-        .sheetCanvas(width: 520, height: 390)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(.white.opacity(0.16), lineWidth: Metric.hairWidth)
+        }
+        .shadow(color: .black.opacity(0.28), radius: 28, y: 12)
         .confirmationDialog("Delete \(folder.name)?", isPresented: $confirmsDeletion) {
             Button("Delete Folder", role: .destructive) {
                 onDeleteFolder(folder)
-                dismiss()
+                onDismiss()
             }
         } message: {
             Text("Favorites in this folder will be moved to Favorites.")
@@ -61,7 +66,7 @@ struct FavoriteFolderSheet: View {
         if let bookmarkID = tile.bookmarkID {
             Button("Remove from Folder") {
                 onRemoveFromFolder(bookmarkID)
-                dismiss()
+                onDismiss()
             }
         }
     }

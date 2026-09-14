@@ -18,7 +18,7 @@ struct TopTabItem: View {
 
     @ViewBuilder
     private var selectionBackground: some View {
-        let shape = RoundedRectangle(cornerRadius: Metric.mediumRadius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Metric.tabRowHeight / 2, style: .continuous)
         if drag.isLifted(tab.id) {
             EmptyView()
         } else if isSelected {

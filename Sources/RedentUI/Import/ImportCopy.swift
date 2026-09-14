@@ -17,7 +17,7 @@ enum ImportCopy {
         switch kind {
         case .history: "Powers address bar suggestions and the new-tab page."
         case .bookmarks: "Bookmarks-bar entries become favorites."
-        case .passwords: "macOS will ask permission to read the other browser's key."
+        case .passwords: "macOS may ask once to read the other browser's key. Choose Always Allow to reuse it."
         }
     }
 }

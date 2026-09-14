@@ -64,6 +64,10 @@ extension BrowserModel {
     /// new-tab page are all scoped to it.
     public var currentSpaceID: UUID? { tabs.session.selectedSpaceID }
 
+    public var currentSpace: BrowserSpace? {
+        tabs.session.spaces.first { $0.id == currentSpaceID }
+    }
+
     /// Space names by id, for screens that list more than one profile's data.
     public var spaceNames: [UUID: String] {
         Dictionary(tabs.session.spaces.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })

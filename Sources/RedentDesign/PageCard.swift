@@ -16,7 +16,6 @@ private struct PageCard: ViewModifier {
         return content
             .overlay { cornerCover }
             .background { shadowPlate(shape) }
-            .padding(isInset ? Metric.pageInset : 0)
             .animation(.spring(duration: 0.3), value: isInset)
     }
 
@@ -29,14 +28,16 @@ private struct PageCard: ViewModifier {
                 let bounds = CGRect(origin: .zero, size: size)
                 var path = Path(bounds)
                 path.addPath(
-                    RoundedRectangle(cornerRadius: Metric.pageRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: innerRadius, style: .continuous)
                         .path(in: bounds)
                 )
-                context.fill(path, with: .color(Palette.pageChrome), style: FillStyle(eoFill: true))
+                context.fill(path, with: .color(Palette.canvas), style: FillStyle(eoFill: true))
             }
             .allowsHitTesting(false)
         }
     }
+
+    private var innerRadius: CGFloat { Metric.pageRadius - Metric.pageInset }
 
     /// The shadow belongs to a shape *behind* the card, not to the card itself.
     /// Shadowing the content would put the live web view through an offscreen

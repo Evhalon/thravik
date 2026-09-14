@@ -53,7 +53,7 @@ public final class BrowserImportModel {
         browsers = importer.availableBrowsers()
         let known = Set(browsers.map(\.id))
         selectedIDs.formIntersection(known)
-        if selectedIDs.isEmpty, let first = browsers.first { selectedIDs.insert(first.id) }
+        if selectedIDs.isEmpty { selectAll() }
     }
 
     public func toggle(browserID: String) {
@@ -97,7 +97,7 @@ public final class BrowserImportModel {
 
     static func message(for failures: [String]) -> String {
         if failures.contains("passwords-key") {
-            return "Passwords need permission: macOS must allow Thravik to read the other browser's encryption key from your Keychain. Try again and choose Allow."
+            return "Passwords need permission: macOS must allow Thravik to read the other browser's encryption key. Try again and choose Always Allow to retain that permission."
         }
         if failures.contains("passwords-save") {
             return "Passwords were read but could not be saved to the Keychain."

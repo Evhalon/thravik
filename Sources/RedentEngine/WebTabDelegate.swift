@@ -17,6 +17,10 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
         self.tab = tab
     }
 
+    static func tracksTab(targetFrameIsMain: Bool?) -> Bool {
+        targetFrameIsMain == true
+    }
+
     /// Resolved here rather than in the permission extension, which cannot see
     /// `tab` — and so cannot tell which Container the request came from.
     func permissionDecision(for origin: Origin, _ permission: SitePermission) -> PermissionDecision? {
@@ -29,6 +33,9 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
         _ webView: WKWebView,
         decidePolicyFor navigationAction: WKNavigationAction
     ) async -> WKNavigationActionPolicy {
+        guard Self.tracksTab(targetFrameIsMain: navigationAction.targetFrame?.isMainFrame) else {
+            return .allow
+        }
         let target = LinkActivation.target(
             isUserLink: navigationAction.navigationType == .linkActivated,
             commandHeld: navigationAction.modifierFlags.contains(.command),

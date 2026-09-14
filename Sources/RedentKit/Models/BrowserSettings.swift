@@ -76,6 +76,8 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
     public var showsTOTPButton: Bool
     public var searchEngine: SearchEngine
     public var homepage: String
+    /// Restores the primary workspace when the app opens.
+    public var reopensTabsOnLaunch: Bool
 
     public static let sidebarWidthRange: ClosedRange<Double> = 180...380
 
@@ -89,7 +91,8 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
         offersPasswordSave: Bool = true,
         showsTOTPButton: Bool = true,
         searchEngine: SearchEngine = .duckduckgo,
-        homepage: String = "https://duckduckgo.com"
+        homepage: String = "https://duckduckgo.com",
+        reopensTabsOnLaunch: Bool = true
     ) {
         self.tabLayout = tabLayout
         self.isTabStripVisible = isTabStripVisible
@@ -101,6 +104,7 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
         self.showsTOTPButton = showsTOTPButton
         self.searchEngine = searchEngine
         self.homepage = homepage
+        self.reopensTabsOnLaunch = reopensTabsOnLaunch
     }
 
     public var hibernationIdleThreshold: TimeInterval? {

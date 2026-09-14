@@ -8,13 +8,10 @@ struct NewTabGrid: View {
     let frequent: [NewTabTile]
     let tilesForFolder: (FavoriteFolder) -> [NewTabTile]
     let onOpen: (NewTabTile, Bool) -> Void
+    let onOpenFolder: (FavoriteFolder) -> Void
     let onCreateFolder: () -> Void
     let onMoveFavorite: (UUID, FavoriteFolder) -> Void
     let onRemoveFavorite: (NewTabTile) -> Void
-    let onRemoveFromFolder: (UUID) -> Void
-    let onDeleteFolder: (FavoriteFolder) -> Void
-
-    @State private var openedFolder: FavoriteFolder?
 
     private let columns = [GridItem(.adaptive(minimum: 96, maximum: 96), spacing: 18)]
 
@@ -25,15 +22,6 @@ struct NewTabGrid: View {
         }
         .padding(.horizontal, 52)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .sheet(item: $openedFolder) { folder in
-            FavoriteFolderSheet(
-                folder: folder,
-                tiles: tilesForFolder(folder),
-                onOpen: onOpen,
-                onRemoveFromFolder: onRemoveFromFolder,
-                onDeleteFolder: onDeleteFolder
-            )
-        }
     }
 
     private var favoritesSection: some View {
@@ -53,7 +41,7 @@ struct NewTabGrid: View {
                 ForEach(folders) { folder in
                     FavoriteFolderTile(
                         folder: folder,
-                        onOpen: { openedFolder = folder },
+                        onOpen: { onOpenFolder(folder) },
                         onPrepare: { prefetchIcons(for: folder) },
                         onReceiveFavorite: { onMoveFavorite($0, folder) }
                     )

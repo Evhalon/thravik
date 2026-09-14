@@ -36,6 +36,13 @@ struct GeneralSettingsPane: View {
                     .frame(height: Metric.controlHeight)
                     .background { fieldChrome }
             }
+            SettingsSection("STARTUP") {
+                SettingsToggleRow(
+                    "Reopen tabs on launch",
+                    caption: "Open the tabs that were active when you last quit.",
+                    isOn: $settings.reopensTabsOnLaunch
+                )
+            }
             SettingsSection("DEFAULT BROWSER") {
                 DefaultBrowserRow(model: defaultBrowser)
             }

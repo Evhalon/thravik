@@ -9,6 +9,7 @@ struct NewTabPage: View {
     @FocusState private var isSearchFocused: Bool
     @State private var query = ""
     @State private var showsFolderEditor = false
+    @State private var openedFolder: FavoriteFolder?
 
     init(model: BrowserModel) {
         self.model = model
@@ -17,7 +18,7 @@ struct NewTabPage: View {
 
     var body: some View {
         ZStack {
-            NewTabBackdrop()
+            NewTabBackdrop(space: model.currentSpace)
             VStack(spacing: 26) {
                 header
                 NewTabSearchField(model: model, text: $query, isFocused: $isSearchFocused, onSubmit: submit)
@@ -36,11 +37,13 @@ struct NewTabPage: View {
             // and the grid scrolls inside it rather than spilling past it.
             .frame(maxWidth: .infinity, maxHeight: restingHeight)
             .defaultFocus($isSearchFocused, true)
+            folderOverlay
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(isPresented: $showsFolderEditor) {
             FavoriteFolderEditor { await newTab.createFavoriteFolder(named: $0) }
         }
-        .task(id: model.currentSpaceID) { await newTab.load(in: model.currentSpaceID) }
+        .task(id: model.currentSpaceID) { await loadFavorites() }
         .onAppear { isSearchFocused = true }
         .task(id: model.centerSearchFocusEpoch) { await claimSearchFocus() }
     }
@@ -84,21 +87,48 @@ struct NewTabPage: View {
                 frequent: newTab.frequentTiles,
                 tilesForFolder: newTab.favoriteTiles(in:),
                 onOpen: { tile, inNewTab in model.open(tile.url, inNewTab: inNewTab) },
+                onOpenFolder: { openedFolder = $0 },
                 onCreateFolder: { showsFolderEditor = true },
                 onMoveFavorite: { id, folder in
                     Task { await newTab.moveFavorite(id, into: folder) }
                 },
                 onRemoveFavorite: { tile in
                     Task { await newTab.removeFavorite(tile) }
-                },
-                onRemoveFromFolder: { id in
-                    Task { await newTab.removeFavoriteFromFolder(id) }
-                },
-                onDeleteFolder: { folder in
-                    Task { await newTab.deleteFavoriteFolder(folder) }
                 }
             )
         }
+    }
+
+    @ViewBuilder
+    private var folderOverlay: some View {
+        if let folder = openedFolder {
+            FavoriteFolderOverlay(
+                folder: folder,
+                tiles: newTab.favoriteTiles(in: folder),
+                onOpen: openFolderTile,
+                onRemoveFromFolder: removeFromFolder,
+                onDeleteFolder: deleteFolder,
+                onDismiss: { openedFolder = nil }
+            )
+        }
+    }
+
+    private func openFolderTile(_ tile: NewTabTile, inNewTab: Bool) {
+        model.open(tile.url, inNewTab: inNewTab)
+        openedFolder = nil
+    }
+
+    private func removeFromFolder(_ id: UUID) {
+        Task { await newTab.removeFavoriteFromFolder(id) }
+    }
+
+    private func deleteFolder(_ folder: FavoriteFolder) {
+        Task { await newTab.deleteFavoriteFolder(folder) }
+    }
+
+    private func loadFavorites() async {
+        await newTab.load(in: model.currentSpaceID)
+        await newTab.preloadFavoriteIcons()
     }
 
     private func submit() {

@@ -41,7 +41,7 @@ public struct BrowserImportSheet: View {
         VStack(alignment: .leading, spacing: 3) {
             Text("Import from another browser")
                 .font(.system(size: 16, weight: .semibold))
-            Text("Pick as many profiles as you like — they are imported one after another. Nothing leaves your Mac.")
+            Text("All detected profiles are selected. Deselect any you do not want; nothing leaves your Mac.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(Palette.chromeSecondaryText)
         }

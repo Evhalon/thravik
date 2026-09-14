@@ -55,10 +55,15 @@ final class AppContainer {
     init() {
         let logger = OSLogEventLogger(category: "browser")
         self.logger = logger
-        self.settingsStore = UserDefaultsSettingsStore()
+        let settingsStore = UserDefaultsSettingsStore()
+        self.settingsStore = settingsStore
         let sessionStore = UserDefaultsSessionStore()
         self.sessionStore = sessionStore
-        self.restoredSession = Result { try sessionStore.loadRecoverable() }
+        if settingsStore.load().reopensTabsOnLaunch {
+            self.restoredSession = Result { try sessionStore.loadRecoverable() }
+        } else {
+            self.restoredSession = .success(BrowserSession())
+        }
 
         let credentials = KeychainCredentialStore()
         self.credentials = credentials

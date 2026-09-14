@@ -36,8 +36,7 @@ struct PageColumn: View {
 
     private var page: some View {
         ContentArea(model: model)
-            .background(Palette.pageChrome)
-            .pageCard(isInset: !model.isFocusMode)
+            .pageCard(isInset: !model.isFocusMode && !isShowingNewTab)
     }
 
     /// Without the rail there is nothing else holding the window buttons, so the
@@ -63,4 +62,6 @@ struct PageColumn: View {
     }
 
     private var showsChrome: Bool { !model.isFocusMode }
+
+    private var isShowingNewTab: Bool { model.selectedTab?.url == nil }
 }

@@ -38,7 +38,6 @@ struct BrowserImportSelectionTests {
             "Dia/User Data/Profile 2": .init(history: 5, bookmarks: 2)
         ]))
         model.discover()
-        model.selectAll()
         model.kinds = [.history, .bookmarks]
 
         await model.run()
@@ -82,22 +81,22 @@ struct BrowserImportSelectionTests {
         #expect(model.problem?.contains("Allow") == true)
     }
 
-    @Test("Discovery selects one profile, and toggling is independent")
+    @Test("Discovery selects every profile, and toggling is independent")
     func selectionDefaultsAndToggles() {
         let model = makeModel(importer([:]))
         model.discover()
 
-        #expect(model.selectedIDs == ["Dia/User Data/Default"])
-        #expect(!model.isEverythingSelected)
+        #expect(model.selectedIDs == Set(Self.profiles.map(\.id)))
+        #expect(model.isEverythingSelected)
 
         model.toggle(browserID: "Dia/User Data/Profile 1")
         #expect(model.selectedIDs.count == 2)
         #expect(model.selectedBrowsers.map(\.id) == [
-            "Dia/User Data/Default", "Dia/User Data/Profile 1"
+            "Dia/User Data/Default", "Dia/User Data/Profile 2"
         ])
 
         model.toggle(browserID: "Dia/User Data/Default")
-        #expect(model.selectedIDs == ["Dia/User Data/Profile 1"])
+        #expect(model.selectedIDs == ["Dia/User Data/Profile 2"])
 
         model.selectAll()
         #expect(model.isEverythingSelected)

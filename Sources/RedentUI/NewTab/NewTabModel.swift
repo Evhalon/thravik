@@ -73,6 +73,18 @@ public final class NewTabModel {
         favoriteTiles(from: favorites.filter(\.folderPath.isEmpty), limit: Self.tileLimit, uniquingHosts: true)
     }
 
+    func updateFavoriteIcons(_ icons: [String: Data]) {
+        favorites = favorites.map { bookmark in
+            guard bookmark.faviconData == nil,
+                  let host = bookmark.origin?.displayHost,
+                  let icon = icons[host]
+            else { return bookmark }
+            var updated = bookmark
+            updated.faviconData = icon
+            return updated
+        }
+    }
+
     public var frequentTiles: [NewTabTile] {
         let savedHosts = Set(favorites.compactMap { $0.origin?.displayHost })
         return frequentTiles(excluding: savedHosts, limit: Self.tileLimit)

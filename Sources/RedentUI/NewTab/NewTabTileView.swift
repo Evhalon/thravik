@@ -69,16 +69,14 @@ struct NewTabTileView: View {
                     LinearGradient(colors: [.white.opacity(0.28), .white.opacity(0.05)],
                                    startPoint: .top, endPoint: .bottom),
                     lineWidth: Metric.hairWidth
-                )
+            )
             if let iconData {
                 FaviconView(data: iconData, host: tile.host, size: 30)
-                    .transition(.opacity)
             } else {
                 FaviconView(data: nil, host: tile.host, size: 30)
             }
         }
         .frame(width: 62, height: 62)
-        .animation(.easeOut(duration: 0.16), value: iconData != nil)
         .shadow(color: accent.opacity(isHovering ? 0.45 : 0.18), radius: isHovering ? 14 : 7, y: 4)
         .overlay(alignment: .topTrailing) {
             if tile.isFavorite {

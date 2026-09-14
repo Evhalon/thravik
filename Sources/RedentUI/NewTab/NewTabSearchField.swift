@@ -13,7 +13,7 @@ struct NewTabSearchField: View {
         HStack(spacing: Metric.gutter) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(isFocused ? Palette.accent : Palette.chromeSecondaryText)
+                .foregroundStyle(Palette.chromeSecondaryText)
 
             TextField("Search the web or type an address", text: $text)
                 .textFieldStyle(.plain)
@@ -55,20 +55,16 @@ struct NewTabSearchField: View {
         .background {
             let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
             ZStack {
-                shape.fill(.black.opacity(isFocused ? 0.30 : 0.20))
+                shape.fill(.black.opacity(0.20))
                 shape.strokeBorder(
                     LinearGradient(
-                        colors: isFocused
-                            ? [Palette.accent.opacity(0.85), Palette.accent.opacity(0.25)]
-                            : [.white.opacity(0.22), .white.opacity(0.06)],
+                        colors: [.white.opacity(0.22), .white.opacity(0.06)],
                         startPoint: .top, endPoint: .bottom
                     ),
-                    lineWidth: isFocused ? 1.4 : Metric.hairWidth
+                    lineWidth: Metric.hairWidth
                 )
             }
-            .shadow(color: Palette.accent.opacity(isFocused ? 0.32 : 0), radius: 18, y: 4)
         }
-        .animation(.easeOut(duration: 0.2), value: isFocused)
         .overlay(alignment: .topLeading) { dropdown }
         .padding(.horizontal, 40)
         .zIndex(3)
