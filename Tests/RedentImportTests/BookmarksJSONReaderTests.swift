@@ -65,6 +65,7 @@ struct BookmarksJSONReaderTests {
 
         let bookmarks = try BookmarksJSONReader.read(from: url)
         #expect(bookmarks.count == 3)
+        #expect(bookmarks.map(\.title) == ["Top Level", "Nested", "Elsewhere"])
 
         let topLevel = try #require(bookmarks.first { $0.title == "Top Level" })
         #expect(topLevel.folderPath == ["Bookmarks Bar"])

@@ -10,6 +10,7 @@ struct NewTabPage: View {
     @State private var query = ""
     @State private var showsFolderEditor = false
     @State private var openedFolder: FavoriteFolder?
+    @State private var favoriteToRename: NewTabTile?
 
     init(model: BrowserModel) {
         self.model = model
@@ -38,21 +39,20 @@ struct NewTabPage: View {
         .sheet(isPresented: $showsFolderEditor) {
             FavoriteFolderEditor { await newTab.createFavoriteFolder(named: $0) }
         }
+        .sheet(item: $favoriteToRename) { tile in
+            FavoriteNameEditor(tile: tile) { await newTab.renameFavorite(tile, to: $0) }
+        }
         .task(id: model.currentSpaceID) { await loadFavorites() }
         .onAppear { isSearchFocused = true }
         .task(id: model.centerSearchFocusEpoch) { await claimSearchFocus() }
     }
 
-    /// AppKit often hands first responder to the sidebar address field when a
-    /// web view leaves the tree. Claim twice: now, and after that reassignment.
     private func claimSearchFocus() async {
         isSearchFocused = true
         try? await Task.sleep(for: .milliseconds(50))
         isSearchFocused = true
     }
 
-    /// Sits the greeting a little above centre, where it rests in a tall
-    /// window; the grid then runs to the bottom edge and scrolls there.
     private func topInset(in height: CGFloat) -> CGFloat {
         max(40, (height - 620) / 2 + 40)
     }
@@ -88,6 +88,7 @@ struct NewTabPage: View {
                 onMoveFavorite: { id, folder in
                     Task { await newTab.moveFavorite(id, into: folder) }
                 },
+                onRenameFavorite: { favoriteToRename = $0 },
                 onRemoveFavorite: { tile in
                     Task { await newTab.removeFavorite(tile) }
                 }
@@ -102,6 +103,7 @@ struct NewTabPage: View {
                 folder: folder,
                 tiles: newTab.favoriteTiles(in: folder),
                 onOpen: openFolderTile,
+                onRenameFavorite: { favoriteToRename = $0 },
                 onRemoveFromFolder: removeFromFolder,
                 onDeleteFolder: deleteFolder,
                 onDismiss: { openedFolder = nil }

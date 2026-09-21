@@ -11,6 +11,8 @@ struct NewTabTileView: View {
     let tile: NewTabTile
     let onOpen: (_ commandHeld: Bool) -> Void
     var onRemoveFavorite: (() -> Void)?
+    var onRenameFavorite: (() -> Void)?
+    var onRemoveFromFolder: (() -> Void)?
 
     @State private var isHovering = false
     @State private var fetchedIcon: Data?
@@ -19,7 +21,7 @@ struct NewTabTileView: View {
         Button(action: { onOpen(NSEvent.modifierFlags.contains(.command)) }) {
             VStack(spacing: 9) {
                 icon
-                Text(tile.host)
+                Text(tile.isFavorite ? tile.title : tile.host)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Palette.chromeSecondaryText)
                     .lineLimit(1)
@@ -39,6 +41,12 @@ struct NewTabTileView: View {
 
     @ViewBuilder
     private var menu: some View {
+        if let onRenameFavorite {
+            Button("Rename Favorite…", action: onRenameFavorite)
+        }
+        if let onRemoveFromFolder {
+            Button("Remove from Folder", action: onRemoveFromFolder)
+        }
         if tile.isFavorite, let onRemoveFavorite {
             Button("Remove from Favorites", role: .destructive, action: onRemoveFavorite)
         }

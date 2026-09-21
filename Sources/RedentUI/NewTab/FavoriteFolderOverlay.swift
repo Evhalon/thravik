@@ -5,6 +5,7 @@ struct FavoriteFolderOverlay: View {
     let folder: FavoriteFolder
     let tiles: [NewTabTile]
     let onOpen: (NewTabTile, Bool) -> Void
+    let onRenameFavorite: (NewTabTile) -> Void
     let onRemoveFromFolder: (UUID) -> Void
     let onDeleteFolder: (FavoriteFolder) -> Void
     let onDismiss: () -> Void
@@ -18,6 +19,7 @@ struct FavoriteFolderOverlay: View {
                 folder: folder,
                 tiles: tiles,
                 onOpen: onOpen,
+                onRenameFavorite: onRenameFavorite,
                 onRemoveFromFolder: onRemoveFromFolder,
                 onDeleteFolder: onDeleteFolder,
                 onDismiss: onDismiss

@@ -11,6 +11,7 @@ struct NewTabGrid: View {
     let onOpenFolder: (FavoriteFolder) -> Void
     let onCreateFolder: () -> Void
     let onMoveFavorite: (UUID, FavoriteFolder) -> Void
+    let onRenameFavorite: (NewTabTile) -> Void
     let onRemoveFavorite: (NewTabTile) -> Void
 
     private let columns = [GridItem(.adaptive(minimum: 96, maximum: 96), spacing: 18)]
@@ -50,7 +51,8 @@ struct NewTabGrid: View {
                     NewTabTileView(
                         tile: tile,
                         onOpen: { onOpen(tile, $0) },
-                        onRemoveFavorite: { onRemoveFavorite(tile) }
+                        onRemoveFavorite: { onRemoveFavorite(tile) },
+                        onRenameFavorite: { onRenameFavorite(tile) }
                     )
                 }
             }

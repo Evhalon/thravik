@@ -6,6 +6,7 @@ struct FavoriteFolderSheet: View {
     let folder: FavoriteFolder
     let tiles: [NewTabTile]
     let onOpen: (NewTabTile, Bool) -> Void
+    let onRenameFavorite: (NewTabTile) -> Void
     let onRemoveFromFolder: (UUID) -> Void
     let onDeleteFolder: (FavoriteFolder) -> Void
     let onDismiss: () -> Void
@@ -33,11 +34,15 @@ struct FavoriteFolderSheet: View {
             ScrollView {
                 LazyVGrid(columns: columns, alignment: .leading, spacing: 22) {
                     ForEach(tiles) { tile in
-                        NewTabTileView(tile: tile) { commandHeld in
-                            onOpen(tile, commandHeld)
-                            onDismiss()
-                        }
-                        .contextMenu { removeFromFolderAction(for: tile) }
+                        NewTabTileView(
+                            tile: tile,
+                            onOpen: { commandHeld in
+                                onOpen(tile, commandHeld)
+                                onDismiss()
+                            },
+                            onRenameFavorite: { onRenameFavorite(tile) },
+                            onRemoveFromFolder: { removeFromFolder(tile) }
+                        )
                     }
                 }
                 // Room for the favorite badge, hover scale and glow, which the scroll view clips.
@@ -62,13 +67,9 @@ struct FavoriteFolderSheet: View {
         }
     }
 
-    @ViewBuilder
-    private func removeFromFolderAction(for tile: NewTabTile) -> some View {
-        if let bookmarkID = tile.bookmarkID {
-            Button("Remove from Folder") {
-                onRemoveFromFolder(bookmarkID)
-                onDismiss()
-            }
-        }
+    private func removeFromFolder(_ tile: NewTabTile) {
+        guard let bookmarkID = tile.bookmarkID else { return }
+        onRemoveFromFolder(bookmarkID)
+        onDismiss()
     }
 }
