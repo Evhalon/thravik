@@ -10,6 +10,7 @@ extension AppContainer {
     /// - Returns: whether a window was there to take them.
     @discardableResult
     func openExternal(_ urls: [URL]) -> Bool {
+        let urls = urls.filter { linkDebouncer.admits($0, at: .now) }
         guard let window = primaryWindow else {
             pendingLinks.append(contentsOf: urls)
             return false
@@ -23,7 +24,8 @@ extension AppContainer {
         guard !pendingLinks.isEmpty else { return }
         let waiting = pendingLinks
         pendingLinks.removeAll()
-        openExternal(waiting)
+        guard let window = primaryWindow else { return }
+        for url in waiting { window.model.open(url, inNewTab: true) }
     }
 
     /// The offer to become the default browser, raised once per release and
