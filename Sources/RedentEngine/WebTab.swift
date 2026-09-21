@@ -26,6 +26,7 @@ public final class WebTab: Identifiable, BrowserTab {
     public internal(set) var zoom: Double
     public internal(set) var isPlayingAudio = false
     public internal(set) var isMuted = false
+    public internal(set) var volume: Double = 1
     public internal(set) var isReaderActive = false
 
     public var isPinned: Bool {

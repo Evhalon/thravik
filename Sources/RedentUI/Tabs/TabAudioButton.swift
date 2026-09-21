@@ -9,7 +9,7 @@ struct TabAudioButton: View {
 
     var body: some View {
         Button { tab.setMuted(!tab.isMuted) } label: {
-            Image(systemName: tab.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+            Image(systemName: TabVolumeSymbol.name(muted: tab.isMuted, level: tab.volume))
                 .font(.system(size: 9.5, weight: .semibold))
                 .foregroundStyle(tab.isMuted ? Palette.chromeSecondaryText : Palette.accent)
                 .symbolEffect(.variableColor.iterative, isActive: tab.isPlayingAudio && !tab.isMuted)

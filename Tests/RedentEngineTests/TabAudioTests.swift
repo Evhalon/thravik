@@ -46,6 +46,17 @@ struct TabAudioTests {
         #expect(tab.isMuted)
     }
 
+    @Test("Volume stays between silent and the page's own level")
+    func volumeIsClamped() throws {
+        let (_, tab) = try backgroundTab()
+        tab.setVolume(1.7)
+        #expect(tab.volume == 1)
+        tab.setVolume(-0.2)
+        #expect(tab.volume == 0)
+        tab.setVolume(.nan)
+        #expect(tab.volume == 1)
+    }
+
     private func backgroundTab() throws -> (TabController, WebTab) {
         let first = TabSnapshot(url: URL(string: "https://front.example"), title: "Front")
         let second = TabSnapshot(url: URL(string: "https://music.example"), title: "Music")

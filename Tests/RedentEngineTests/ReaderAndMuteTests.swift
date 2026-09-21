@@ -60,6 +60,19 @@ struct ReaderAndMuteTests {
         #expect(try await settles(tab, "v.muted"))
     }
 
+    @Test("Tab volume scales the page's own level, and 100% hands it back")
+    func volumeScalesPageLevel() async throws {
+        let tab = try await page("<audio id='a'></audio>")
+        tab.setVolume(0.5)
+        #expect(try await settles(tab, "Math.abs(a.volume - 0.5) < 0.001"))
+
+        _ = try await pageValue(tab, "(a.volume = 0.8, true)")
+        #expect(try await settles(tab, "Math.abs(a.volume - 0.4) < 0.001"))
+
+        tab.setVolume(1)
+        #expect(try await settles(tab, "Math.abs(a.volume - 0.8) < 0.001"))
+    }
+
     /// The mute is fire-and-forget, so poll the page rather than guess a delay.
     private func settles(_ tab: WebTab, _ condition: String) async throws -> Bool {
         for _ in 0..<100 {
@@ -85,7 +98,7 @@ struct ReaderAndMuteTests {
         view.loadHTMLString("<body>\(body)</body>", baseURL: URL(string: "https://example.com"))
         for _ in 0..<200 {
             let ready = try? await view.callAsyncJavaScript(
-                "return typeof window.redentToggleReader === 'function' && typeof window.redentSetMuted === 'function'",
+                "return typeof window.redentToggleReader === 'function' && typeof window.redentSetAudio === 'function'",
                 in: nil,
                 contentWorld: PageScripts.contentWorld
             ) as? Bool

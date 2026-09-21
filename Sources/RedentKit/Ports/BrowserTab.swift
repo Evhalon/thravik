@@ -40,6 +40,9 @@ public protocol BrowserTab: AnyObject {
     var isPlayingAudio: Bool { get }
     var isMuted: Bool { get }
     func setMuted(_ muted: Bool)
+    /// The tab's level, 0…1, scaling whatever the page itself plays at.
+    var volume: Double { get }
+    func setVolume(_ level: Double)
     /// The page's article is laid over it in Reader.
     var isReaderActive: Bool { get }
     /// Opens Reader, or closes it. A page with no article stays as it is.
@@ -64,6 +67,8 @@ public extension BrowserTab {
     var isPlayingAudio: Bool { false }
     var isMuted: Bool { false }
     func setMuted(_ muted: Bool) {}
+    var volume: Double { 1 }
+    func setVolume(_ level: Double) {}
     var isReaderActive: Bool { false }
     func toggleReader() async {}
 }

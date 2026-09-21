@@ -20,6 +20,7 @@ struct ChromeBar: View {
                 .frame(maxWidth: 720)
                 .zIndex(2)
             if model.isPrivate { ChromeBadge("PRIVATE", tint: Palette.accent) }
+            if model.showsVolumeControl { TabVolumeButton(model: model) }
             DownloadsButton(model: model)
             overflowMenu
         }
