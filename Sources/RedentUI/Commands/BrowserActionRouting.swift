@@ -46,6 +46,8 @@ extension BrowserModel {
         case .bookmarkPage: Task { await toggleBookmark() }
         case .findOnPage: showFindBar()
         case .printPage: printPage()
+        case .toggleReader: toggleReader()
+        case .toggleMute: toggleMute()
         case .showScreen(let screen): sheet = SheetRoute(screen)
         }
     }

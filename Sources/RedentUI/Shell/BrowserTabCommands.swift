@@ -1,7 +1,7 @@
 import RedentKit
 import SwiftUI
 
-/// The Tab menu: moving between the tabs of the current Space, and the two
+/// The Tab menu: moving between the tabs of the current Space, and the few
 /// things done to the one in front.
 struct BrowserTabCommands: Commands {
     let model: BrowserModel?
@@ -20,6 +20,10 @@ struct BrowserTabCommands: Commands {
             }
             .keyboardShortcut("w", modifiers: [.command, .option])
             .disabled(model?.tabs.selectedID == nil)
+            // ⌃M, as in Firefox: ⌘M belongs to Minimize in every Mac app.
+            Button(muteTitle) { model?.toggleMute() }
+                .keyboardShortcut("m", modifiers: .control)
+                .disabled(model?.selectedTab == nil)
         }
     }
 
@@ -54,6 +58,10 @@ struct BrowserTabCommands: Commands {
                 .keyboardShortcut(KeyEquivalent(Character(String(number))), modifiers: .command)
                 .disabled(model == nil)
         }
+    }
+
+    private var muteTitle: String {
+        model?.isSelectedTabMuted == true ? "Unmute Tab" : "Mute Tab"
     }
 
     private var pinTitle: String {

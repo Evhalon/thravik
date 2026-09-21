@@ -30,11 +30,14 @@ extension BrowserModel {
 
     public var hasPage: Bool { selectedTab?.url != nil }
 
+    /// Copies the link the way it should be shared: without the click IDs a
+    /// recipient's browser would otherwise report back to the tracker.
     public func copyAddress() {
         guard let url = selectedTab?.url else { return }
+        let shared = settings.stripsTrackingParameters ? TrackingParameters.stripped(url) ?? url : url
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(url.absoluteString, forType: .string)
+        pasteboard.setString(shared.absoluteString, forType: .string)
     }
 
     /// ⌘L. A new tab has no address bar of its own, so the caret goes to the

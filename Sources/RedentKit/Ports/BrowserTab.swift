@@ -36,6 +36,14 @@ public protocol BrowserTab: AnyObject {
     func fillCredential(username: String, password: String) async
     func fillOTPCode(_ code: String) async
     func hibernate()
+    /// Some frame in the page is playing sound, muted by Redent or not.
+    var isPlayingAudio: Bool { get }
+    var isMuted: Bool { get }
+    func setMuted(_ muted: Bool)
+    /// The page's article is laid over it in Reader.
+    var isReaderActive: Bool { get }
+    /// Opens Reader, or closes it. A page with no article stays as it is.
+    func toggleReader() async
     /// The tab's own navigation path, oldest first.
     var timeline: [NavigationEntry] { get }
     /// Returns to an earlier entry, live where possible and by URL otherwise.
@@ -53,4 +61,9 @@ public extension BrowserTab {
     func findInPage(_ query: String, forward: Bool) async -> FindMatches { .empty }
     func clearFindHighlight() {}
     func printPage() {}
+    var isPlayingAudio: Bool { false }
+    var isMuted: Bool { false }
+    func setMuted(_ muted: Bool) {}
+    var isReaderActive: Bool { false }
+    func toggleReader() async {}
 }

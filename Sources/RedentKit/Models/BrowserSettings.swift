@@ -72,6 +72,8 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
     public var customHibernationMinutes: Int?
     /// Ads and trackers. On by default, like Brave Shields.
     public var blocksTrackers: Bool
+    /// Drops click IDs and campaign tags from links before they load.
+    public var stripsTrackingParameters: Bool
     public var offersPasswordSave: Bool
     public var showsTOTPButton: Bool
     public var searchEngine: SearchEngine
@@ -88,6 +90,7 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
         hibernation: HibernationPolicy = .balanced,
         customHibernationMinutes: Int? = 15,
         blocksTrackers: Bool = true,
+        stripsTrackingParameters: Bool = true,
         offersPasswordSave: Bool = true,
         showsTOTPButton: Bool = true,
         searchEngine: SearchEngine = .duckduckgo,
@@ -100,6 +103,7 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
         self.hibernation = hibernation
         self.customHibernationMinutes = customHibernationMinutes
         self.blocksTrackers = blocksTrackers
+        self.stripsTrackingParameters = stripsTrackingParameters
         self.offersPasswordSave = offersPasswordSave
         self.showsTOTPButton = showsTOTPButton
         self.searchEngine = searchEngine

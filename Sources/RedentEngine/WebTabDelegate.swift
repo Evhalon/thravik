@@ -41,12 +41,19 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
             commandHeld: navigationAction.modifierFlags.contains(.command),
             shiftHeld: navigationAction.modifierFlags.contains(.shift)
         )
+        let strips = tab?.controller?.settings.stripsTrackingParameters ?? false
         if target != .currentTab {
             if let url = navigationAction.request.url, let tab {
                 tab.controller?.openCommandClickedLink(
-                    url: url, from: tab.snapshot, selecting: target == .foregroundTab
+                    url: TrackingLinkCleaner.clean(url, enabled: strips),
+                    from: tab.snapshot, selecting: target == .foregroundTab
                 )
             }
+            return .cancel
+        }
+        if let clean = TrackingLinkCleaner.cleanTarget(of: navigationAction, enabled: strips) {
+            // After the decision returns, so the cancel never races the new load.
+            if let tab { Task { tab.load(clean) } }
             return .cancel
         }
         tab?.beginNavigation(to: navigationAction.request.url)

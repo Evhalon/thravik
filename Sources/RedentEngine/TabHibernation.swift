@@ -26,6 +26,8 @@ extension WebTab {
         // it can no longer perform.
         liveItems.removeAll()
         snapshot.timeline.dropLiveState()
+        audibleFrames.removeAll()
+        isPlayingAudio = false
     }
 
     /// Toggles the built-in ad/tracker list on an already-live view when
@@ -50,9 +52,9 @@ extension TabController {
                        blocksTrackers: settings.blocksTrackers, contentBlocker: contentBlocker)
     }
 
-    /// Hibernates every non-selected, non-pinned tab whose snapshot has been
-    /// idle past the current hibernation policy's threshold. `.off` (a `nil`
-    /// threshold) does nothing.
+    /// Hibernates every non-selected, non-pinned, silent tab whose snapshot has
+    /// been idle past the current hibernation policy's threshold. `.off` (a
+    /// `nil` threshold) does nothing. Music in a background tab is the tab in use.
     public func sweepHibernation(now: Date, keeping visible: Set<UUID>) {
         guard let threshold = settings.hibernationIdleThreshold else { return }
         let onScreen = visible.union([selectedID].compactMap { $0 })
@@ -61,7 +63,7 @@ extension TabController {
                 tab.snapshot.lastActiveAt = now
                 continue
             }
-            guard !tab.isPinned, !tab.isHibernated else { continue }
+            guard !tab.isPinned, !tab.isHibernated, !tab.isPlayingAudio else { continue }
             if now.timeIntervalSince(tab.snapshot.lastActiveAt) >= threshold {
                 tab.hibernate()
             }

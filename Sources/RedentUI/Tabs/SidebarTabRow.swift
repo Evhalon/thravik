@@ -33,7 +33,7 @@ struct SidebarTabRow: View {
             withAnimation(.easeOut(duration: 0.14)) { isHovering = hovering }
         }
         .tabDragging(tab: tab, actions: actions, drag: drag, space: SidebarTabList.dragSpace)
-        .contextMenu { TabRowMenu(isPinned: tab.isPinned, actions: actions) }
+        .contextMenu { TabRowMenu(tab: tab, actions: actions) }
     }
 
     @ViewBuilder

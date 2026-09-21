@@ -33,5 +33,8 @@ public enum BrowserAction: Hashable, Sendable {
     case bookmarkPage
     case findOnPage
     case printPage
+    /// Lays the page's article over it, or takes it away.
+    case toggleReader
+    case toggleMute
     case showScreen(BrowserScreen)
 }

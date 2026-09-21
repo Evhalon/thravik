@@ -42,6 +42,7 @@ struct AddressField: View {
                 }
 
             if model.selectedTab?.url != nil {
+                ReaderToggleButton(model: model)
                 BookmarkToggleButton(model: model)
             }
             if model.autofill.hasSuggestions {

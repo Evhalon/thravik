@@ -60,6 +60,6 @@ struct TopTabItem: View {
             withAnimation(.easeOut(duration: 0.12)) { isHovering = hovering }
         }
         .tabDragging(tab: tab, actions: actions, drag: drag, space: TopTabStrip.dragSpace)
-        .contextMenu { TabRowMenu(isPinned: tab.isPinned, actions: actions) }
+        .contextMenu { TabRowMenu(tab: tab, actions: actions) }
     }
 }

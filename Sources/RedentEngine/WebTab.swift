@@ -24,6 +24,9 @@ public final class WebTab: Identifiable, BrowserTab {
     public internal(set) var isHibernated: Bool = true
     public internal(set) var themeColor: Color?
     public internal(set) var zoom: Double
+    public internal(set) var isPlayingAudio = false
+    public internal(set) var isMuted = false
+    public internal(set) var isReaderActive = false
 
     public var isPinned: Bool {
         didSet { snapshot.isPinned = isPinned }
@@ -48,6 +51,7 @@ public final class WebTab: Identifiable, BrowserTab {
     @ObservationIgnored var navigationDelegate: WebTabNavigationDelegate?
     @ObservationIgnored var signalRouter: PageSignalRouter?
     @ObservationIgnored var observationTokens: [NSKeyValueObservation] = []
+    @ObservationIgnored var audibleFrames: Set<String> = []
 
     init(snapshot: TabSnapshot, controller: TabController?) {
         self.id = snapshot.id
@@ -124,6 +128,7 @@ public final class WebTab: Identifiable, BrowserTab {
 
     func beginNavigation(to url: URL? = nil) {
         pageTrustIssue = nil
+        isReaderActive = false
         guard let url else { return }
         attemptedURL = url
         self.url = url

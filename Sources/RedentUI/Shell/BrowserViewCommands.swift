@@ -16,6 +16,9 @@ struct BrowserViewCommands: Commands {
             Button(focusTitle) { model?.toggleFocusMode() }
                 .keyboardShortcut("f", modifiers: [.command, .shift])
                 .disabled(model == nil)
+            Button(readerTitle) { model?.toggleReader() }
+                .keyboardShortcut("r", modifiers: [.command, .control])
+                .disabled(!(model?.hasPage ?? false))
             Divider()
             Picker("Tab Layout", selection: layoutBinding) {
                 ForEach(TabLayout.allCases) { Text($0.label).tag($0) }
@@ -61,6 +64,7 @@ struct BrowserViewCommands: Commands {
     private var tabStripTitle: String { (model?.showsTabStrip ?? false) ? "Hide Tabs" : "Show Tabs" }
     private var sidebarTitle: String { (model?.isSidebarVisible ?? false) ? "Hide Sidebar" : "Show Sidebar" }
     private var focusTitle: String { (model?.isFocusMode ?? false) ? "Exit Focus Mode" : "Focus Mode" }
+    private var readerTitle: String { (model?.isReaderActive ?? false) ? "Hide Reader" : "Show Reader" }
     private var splitTitle: String { (model?.split.isSplit ?? false) ? "Close Split" : "Split View" }
 
     private var layoutBinding: Binding<TabLayout> {

@@ -21,7 +21,8 @@ enum CommandValidity {
         // The page commands act on whatever the window is showing when they
         // run, so there is nothing in a stale snapshot to invalidate them.
         case .newTab, .navigate, .reopenLastClosed, .goBack, .goForward, .toggleFocusMode,
-             .toggleSidebar, .reloadPage, .bookmarkPage, .findOnPage, .printPage, .showScreen:
+             .toggleSidebar, .reloadPage, .bookmarkPage, .findOnPage, .printPage, .toggleReader,
+             .toggleMute, .showScreen:
             true
         }
     }

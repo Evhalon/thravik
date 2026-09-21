@@ -17,6 +17,7 @@ final class PageSignalRouter: NSObject, WKScriptMessageHandler {
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        if routeMedia(message.body) { return }
         guard let signal = Self.parse(message.body) else { return }
         tab?.receive(signal)
     }
@@ -54,6 +55,23 @@ final class PageSignalRouter: NSObject, WKScriptMessageHandler {
         default:
             return nil
         }
+    }
+
+    /// Tab audio stays inside the engine: it drives the speaker badge and
+    /// keeps a playing tab awake, and no feature above needs the raw events.
+    private func routeMedia(_ body: Any) -> Bool {
+        guard let dict = body as? [String: Any], let type = dict["type"] as? String else { return false }
+        switch type {
+        case "mediaReset":
+            tab?.resetMediaFrames()
+        case "mediaAudible":
+            guard let frame = dict["frame"] as? String, frame.count <= 64,
+                  let audible = dict["audible"] as? Bool else { return true }
+            tab?.mediaFrame(frame, isAudible: audible)
+        default:
+            return false
+        }
+        return true
     }
 
     private static func parseOrigin(_ dict: [String: Any]) -> Origin? {

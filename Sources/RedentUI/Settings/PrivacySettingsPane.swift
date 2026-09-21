@@ -59,6 +59,11 @@ struct PrivacySettingsPane: View {
                 caption: "On by default, like Brave Shields. YouTube stays unblocked so the player does not die.",
                 isOn: $settings.blocksTrackers
             )
+            SettingsToggleRow(
+                "Remove tracking from links",
+                caption: "Strips click IDs and campaign tags such as utm_source and fbclid before a page loads.",
+                isOn: $settings.stripsTrackingParameters
+            )
             SettingsToggleRow("Offer to save passwords", isOn: $settings.offersPasswordSave)
             SettingsToggleRow("Show one-time code button", isOn: $settings.showsTOTPButton)
         }

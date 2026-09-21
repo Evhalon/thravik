@@ -1,12 +1,14 @@
+import RedentKit
 import SwiftUI
 
 /// The right-click menu shared by both tab strips.
 struct TabRowMenu: View {
-    let isPinned: Bool
+    let tab: any BrowserTab
     let actions: TabRowActions
 
     var body: some View {
-        Button(isPinned ? "Unpin Tab" : "Pin Tab", action: actions.onTogglePin)
+        Button(tab.isPinned ? "Unpin Tab" : "Pin Tab", action: actions.onTogglePin)
+        Button(tab.isMuted ? "Unmute Tab" : "Mute Tab") { tab.setMuted(!tab.isMuted) }
         if let onUngroup = actions.onUngroup {
             Button("Remove from Group", action: onUngroup)
         }

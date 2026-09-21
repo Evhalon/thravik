@@ -22,6 +22,9 @@ struct TabRowLabel: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .foregroundStyle(isSelected ? Palette.chromeText : Palette.chromeSecondaryText)
+            if tab.isPlayingAudio || tab.isMuted {
+                TabAudioButton(tab: tab)
+            }
         }
         .opacity(tab.isHibernated ? 0.6 : 1)
         .help(helpText)

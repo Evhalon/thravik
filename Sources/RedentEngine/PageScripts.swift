@@ -10,21 +10,34 @@ enum PageScripts {
     static let contentWorld = WKContentWorld.world(name: "redent")
     static let messageHandlerName = "redentBridge"
 
+    /// Frames relay mute requests to their children with this; a page never
+    /// sees the isolated world's copy, so it cannot guess one to replay.
+    private static let mediaRelayToken = UUID().uuidString
+
     /// Adds the user scripts to a fresh configuration's content controller: the
-    /// credential bridge, and find-in-page. A missing resource is a no-op,
-    /// never a crash — a bundle resource must never be force-unwrapped.
+    /// credential bridge, find-in-page, tab audio, and Reader. A missing resource is a
+    /// no-op, never a crash — a bundle resource must never be force-unwrapped.
     static func install(into controller: WKUserContentController) {
         for name in ["redent-page", "redent-find"] {
-            guard let source = loadSource(named: name) else { continue }
-            controller.addUserScript(
-                WKUserScript(
-                    source: source,
-                    injectionTime: .atDocumentEnd,
-                    forMainFrameOnly: false,
-                    in: contentWorld
-                )
-            )
+            add(loadSource(named: name), at: .atDocumentEnd, to: controller)
         }
+        // At document start: a page that autoplays on load must already be heard.
+        let media = loadSource(named: "redent-media")?
+            .replacingOccurrences(of: "__REDENT_MEDIA_RELAY__", with: mediaRelayToken)
+        add(media, at: .atDocumentStart, to: controller)
+        add(loadSource(named: "redent-reader"), at: .atDocumentEnd, mainFrameOnly: true, to: controller)
+    }
+
+    private static func add(
+        _ source: String?,
+        at time: WKUserScriptInjectionTime,
+        mainFrameOnly: Bool = false,
+        to controller: WKUserContentController
+    ) {
+        guard let source else { return }
+        controller.addUserScript(
+            WKUserScript(source: source, injectionTime: time, forMainFrameOnly: mainFrameOnly, in: contentWorld)
+        )
     }
 
     private static func loadSource(named name: String) -> String? {

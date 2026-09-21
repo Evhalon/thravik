@@ -75,6 +75,8 @@ public enum DefaultCommandDescriptors {
         CommandDescriptor(id: "reload", title: "Reload Page", keywords: ["refresh"], symbol: "arrow.clockwise") { _, _ in .reloadPage },
         CommandDescriptor(id: "bookmark", title: "Bookmark Page", keywords: ["save", "star", "favorite"], symbol: "star") { _, _ in .bookmarkPage },
         CommandDescriptor(id: "find", title: "Find on Page", keywords: ["search", "text"], symbol: "text.magnifyingglass") { _, _ in .findOnPage },
+        CommandDescriptor(id: "reader", title: "Toggle Reader", keywords: ["read", "article", "clean"], symbol: "text.page") { _, _ in .toggleReader },
+        CommandDescriptor(id: "mute", title: "Mute or Unmute Tab", keywords: ["sound", "audio", "silence"], symbol: "speaker.slash") { _, _ in .toggleMute },
         CommandDescriptor(id: "print", title: "Print Page", keywords: ["pdf", "paper"], symbol: "printer") { _, _ in .printPage },
         CommandDescriptor(id: "downloads", title: "Downloads", keywords: ["files", "saved"], symbol: "arrow.down.circle") { _, _ in .showScreen(.downloads) },
         CommandDescriptor(id: "bookmarks", title: "Bookmarks", keywords: ["saved", "library"], symbol: "book") { _, _ in .showScreen(.bookmarks) },
