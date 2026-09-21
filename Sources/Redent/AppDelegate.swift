@@ -14,20 +14,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// common case when a click in Mail is what launched the app.
     @MainActor private var pendingLinks: [URL] = []
 
-    /// Once launched, links bypass SwiftUI, which answers every URL event that
-    /// finds no window yet with a window of its own. The link that launches
-    /// the app is left to SwiftUI — it builds the first window from it — and
-    /// reaches a tab through that window's `onOpenURL`.
+    /// Register before launch completes so the URL that starts Redent is not
+    /// consumed by SwiftUI as a request for an empty window.
     @MainActor
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate()
+    func applicationWillFinishLaunching(_ notification: Notification) {
         NSAppleEventManager.shared().setEventHandler(
             self,
             andSelector: #selector(handleGetURL(_:withReplyEvent:)),
             forEventClass: AEEventClass(kInternetEventClass),
             andEventID: AEEventID(kAEGetURL)
         )
+    }
+
+    @MainActor
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate()
+    }
+
+    @MainActor
+    func application(_ application: NSApplication, open urls: [URL]) {
+        receive(urls)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -44,12 +51,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let text = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
               let url = URL(string: text)
         else { return }
+        receive([url])
+        NSApp.activate()
+    }
+
+    @MainActor
+    private func receive(_ urls: [URL]) {
         guard let container else {
-            pendingLinks.append(url)
+            pendingLinks.append(contentsOf: urls)
             return
         }
-        container.openExternal([url])
-        NSApp.activate()
+        container.openExternal(urls)
     }
 
     /// The container takes them from here: if it has no window yet either, it

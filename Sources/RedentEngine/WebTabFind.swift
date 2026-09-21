@@ -14,11 +14,13 @@ extension WebTab {
     /// needs a colour a reader can actually pick out.
     public func findInPage(_ query: String, forward: Bool) async -> FindMatches {
         guard let webView, !query.isEmpty else { return .empty }
+        findRequestID &+= 1
+        let requestID = findRequestID
         // The call throws on a page that navigated out from under it; either
         // way the answer is that nothing is highlighted.
         let reply = try? await webView.callAsyncJavaScript(
-            "return window.redentFind ? window.redentFind(query, forward) : null",
-            arguments: ["query": query, "forward": forward],
+            "return window.redentFind ? window.redentFind(query, forward, requestID) : null",
+            arguments: ["query": query, "forward": forward, "requestID": requestID],
             in: nil,
             contentWorld: PageScripts.contentWorld
         )
@@ -29,8 +31,10 @@ extension WebTab {
     /// page but not its scripts (AGENTS.md §5).
     public func clearFindHighlight() {
         guard let webView else { return }
+        findRequestID &+= 1
+        let requestID = findRequestID
         webView.evaluateJavaScript(
-            "window.redentFindClear && window.redentFindClear();",
+            "window.redentFindClear && window.redentFindClear(\(requestID));",
             in: nil,
             in: PageScripts.contentWorld
         ) { _ in }

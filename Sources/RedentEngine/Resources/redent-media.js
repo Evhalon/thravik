@@ -29,13 +29,12 @@
       return typeof el.__redentPageVolume === 'number' ? el.__redentPageVolume : el.volume;
     }
 
-    // A video that has decoded seconds of frames and not one byte of audio has
-    // no sound to mute; everything else counts once it plays at any volume.
+    // Any player running unmuted at some volume counts. WebKit's decoded-audio
+    // byte count is not a usable "has no sound" test: it stays at zero for
+    // streamed and hardware-decoded video, which would hide YouTube.
     function wantsSound(el) {
       if (el.paused || el.ended || pageVolume(el) === 0) return false;
-      if (el.muted && !el.__redentMuted) return false;
-      var silent = el.tagName === 'VIDEO' && el.webkitAudioDecodedByteCount === 0 && el.currentTime > 2;
-      return !silent;
+      return !el.muted || !!el.__redentMuted;
     }
 
     function report() {

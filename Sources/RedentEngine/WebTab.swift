@@ -53,6 +53,7 @@ public final class WebTab: Identifiable, BrowserTab {
     @ObservationIgnored var signalRouter: PageSignalRouter?
     @ObservationIgnored var observationTokens: [NSKeyValueObservation] = []
     @ObservationIgnored var audibleFrames: Set<String> = []
+    @ObservationIgnored var findRequestID: UInt = 0
 
     init(snapshot: TabSnapshot, controller: TabController?) {
         self.id = snapshot.id

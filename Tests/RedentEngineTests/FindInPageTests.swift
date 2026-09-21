@@ -40,10 +40,37 @@ struct FindInPageTests {
         #expect(try await tab.webView?.evaluateJavaScript("document.querySelectorAll('span').length") as? Int == 0)
     }
 
+    @Test("An older keystroke cannot repaint over the current query")
+    func staleQueryCannotRepaint() async throws {
+        let tab = try await pageSaying("<p>s elsewhere, then stock here</p>")
+        let view = try #require(tab.webView)
+        let script = "return window.redentFind(query, true, requestID)"
+
+        _ = try await view.callAsyncJavaScript(
+            script, arguments: ["query": "stock", "requestID": 2],
+            in: nil, contentWorld: PageScripts.contentWorld
+        )
+        _ = try await view.callAsyncJavaScript(
+            script, arguments: ["query": "s", "requestID": 1],
+            in: nil, contentWorld: PageScripts.contentWorld
+        )
+
+        #expect(try await allHighlightRangeCount(in: tab) == 1)
+    }
+
     /// The all-matches highlight and the active one, or neither.
     private func highlightCount(in tab: WebTab) async throws -> Int {
         let value = try await tab.webView?.callAsyncJavaScript(
             "return CSS.highlights.size",
+            in: nil,
+            contentWorld: PageScripts.contentWorld
+        )
+        return value as? Int ?? -1
+    }
+
+    private func allHighlightRangeCount(in tab: WebTab) async throws -> Int {
+        let value = try await tab.webView?.callAsyncJavaScript(
+            "return CSS.highlights.get('redent-find-all').size",
             in: nil,
             contentWorld: PageScripts.contentWorld
         )

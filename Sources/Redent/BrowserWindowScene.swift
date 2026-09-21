@@ -24,6 +24,7 @@ struct BrowserWindowScene: View {
             await app.offerDefaultBrowserIfNeeded(in: window)
         }
         .onDisappear { app.releaseWindow(spec) }
+        .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         .onOpenURL { url in app.openExternal([url]) }
     }
 

@@ -22,7 +22,7 @@
     };
     var SKIP = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1, TITLE: 1, SELECT: 1 };
 
-    var state = { query: '', ranges: [], index: -1, styled: false };
+    var state = { query: '', ranges: [], index: -1, styled: false, requestID: 0 };
 
     function supported() {
       return typeof CSS !== 'undefined' && !!CSS.highlights && typeof Highlight === 'function';
@@ -175,9 +175,13 @@
       return !current || !current.getClientRects().length;
     }
 
-    window.redentFind = function (query, forward) {
+    window.redentFind = function (query, forward, requestID) {
       if (!supported() || typeof query !== 'string' || !query.length) return { total: 0, current: 0 };
       try {
+        if (typeof requestID === 'number' && requestID < state.requestID) {
+          return { total: state.ranges.length, current: state.index + 1 };
+        }
+        if (typeof requestID === 'number') state.requestID = requestID;
         var stepping = query === state.query && state.ranges.length > 0 && !stale();
         if (stepping) {
           var count = state.ranges.length;
@@ -199,8 +203,10 @@
       }
     };
 
-    window.redentFindClear = function () {
+    window.redentFindClear = function (requestID) {
       try {
+        if (typeof requestID === 'number' && requestID < state.requestID) return;
+        if (typeof requestID === 'number') state.requestID = requestID;
         state.query = '';
         state.ranges = [];
         state.index = -1;

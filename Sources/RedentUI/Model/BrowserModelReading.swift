@@ -23,10 +23,9 @@ extension BrowserModel {
         selectedTab?.setVolume(level)
     }
 
-    /// The toolbar's volume control appears once the tab has sound to control,
-    /// and stays while the user has turned it down, so it can be turned back up.
-    public var showsVolumeControl: Bool {
-        guard let tab = selectedTab else { return false }
-        return tab.isPlayingAudio || tab.isMuted || tab.volume < 1
-    }
+    /// Always there over a page, so the control is where you look before the
+    /// sound starts; it lights up once the tab actually plays something.
+    public var showsVolumeControl: Bool { hasPage }
+
+    public var isSelectedTabPlayingAudio: Bool { selectedTab?.isPlayingAudio ?? false }
 }

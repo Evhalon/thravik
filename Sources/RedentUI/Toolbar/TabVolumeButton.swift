@@ -12,7 +12,7 @@ struct TabVolumeButton: View {
         Button { isShowingSlider.toggle() } label: {
             Image(systemName: TabVolumeSymbol.name(muted: model.isSelectedTabMuted, level: model.selectedTabVolume))
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(model.isSelectedTabMuted ? Palette.chromeSecondaryText : Palette.accent)
+                .foregroundStyle(tint)
                 .frame(width: 18)
         }
         .buttonStyle(PressScaleStyle())
@@ -21,6 +21,10 @@ struct TabVolumeButton: View {
         .popover(isPresented: $isShowingSlider, arrowEdge: .bottom) {
             TabVolumePopover(model: model)
         }
+    }
+
+    private var tint: Color {
+        model.isSelectedTabPlayingAudio && !model.isSelectedTabMuted ? Palette.accent : Palette.chromeSecondaryText
     }
 }
 
