@@ -24,8 +24,9 @@ enum CommandSearch {
         rows.append(contentsOf: spaceRows(context.spaces, query: text))
         guard !text.isEmpty else { return Array(rows.prefix(limit)) }
 
-        async let saved = source.bookmarks.search(text, in: currentSpaceID(context), limit: limit)
-        async let visited = source.history.search(text, limit: limit)
+        let spaceID = currentSpaceID(context)
+        async let saved = source.bookmarks.search(text, in: spaceID, limit: limit)
+        async let visited = source.history.search(text, in: spaceID, limit: limit)
         let (bookmarks, history) = await (saved, visited)
         // An open tab already represents that page: it owns the row for that URL.
         var seen = Set(openTabs.compactMap { $0.url.map(normalizedURL) })
@@ -45,7 +46,7 @@ enum CommandSearch {
         return Array(rows.prefix(limit))
     }
 
-    /// Bookmarks are per Space, and the bar searches the one you are in.
+    /// Bookmarks and the visit leaderboard are per Space; the bar reads the one you are in.
     private static func currentSpaceID(_ context: CommandBarContext) -> UUID? {
         context.spaces.first { $0.isCurrent }?.id
     }

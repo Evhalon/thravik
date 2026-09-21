@@ -40,7 +40,8 @@ struct FavoriteFolderSheet: View {
                         .contextMenu { removeFromFolderAction(for: tile) }
                     }
                 }
-                .padding(.vertical, 4)
+                // Room for the favorite badge, hover scale and glow, which the scroll view clips.
+                .padding(12)
             }
         }
         .padding(20)

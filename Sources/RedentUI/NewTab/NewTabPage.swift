@@ -19,23 +19,18 @@ struct NewTabPage: View {
     var body: some View {
         ZStack {
             NewTabBackdrop(space: model.currentSpace)
-            VStack(spacing: 26) {
-                header
-                NewTabSearchField(model: model, text: $query, isFocused: $isSearchFocused, onSubmit: submit)
-                ScrollView {
-                    content
-                        .zIndex(0)
+            GeometryReader { proxy in
+                VStack(spacing: 16) {
+                    header
+                        .padding(.bottom, 10)
+                    NewTabSearchField(model: model, text: $query, isFocused: $isSearchFocused, onSubmit: submit)
+                    NewTabScrollArea { content }
                 }
-                .scrollIndicators(.never)
+                .frame(maxWidth: 680)
+                .padding(.horizontal, 20)
+                .padding(.top, topInset(in: proxy.size.height))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
-            .frame(maxWidth: 680)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 40)
-            // Sits a little above centre — dead centre reads as unfinished,
-            // and the eye expects the search field slightly high. A ceiling,
-            // never a floor: a short window gets the height it actually has,
-            // and the grid scrolls inside it rather than spilling past it.
-            .frame(maxWidth: .infinity, maxHeight: restingHeight)
             .defaultFocus($isSearchFocused, true)
             folderOverlay
         }
@@ -56,10 +51,11 @@ struct NewTabPage: View {
         isSearchFocused = true
     }
 
-    /// How tall the stack grows before it stops. Past this the window keeps
-    /// the extra room, which is what sits the greeting high in a large window;
-    /// below it the stack simply takes what it is given.
-    private let restingHeight: CGFloat = 620
+    /// Sits the greeting a little above centre, where it rests in a tall
+    /// window; the grid then runs to the bottom edge and scrolls there.
+    private func topInset(in height: CGFloat) -> CGFloat {
+        max(40, (height - 620) / 2 + 40)
+    }
 
     private var header: some View {
         VStack(spacing: 6) {

@@ -48,7 +48,7 @@ public struct SuggestionEngine: Sendable {
         }
 
         let roomForHistory = max(0, limit - rows.count - 1)
-        for entry in await history.search(trimmed, limit: roomForHistory) {
+        for entry in await history.search(trimmed, in: spaceID, limit: roomForHistory) {
             guard rows.count < limit - 1, seen.insert(key(entry.url)).inserted else { continue }
             rows.append(AddressSuggestion(
                 kind: .history,
