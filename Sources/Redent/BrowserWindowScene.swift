@@ -24,6 +24,13 @@ struct BrowserWindowScene: View {
             await app.offerDefaultBrowserIfNeeded(in: window)
         }
         .onDisappear { app.releaseWindow(spec) }
+        // A link another app hands over goes to a tab of a window already
+        // open; without this, SwiftUI answers each one with a fresh window.
+        .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
+        .onOpenURL { url in
+            app.openExternal([url])
+            NSApp.activate()
+        }
     }
 
     private func open(isPrivate: Bool) {
