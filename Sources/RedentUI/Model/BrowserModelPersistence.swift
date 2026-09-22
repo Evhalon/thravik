@@ -15,6 +15,10 @@ extension BrowserModel {
         persistSettings()
         hasUnsavedChanges = false
         lastSave = .now
+        // A periodic save may still be queued behind an older write. Cancel it
+        // before the closing snapshot is written so stale tabs cannot win last.
+        saveTask?.cancel()
+        saveTask = nil
         do { try sessionStore.saveRecoverable(durableSession()) }
         catch { actionError = "Workspace could not be saved. Existing saved data was preserved." }
     }
@@ -31,13 +35,15 @@ extension BrowserModel {
 
         let session = durableSession()
         let previous = saveTask
-        saveTask = Task { [sessionStore] in
-            await previous?.value
-            let saved = await Task.detached(priority: .utility) {
-                (try? sessionStore.saveRecoverable(session)) != nil
-            }.value
-            guard !saved else { return }
-            actionError = "Workspace could not be saved. Existing saved data was preserved."
+        let task: Task<Bool?, Never> = Task.detached(priority: .utility) { [sessionStore] in
+            _ = await previous?.value
+            guard !Task.isCancelled else { return nil }
+            return (try? sessionStore.saveRecoverable(session)) != nil
+        }
+        saveTask = task
+        Task { [weak self] in
+            guard let saved = await task.value, !saved else { return }
+            self?.actionError = "Workspace could not be saved. Existing saved data was preserved."
         }
     }
 

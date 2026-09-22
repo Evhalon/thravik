@@ -30,4 +30,21 @@ struct WorkspaceStoreTests {
         defaults.set(newer, forKey: "app.redent.browser.workspace.v2")
         #expect(throws: WorkspaceStoreError.newerSchema(99)) { try store.loadWorkspace() }
     }
+
+    @Test("A cancelled stale save cannot resurrect closed tabs")
+    func cancelledSaveIsIgnored() async throws {
+        let defaults = try #require(UserDefaults(suiteName: "workspace-store-\(UUID().uuidString)"))
+        let store = UserDefaultsWorkspaceStore(defaults: defaults)
+        let current = BrowserSession(tabs: [TabSnapshot(title: "Still open")])
+        try store.saveWorkspace(WorkspaceSnapshot(session: current))
+
+        let stale = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            let session = BrowserSession(tabs: [TabSnapshot(title: "Already closed")])
+            try store.saveWorkspace(WorkspaceSnapshot(session: session))
+        }
+
+        await #expect(throws: CancellationError.self) { try await stale.value }
+        #expect(try store.loadWorkspace().tabs.map(\.title) == ["Still open"])
+    }
 }

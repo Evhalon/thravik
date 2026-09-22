@@ -13,10 +13,12 @@ public enum WorkspaceStoreError: Error, Equatable, Sendable {
 public struct UserDefaultsWorkspaceStore: WorkspaceStoring, @unchecked Sendable {
     private let defaults: UserDefaults
     private let lastWrite: LastWrite
+    private let writeGate: WriteGate
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.lastWrite = LastWrite()
+        self.writeGate = WriteGate()
     }
 
     public func loadWorkspace() throws -> WorkspaceSnapshot {
@@ -33,20 +35,28 @@ public struct UserDefaultsWorkspaceStore: WorkspaceStoring, @unchecked Sendable 
     }
 
     public func saveWorkspace(_ workspace: WorkspaceSnapshot) throws {
-        let durable = WorkspaceSnapshot(session: workspace.session, revision: workspace.revision)
-        guard let data = try? JSONEncoder().encode(durable) else { throw WorkspaceStoreError.encodingFailed }
+        try writeGate.withLock {
+            // Cancellation is checked after taking the gate. A stale periodic
+            // save waiting behind the final window-close save must not write.
+            guard !Task.isCancelled else { throw CancellationError() }
+            let durable = WorkspaceSnapshot(session: workspace.session, revision: workspace.revision)
+            guard let data = try? JSONEncoder().encode(durable) else {
+                throw WorkspaceStoreError.encodingFailed
+            }
+            try preserveBackup()
+            defaults.set(data, forKey: Keys.workspace)
+            lastWrite.record(data)
+        }
+    }
+
+    private func preserveBackup() throws {
         if let previous = defaults.data(forKey: Keys.workspace) {
-            // A blob this store wrote itself already decoded cleanly on the way
-            // in. Re-decoding it on every save put a full parse of the workspace
-            // on the main thread between navigations.
             if !lastWrite.wrote(previous) { _ = try decodeSnapshot(previous) }
             defaults.set(previous, forKey: Keys.backup)
         } else if let legacy = defaults.data(forKey: Keys.legacySession) {
             _ = try decodeLegacy(legacy)
             defaults.set(legacy, forKey: Keys.backup)
         }
-        defaults.set(data, forKey: Keys.workspace)
-        lastWrite.record(data)
     }
 
     public func restoreBackup() throws -> WorkspaceSnapshot {
@@ -93,6 +103,15 @@ private final class LastWrite: @unchecked Sendable {
 
     func record(_ value: Data) { lock.withLock { data = value } }
     func wrote(_ value: Data) -> Bool { lock.withLock { data == value } }
+}
+
+// @unchecked Sendable: NSLock owns all synchronization.
+private final class WriteGate: @unchecked Sendable {
+    private let lock = NSLock()
+
+    func withLock<T>(_ operation: () throws -> T) rethrows -> T {
+        try lock.withLock(operation)
+    }
 }
 
 private struct SchemaEnvelope: Decodable {

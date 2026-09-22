@@ -16,7 +16,7 @@ struct TopTabStrip: View {
     var body: some View {
         HStack(spacing: Metric.tightGutter) {
             ScrollView(.horizontal) {
-                HStack(spacing: 3) {
+                LazyHStack(spacing: 3) {
                     ForEach(model.tabs.visibleTabs, id: \.id) { tab in
                         TopTabItem(
                             tab: tab,

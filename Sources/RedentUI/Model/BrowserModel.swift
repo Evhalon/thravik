@@ -43,7 +43,7 @@ public final class BrowserModel {
     @ObservationIgnored var hasUnsavedChanges = false
     @ObservationIgnored var lastSave = Date.distantPast
     @ObservationIgnored var hasUnsavedSettings = false
-    @ObservationIgnored var saveTask: Task<Void, Never>?
+    @ObservationIgnored var saveTask: Task<Bool?, Never>?
     let settingsStore: any SettingsStoring
     let sessionStore: any SessionStoring
     private let logger: any EventLogging

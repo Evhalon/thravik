@@ -33,8 +33,8 @@ public struct FaviconView: View {
     }
 
     private var decodedImage: NSImage? {
-        guard let data, let image = NSImage(data: data), image.isValid else { return nil }
-        return image
+        guard let data else { return nil }
+        return FaviconImageCache.image(for: data)
     }
 
     private var fallbackTile: some View {
@@ -63,6 +63,23 @@ public struct FaviconView: View {
         var hash: UInt64 = 5381
         for byte in host.utf8 { hash = (hash &* 33) &+ UInt64(byte) }
         return Double(hash % 360) / 360
+    }
+}
+
+@MainActor
+private enum FaviconImageCache {
+    private static let images: NSCache<NSData, NSImage> = {
+        let cache = NSCache<NSData, NSImage>()
+        cache.countLimit = 256
+        return cache
+    }()
+
+    static func image(for data: Data) -> NSImage? {
+        let key = data as NSData
+        if let cached = images.object(forKey: key) { return cached }
+        guard let image = NSImage(data: data), image.isValid else { return nil }
+        images.setObject(image, forKey: key)
+        return image
     }
 }
 

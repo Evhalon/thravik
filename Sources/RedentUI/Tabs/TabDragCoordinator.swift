@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import RedentKit
 import SwiftUI
 
@@ -14,13 +15,13 @@ final class TabDragCoordinator {
     private let axis: Axis
     private var liftedID: UUID?
     private var travel: CGFloat = 0
-    private var slot = 0
-    private var originIndex = 0
-    private var span: CGFloat = 0
+    @ObservationIgnored private var slot = 0
+    @ObservationIgnored private var originIndex = 0
+    @ObservationIgnored private var span: CGFloat = 0
     private var shifts: [UUID: CGFloat] = [:]
-    private var frames: [UUID: CGRect] = [:]
-    private var drawn: [UUID: [UUID]] = [:]
-    private var frozen: [(UUID, CGRect)] = []
+    @ObservationIgnored private var frames: [UUID: CGRect] = [:]
+    @ObservationIgnored private var drawn: [UUID: [UUID]] = [:]
+    @ObservationIgnored private var frozen: [(UUID, CGRect)] = []
 
     init(axis: Axis) { self.axis = axis }
 
