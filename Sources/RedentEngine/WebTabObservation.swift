@@ -45,7 +45,11 @@ extension WebTab {
 
     /// A URL change with no load behind it is a same-document move — a router
     /// or an anchor — which never reaches the navigation delegate.
-    private func applyURL(_ url: URL?) {
+    func applyURL(_ url: URL?) {
+        // A failed TLS navigation clears WKWebView.url after the delegate has
+        // kept the attempted address for the warning. Do not turn that warning
+        // into a blank new tab.
+        guard url != nil || pageTrustIssue == nil else { return }
         self.url = url
         self.origin = url.flatMap(Origin.init(url:))
         snapshot.url = url

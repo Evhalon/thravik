@@ -23,7 +23,7 @@ struct PagePane: View {
         // A tab with no URL is a new tab: it shows Redent's own page rather
         // than an empty web view, and never touches the network.
         if let tab, tab.pageTrustIssue == .invalidCertificate, let url = tab.url {
-            CertificateWarningPage(url: url, retry: { tab.load(url) }) {
+            CertificateWarningPage(url: url, dismiss: { model.tabs.close(tab.id) }) {
                 tab.proceedThroughInvalidCertificate()
             }
         } else if let tab, tab.url != nil {

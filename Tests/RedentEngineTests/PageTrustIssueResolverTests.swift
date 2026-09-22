@@ -44,6 +44,25 @@ struct PageTrustIssueResolverTests {
         #expect(tab.pageTrustIssue == .invalidCertificate)
     }
 
+    @Test("A certificate warning survives WebKit clearing its URL")
+    @MainActor
+    func certificateFailureKeepsAddressAfterURLReset() throws {
+        let controller = TabController(
+            session: BrowserSession(), settings: BrowserSettings(), logger: TrustIssueLogger()
+        )
+        let url = try #require(URL(string: "https://internal.example"))
+        let tab = try #require(controller.newTab(url: nil) as? WebTab)
+        tab.beginNavigation(to: url)
+        tab.handleProvisionalFailure(NSError(
+            domain: NSURLErrorDomain, code: URLError.Code.serverCertificateUntrusted.rawValue
+        ))
+
+        tab.applyURL(nil)
+
+        #expect(tab.url == url)
+        #expect(tab.snapshot.url == url)
+    }
+
     @Test("Proceeding records an exception for the exact host")
     @MainActor
     func proceedingRecordsTrustedHost() throws {

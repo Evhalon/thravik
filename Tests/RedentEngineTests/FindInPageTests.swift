@@ -26,6 +26,39 @@ struct FindInPageTests {
         #expect(await tab.findInPage("", forward: true) == .empty)
     }
 
+    @Test("Find includes the page and starts with a matching foreground dialog field")
+    func findsTheModalFieldAndTheDimmedPage() async throws {
+        let tab = try await pageSaying("""
+        <p>306204 in the page behind</p>
+        <div role="dialog" aria-modal="true"><input value="#306204 in the modal"></div>
+        """)
+
+        #expect(await tab.findInPage("306204", forward: true) == FindMatches(total: 2, current: 2))
+        let marked = try await tab.webView?.callAsyncJavaScript(
+            "return document.querySelector('input').classList.contains('redent-find-control-active')",
+            in: nil, contentWorld: PageScripts.contentWorld
+        ) as? Bool
+        #expect(marked == true)
+
+        tab.clearFindHighlight()
+        try await Task.sleep(for: .milliseconds(50))
+        let cleared = try await tab.webView?.evaluateJavaScript(
+            "document.querySelector('input').classList.contains('redent-find-control-active')"
+        ) as? Bool
+        #expect(cleared == false)
+    }
+
+    @Test("The topmost dialog starts find, then every match remains reachable")
+    func startsOnTheFrontDialogAndCyclesEveryMatch() async throws {
+        let tab = try await pageSaying("""
+        <div role="dialog" style="position:fixed;z-index:10"><input value="306204 behind"></div>
+        <div role="dialog" style="position:fixed;z-index:20"><input value="306204 front"></div>
+        """)
+
+        #expect(await tab.findInPage("306204", forward: true) == FindMatches(total: 2, current: 2))
+        #expect(await tab.findInPage("306204", forward: true) == FindMatches(total: 2, current: 1))
+    }
+
     @Test("Matches are painted, and clearing puts the page back as it was")
     func highlightsAreLitAndPutOut() async throws {
         let tab = try await pageSaying("<p>quick one</p><p>quick two</p>")
