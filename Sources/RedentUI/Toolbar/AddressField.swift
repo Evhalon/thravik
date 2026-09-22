@@ -51,7 +51,7 @@ struct AddressField: View {
         }
         .padding(.horizontal, Metric.gutter)
         .frame(height: Metric.controlHeight)
-        .background { pill }
+        .background { pill.onTapGesture { isFocused = true } }
         .background { reportFrame }
         .overlay(alignment: .bottomLeading) { progressBar }
         .animation(.easeOut(duration: 0.18), value: isFocused)

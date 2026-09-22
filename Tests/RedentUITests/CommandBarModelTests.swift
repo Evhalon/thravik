@@ -65,6 +65,19 @@ struct CommandBarModelTests {
         #expect(model.selectedIndex == 1)
     }
 
+    @Test("Return waits for the current query instead of doing nothing")
+    func returnWaitsForCurrentQuery() async throws {
+        let model = makeModel(history: DelayedHistoryStore(), bookmarks: TestBookmarkStore())
+        let sink = ActionSink()
+        model.onExecute = { sink.actions.append($0) }
+        model.query = "needle"
+
+        await model.executeSelected()
+
+        let expected = try #require(URL(string: "https://needle.example"))
+        #expect(sink.actions == [.navigate(expected)])
+    }
+
     private func settle(_ model: CommandBarModel) async {
         await model.searchInFlight?.value
     }

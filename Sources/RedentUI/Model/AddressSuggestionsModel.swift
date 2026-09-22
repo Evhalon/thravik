@@ -48,7 +48,7 @@ public final class AddressSuggestionsModel {
 
         pendingSource = source
         pending = Task { [engine] in
-            try? await Task.sleep(for: .milliseconds(90))
+            try? await Task.sleep(for: .milliseconds(45))
             guard !Task.isCancelled else { return }
             let found = await engine.suggestions(for: trimmed, engine: searchEngine, spaceID: spaceID)
             guard !Task.isCancelled else { return }

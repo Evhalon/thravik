@@ -81,6 +81,9 @@ public final class CommandBarModel {
     }
 
     public func executeSelected() async {
+        let submittedGeneration = generation
+        await pending?.value
+        guard generation == submittedGeneration else { return }
         guard let selectedRow else { return }
         await execute(selectedRow)
     }
@@ -113,7 +116,7 @@ public final class CommandBarModel {
             return
         }
         pending = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(90))
+            try? await Task.sleep(for: .milliseconds(45))
             guard !Task.isCancelled else { return }
             let source = CommandSearch.Source(descriptors: descriptors, history: history,
                 bookmarks: bookmarks, searchEngine: searchEngine)

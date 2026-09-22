@@ -24,7 +24,8 @@ public struct CommandBarView: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: .black.opacity(0.28), radius: 24, y: 10)
-        .onAppear { isFocused = true }
+        .defaultFocus($isFocused, true)
+        .task { await Task.yield(); isFocused = true }
         .onExitCommand(perform: onDismiss)
     }
 
@@ -43,6 +44,8 @@ public struct CommandBarView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+        .contentShape(Rectangle())
+        .onTapGesture { isFocused = true }
     }
 
     @ViewBuilder

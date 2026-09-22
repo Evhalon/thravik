@@ -64,6 +64,7 @@ struct NewTabSearchField: View {
                     lineWidth: Metric.hairWidth
                 )
             }
+            .onTapGesture { isFocused = true }
         }
         .overlay(alignment: .topLeading) { dropdown }
         .padding(.horizontal, 40)
