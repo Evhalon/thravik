@@ -38,6 +38,7 @@ let package = Package(
         .testTarget(name: "RedentVaultTests", dependencies: ["RedentVault", "RedentKit"], swiftSettings: strict),
         .testTarget(name: "RedentUITests", dependencies: ["RedentUI", "RedentKit"], swiftSettings: strict),
         .testTarget(name: "RedentImportTests", dependencies: ["RedentImport", "RedentKit"], swiftSettings: strict),
-        .testTarget(name: "RedentUpdateTests", dependencies: ["RedentUpdate", "RedentKit"], swiftSettings: strict)
+        .testTarget(name: "RedentUpdateTests", dependencies: ["RedentUpdate", "RedentKit"], swiftSettings: strict),
+        .testTarget(name: "RedentAppTests", dependencies: ["Redent"], swiftSettings: strict)
     ]
 )
