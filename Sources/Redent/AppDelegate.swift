@@ -6,11 +6,12 @@ import Foundation
 /// links other apps hand to the default browser, and flushing the session on
 /// the way out.
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    @MainActor var presentApplication: () -> Void = {
+    @MainActor var presentWindow: (NSWindow?) -> Void = { window in
         NSApp.unhide(nil)
-        let window = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where: \.canBecomeKey)
-        window?.deminiaturize(nil)
-        window?.makeKeyAndOrderFront(nil)
+        let target = window ?? NSApp.keyWindow ?? NSApp.mainWindow
+            ?? NSApp.windows.first(where: \.canBecomeKey)
+        target?.deminiaturize(nil)
+        target?.makeKeyAndOrderFront(nil)
         NSApp.activate()
     }
 
@@ -21,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Links that arrived before the first window finished building — the
     /// common case when a click in Mail is what launched the app.
     @MainActor private var pendingLinks: [URL] = []
+    @MainActor private var awaitsWindowForExternalLink = false
 
     /// Register before launch completes so the URL that starts Redent is not
     /// consumed by SwiftUI as a request for an empty window.
@@ -48,10 +50,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Cold-launch URL events arrive before SwiftUI has registered an
     /// `NSWindow`. Present again once that window exists.
     @MainActor
-    func windowBecameReady(openedExternalLinks: Bool) async {
-        guard openedExternalLinks else { return }
-        await Task.yield()
-        presentApplication()
+    func windowBecameReady(_ window: NSWindow, openedExternalLinks: Bool) {
+        guard openedExternalLinks || awaitsWindowForExternalLink else { return }
+        awaitsWindowForExternalLink = false
+        presentWindow(window)
+    }
+
+    @MainActor
+    func presentForExternalLink(_ window: NSWindow?) {
+        awaitsWindowForExternalLink = window == nil
+        presentWindow(window)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -73,15 +81,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func receive(_ urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        awaitsWindowForExternalLink = true
         guard let container else {
             pendingLinks.append(contentsOf: urls)
-            presentApplication()
+            presentWindow(nil)
             return
         }
         container.openExternal(urls)
         // Teams can use either URL delivery path. Presentation belongs here or
         // its new tab can stay hidden behind the source app.
-        presentApplication()
+        let window = NSApp.keyWindow ?? NSApp.mainWindow
+        presentWindow(window)
+        if window != nil { awaitsWindowForExternalLink = false }
     }
 
     /// The container takes them from here: if it has no window yet either, it

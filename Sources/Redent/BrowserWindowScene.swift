@@ -21,15 +21,20 @@ struct BrowserWindowScene: View {
         }
         .onAppear { window.model.windowOpener = open(isPrivate:) }
         .task {
-            let openedExternalLinks = app.drainPendingLinks()
-            await delegate.windowBecameReady(openedExternalLinks: openedExternalLinks)
             await app.offerDefaultBrowserIfNeeded(in: window)
         }
         .onDisappear { app.releaseWindow(spec) }
+        .background {
+            WindowReadyProbe { nativeWindow in
+                let openedExternalLinks = app.drainPendingLinks()
+                delegate.windowBecameReady(nativeWindow, openedExternalLinks: openedExternalLinks)
+            }
+            .frame(width: 0, height: 0)
+        }
         .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         .onOpenURL { url in
             app.openExternal([url])
-            delegate.presentApplication()
+            delegate.presentForExternalLink(NSApp.keyWindow)
         }
     }
 

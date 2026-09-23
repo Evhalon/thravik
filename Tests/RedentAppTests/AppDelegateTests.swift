@@ -9,24 +9,29 @@ struct AppDelegateTests {
     @Test("Receiving a Teams-style web link presents the browser window")
     func externalLinkPresentsBrowserWindow() throws {
         let delegate = AppDelegate()
-        var presentationCount = 0
-        delegate.presentApplication = { presentationCount += 1 }
+        var presentedWindow: NSWindow?
+        delegate.presentWindow = { presentedWindow = $0 }
         let link = try #require(URL(string: "https://teams.microsoft.com/l/message/example"))
 
         delegate.application(NSApplication.shared, open: [link])
 
-        #expect(presentationCount == 1)
+        #expect(presentedWindow == nil)
     }
 
     @MainActor
-    @Test("A cold-launch link presents again after the window exists")
-    func coldLaunchPresentsReadyWindow() async {
+    @Test("A cold-launch link presents the exact window after attachment")
+    func coldLaunchPresentsReadyWindow() throws {
         let delegate = AppDelegate()
-        var presentationCount = 0
-        delegate.presentApplication = { presentationCount += 1 }
+        var presentedWindow: NSWindow?
+        delegate.presentWindow = { presentedWindow = $0 }
+        let link = try #require(URL(string: "https://teams.microsoft.com/l/message/example"))
+        let window = NSWindow(contentRect: .zero, styleMask: .titled, backing: .buffered, defer: true)
 
-        await delegate.windowBecameReady(openedExternalLinks: true)
+        delegate.application(NSApplication.shared, open: [link])
+        #expect(presentedWindow == nil)
 
-        #expect(presentationCount == 1)
+        delegate.windowBecameReady(window, openedExternalLinks: false)
+
+        #expect(presentedWindow === window)
     }
 }
