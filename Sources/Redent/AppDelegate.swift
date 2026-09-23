@@ -8,11 +8,12 @@ import Foundation
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor var presentWindow: (NSWindow?) -> Void = { window in
         NSApp.unhide(nil)
+        NSApp.activate()
         let target = window ?? NSApp.keyWindow ?? NSApp.mainWindow
             ?? NSApp.windows.first(where: \.canBecomeKey)
         target?.deminiaturize(nil)
         target?.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        target?.orderFrontRegardless()
     }
 
     @MainActor var container: AppContainer? {
