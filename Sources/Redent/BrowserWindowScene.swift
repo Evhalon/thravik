@@ -10,6 +10,7 @@ import SwiftUI
 struct BrowserWindowScene: View {
     let app: AppContainer
     let spec: BrowserWindowSpec
+    let delegate: AppDelegate
 
     @Environment(\.openWindow) private var openWindow
 
@@ -20,12 +21,16 @@ struct BrowserWindowScene: View {
         }
         .onAppear { window.model.windowOpener = open(isPrivate:) }
         .task {
-            app.drainPendingLinks()
+            let openedExternalLinks = app.drainPendingLinks()
+            await delegate.windowBecameReady(openedExternalLinks: openedExternalLinks)
             await app.offerDefaultBrowserIfNeeded(in: window)
         }
         .onDisappear { app.releaseWindow(spec) }
         .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
-        .onOpenURL { url in app.openExternal([url]) }
+        .onOpenURL { url in
+            app.openExternal([url])
+            delegate.presentApplication()
+        }
     }
 
     private func open(isPrivate: Bool) {

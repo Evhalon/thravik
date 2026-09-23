@@ -20,12 +20,13 @@ extension AppContainer {
     }
 
     /// Called by the first window to appear.
-    func drainPendingLinks() {
-        guard !pendingLinks.isEmpty else { return }
+    @discardableResult
+    func drainPendingLinks() -> Bool {
+        guard !pendingLinks.isEmpty, let window = primaryWindow else { return false }
         let waiting = pendingLinks
         pendingLinks.removeAll()
-        guard let window = primaryWindow else { return }
         for url in waiting { window.model.open(url, inNewTab: true) }
+        return true
     }
 
     /// The offer to become the default browser, raised once per release and

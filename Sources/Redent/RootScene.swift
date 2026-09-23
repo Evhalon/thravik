@@ -13,7 +13,7 @@ struct RootScene: View {
     var body: some View {
         Group {
             if let container {
-                BrowserWindowScene(app: container, spec: spec)
+                BrowserWindowScene(app: container, spec: spec, delegate: delegate)
             } else {
                 Color.clear
             }

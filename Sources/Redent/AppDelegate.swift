@@ -8,10 +8,10 @@ import Foundation
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor var presentApplication: () -> Void = {
         NSApp.unhide(nil)
-        NSApp.activate()
         let window = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where: \.canBecomeKey)
         window?.deminiaturize(nil)
         window?.makeKeyAndOrderFront(nil)
+        NSApp.activate()
     }
 
     @MainActor var container: AppContainer? {
@@ -43,6 +43,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     func application(_ application: NSApplication, open urls: [URL]) {
         receive(urls)
+    }
+
+    /// Cold-launch URL events arrive before SwiftUI has registered an
+    /// `NSWindow`. Present again once that window exists.
+    @MainActor
+    func windowBecameReady(openedExternalLinks: Bool) async {
+        guard openedExternalLinks else { return }
+        await Task.yield()
+        presentApplication()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

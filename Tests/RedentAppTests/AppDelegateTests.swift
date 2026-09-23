@@ -17,4 +17,16 @@ struct AppDelegateTests {
 
         #expect(presentationCount == 1)
     }
+
+    @MainActor
+    @Test("A cold-launch link presents again after the window exists")
+    func coldLaunchPresentsReadyWindow() async {
+        let delegate = AppDelegate()
+        var presentationCount = 0
+        delegate.presentApplication = { presentationCount += 1 }
+
+        await delegate.windowBecameReady(openedExternalLinks: true)
+
+        #expect(presentationCount == 1)
+    }
 }
