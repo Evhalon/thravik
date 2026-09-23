@@ -20,6 +20,7 @@ public final class AutofillCoordinator {
     let logger: any EventLogging
     var isEnabled: Bool
     private var lastObservedOrigin: Origin??
+    private var lookupID = UUID()
 
     public init(store: any CredentialStoring, logger: any EventLogging, isEnabled: Bool = true) {
         self.store = store
@@ -61,15 +62,21 @@ public final class AutofillCoordinator {
     }
 
     public func loginFormAppeared(at origin: Origin) async {
+        lookupID = UUID()
         lastObservedOrigin = .some(origin)
         self.origin = origin
         isLoginFormPresent = true
         await refreshSuggestions(for: origin)
     }
 
-    public func loginFormDisappeared() { isLoginFormPresent = false }
+    public func loginFormDisappeared() {
+        lookupID = UUID()
+        isLoginFormPresent = false
+    }
 
     public func pageChanged() {
+        lookupID = UUID()
+        lastObservedOrigin = .some(nil)
         suggestions = []
         origin = nil
         isLoginFormPresent = false
@@ -90,10 +97,14 @@ public final class AutofillCoordinator {
     }
 
     func refreshSuggestions(for origin: Origin) async {
+        let lookupID = self.lookupID
         do {
-            suggestions = try await store.credentials(for: origin)
+            let loaded = try await store.credentials(for: origin)
+            guard self.lookupID == lookupID, self.origin == origin else { return }
+            suggestions = loaded
             logger.debug("autofill: \(suggestions.count) credential(s) for \(origin.registrableDomain)")
         } catch {
+            guard self.lookupID == lookupID else { return }
             suggestions = []
             logger.error("autofill: lookup failed — \(String(describing: error))")
         }

@@ -79,4 +79,15 @@ struct AutofillFillOfferTests {
         #expect(!coordinator.isLoginFormPresent)
         #expect(await store.markUsedCalls == [stored.id])
     }
+
+    @Test("Changing page clears stale credentials and invalidates pending lookups")
+    func pageChangedClearsOffer() async {
+        let stored = Credential(origin: origin, username: "me", password: "x")
+        let coordinator = makeCoordinator(FakeCredentialStore([stored]))
+        await coordinator.loginFormAppeared(at: origin)
+        coordinator.pageChanged()
+        #expect(coordinator.suggestions.isEmpty)
+        #expect(!coordinator.shouldOfferFill)
+        #expect(coordinator.origin == nil)
+    }
 }

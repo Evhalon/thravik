@@ -111,6 +111,11 @@ public final class BrowserModel {
         suggestions.update(query: text, from: source, searchEngine: settings.searchEngine, spaceID: currentSpaceID)
     }
 
+    public func pageContextChanged() {
+        autofill.pageChanged()
+        otp.fieldDisappeared()
+    }
+
     /// Arrow keys in a TextField never reach `onMoveCommand`. The command bar
     /// already uses `onKeyPress`; the address fields must do the same.
     public func moveSuggestionHighlight(by offset: Int, from source: AddressSuggestionsModel.Source) -> Bool {

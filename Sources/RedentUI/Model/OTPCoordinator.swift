@@ -25,6 +25,7 @@ public final class OTPCoordinator {
     private let generator: any TOTPGenerating
     private let logger: any EventLogging
     private var filledAtURL: String?
+    private var challengeID = UUID()
 
     public init(
         store: any TOTPAccountStoring,
@@ -53,9 +54,11 @@ public final class OTPCoordinator {
 
     public func fieldAppeared(at origin: Origin, username: String = "") async {
         resetChallenge()
+        let challengeID = self.challengeID
         self.origin = origin
         do {
             let loaded = try await OTPSuggestionLoader.load(from: store, origin: origin, username: username)
+            guard self.challengeID == challengeID else { return }
             apply(loaded)
             logger.debug("otp: \(suggestions.count) candidate(s) for \(origin.registrableDomain)")
         } catch {
@@ -102,6 +105,7 @@ public final class OTPCoordinator {
     }
 
     private func resetChallenge() {
+        challengeID = UUID()
         suggestions = []
         origin = nil
         pinnedAccountID = nil

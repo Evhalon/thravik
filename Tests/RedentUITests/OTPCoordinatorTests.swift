@@ -115,4 +115,13 @@ struct OTPCoordinatorTests {
         coordinator.dismissIfPageChanged(url)
         #expect(coordinator.isVisible)
     }
+
+    @Test("Changing page clears an unfilled one-time-code offer")
+    func clearsOfferWhenPageChanges() async {
+        let coordinator = makeCoordinator(FakeTOTPStore([account]))
+        await coordinator.fieldAppeared(at: origin)
+        coordinator.fieldDisappeared()
+        #expect(!coordinator.isVisible)
+        #expect(coordinator.origin == nil)
+    }
 }
