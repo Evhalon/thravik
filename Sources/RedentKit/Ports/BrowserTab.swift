@@ -53,6 +53,10 @@ public protocol BrowserTab: AnyObject {
     func travel(to entry: NavigationEntry)
     /// Drops timeline entries for a forgotten site.
     func forgetTimeline(domain: String)
+    /// What Quiet mode has done on the current page.
+    var quietReceipt: QuietReceipt { get }
+    /// The visible page as PNG data, for reading a QR code the page shows.
+    func visiblePageImage() async -> Data?
 }
 
 /// Defaults for the capabilities a tab may simply not have — a stand-in in a
@@ -71,4 +75,6 @@ public extension BrowserTab {
     func setVolume(_ level: Double) {}
     var isReaderActive: Bool { false }
     func toggleReader() async {}
+    var quietReceipt: QuietReceipt { QuietReceipt() }
+    func visiblePageImage() async -> Data? { nil }
 }

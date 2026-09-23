@@ -9,10 +9,11 @@ import SwiftUI
 func makeTestBrowserModel(
     tabs: any BrowserControlling = FakeBrowser(),
     bookmarks: any BookmarkStoring = InertBookmarkStore(),
-    session: any SessionStoring = InertSessionStore()
+    session: any SessionStoring = InertSessionStore(),
+    webApps: (any WebAppStoring)? = nil
 ) -> BrowserModel {
     let history = SilentHistory()
-    let services = BrowserServices(
+    var services = BrowserServices(
         history: history,
         bookmarks: bookmarks,
         settings: InertSettingsStore(),
@@ -20,9 +21,13 @@ func makeTestBrowserModel(
         logger: SilentLogger(),
         downloads: DownloadsModel()
     )
+    services.webApps = webApps
     let features = BrowserFeatures(
         autofill: AutofillCoordinator(store: FakeCredentialStore(), logger: SilentLogger()),
         otp: OTPCoordinator(store: FakeTOTPStore(), generator: FakeGenerator(), logger: SilentLogger()),
+        twoFactor: TwoFactorSetupCoordinator(
+            importer: FakeOTPAuthImporter(), store: FakeTOTPStore(), logger: SilentLogger()
+        ),
         suggestions: AddressSuggestionsModel(
             engine: SuggestionEngine(history: history, bookmarks: bookmarks)
         )

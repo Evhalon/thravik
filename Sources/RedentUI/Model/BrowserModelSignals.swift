@@ -28,6 +28,11 @@ extension BrowserModel: PageSignalHandling {
             otp.fieldDisappeared()
         case .identityCaptured(let username):
             autofill.captureIdentity(username)
+        case .twoFactorSetupAppeared(let setupOrigin):
+            guard settings.showsTOTPButton, let origin = selectedTab?.origin, origin.matches(setupOrigin) else { return }
+            twoFactor.setupAppeared(at: origin)
+        case .twoFactorSetupGone:
+            twoFactor.setupGone()
         }
     }
 }

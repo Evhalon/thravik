@@ -9,6 +9,8 @@ public struct BrowserServices {
     /// Shared by every window: a download belongs to the app, not to whichever
     /// window happened to start it.
     public let downloads: DownloadsModel
+    /// Sites kept as apps. Nil where there is nowhere to keep them.
+    public var webApps: (any WebAppStoring)?
 
     public init(history: any HistoryStoring, bookmarks: any BookmarkStoring,
                 settings: any SettingsStoring, session: any SessionStoring,

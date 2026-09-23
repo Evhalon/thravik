@@ -30,24 +30,24 @@ enum CommandRanking {
         return result
     }
 
+    /// The whole phrase against the title first; failing that, each word on
+    /// its own, so "pull github" still finds "Pull requests — GitHub". Any row
+    /// here was already matched by its source, so none scores below 1.
     static func score(_ row: CommandBarResult, needle: String) -> Int {
         guard !needle.isEmpty else { return 0 }
-        let title = row.title.lowercased()
-        if title == needle { return 5 }
-        if title.hasPrefix(needle) || host(of: row).hasPrefix(needle) { return 4 }
-        let words = title.split { !$0.isLetter && !$0.isNumber }
-        if words.contains(where: { $0.hasPrefix(needle) }) { return 3 }
-        if title.contains(needle) { return 2 }
-        return 1
+        let whole = FuzzyMatch.score(needle, in: row.title)
+        let hostPrefix = host(of: row).hasPrefix(needle) ? 4 : 0
+        let perWord = min(FuzzyMatch.score(query: needle, fields: [row.title]), 3)
+        return max(whole >= 2 ? whole : 0, hostPrefix, perWord, 1)
     }
 
     /// Among equal matches, what is already open beats what can be done,
     /// which beats what was once visited.
     private static func sourceRank(_ source: CommandResultSource) -> Int {
         switch source {
-        case .tab: 0
+        case .tab, .webApp: 0
         case .command: 1
-        case .space: 2
+        case .space, .group, .window: 2
         case .bookmark: 3
         case .history: 4
         case .directURL, .search: 5

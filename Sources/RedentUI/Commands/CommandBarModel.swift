@@ -15,7 +15,8 @@ public final class CommandBarModel {
 
     private let history: any HistoryStoring
     private let bookmarks: any BookmarkStoring
-    private let searchEngine: SearchEngine
+    /// Follows Settings, so a query searches wherever the user last chose.
+    public var searchEngine: SearchEngine
     private let descriptors: [CommandDescriptor]
     @ObservationIgnored private var pending: Task<Void, Never>?
     private var generation = 0
@@ -23,25 +24,6 @@ public final class CommandBarModel {
 
     /// Lets tests await the in-flight search rather than race the debounce.
     var searchInFlight: Task<Void, Never>? { pending }
-    public struct Configuration {
-        public var history: any HistoryStoring
-        public var bookmarks: any BookmarkStoring
-        public var context: CommandBarContext
-        public var searchEngine: SearchEngine
-        public var descriptors: [CommandDescriptor]
-        public var onExecute: ActionHandler?
-
-        public init(history: any HistoryStoring, bookmarks: any BookmarkStoring) {
-            self.history = history
-            self.bookmarks = bookmarks
-            self.context = .init()
-            self.searchEngine = .duckduckgo
-            self.descriptors = DefaultCommandDescriptors.all
-            self.onExecute = nil
-        }
-
-    }
-
     public init(configuration: Configuration) {
         history = configuration.history
         bookmarks = configuration.bookmarks
@@ -80,16 +62,34 @@ public final class CommandBarModel {
         selectionRevision += 1
     }
 
-    public func executeSelected() async {
+    /// - Returns: whether the bar is done — false when the row only filled
+    ///   the field and is waiting for its argument.
+    @discardableResult
+    public func executeSelected() async -> Bool {
         let submittedGeneration = generation
         await pending?.value
-        guard generation == submittedGeneration else { return }
-        guard let selectedRow else { return }
-        await execute(selectedRow)
+        guard generation == submittedGeneration else { return false }
+        guard let selectedRow else { return true }
+        return await execute(selectedRow)
     }
-    public func execute(_ row: CommandBarResult) async {
-        guard let action = row.action, isValid(action), let onExecute else { return }
+
+    /// ⌘1…⌘9 while the bar is open: run the row at that position.
+    @discardableResult
+    public func executeRow(at position: Int) async -> Bool {
+        await pending?.value
+        guard rows.indices.contains(position - 1) else { return false }
+        return await execute(rows[position - 1])
+    }
+
+    @discardableResult
+    public func execute(_ row: CommandBarResult) async -> Bool {
+        if let completion = row.completion {
+            query = completion
+            return false
+        }
+        guard let action = row.action, isValid(action), let onExecute else { return true }
         await onExecute(action)
+        return true
     }
 
     public func close() {
@@ -111,7 +111,7 @@ public final class CommandBarModel {
         let searchEngine = searchEngine
         let initialSelectionRevision = selectionRevision
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            rows = CommandSearchResults.empty(context: context, descriptors: descriptors)
+            rows = CommandHome.rows(context: context, descriptors: descriptors)
             selectedIndex = rows.isEmpty ? nil : 0
             return
         }
@@ -132,15 +132,5 @@ public final class CommandBarModel {
 
     private func isValid(_ action: BrowserAction) -> Bool {
         CommandValidity.isValid(action, in: context)
-    }
-}
-
-private enum CommandSearchResults {
-    static func empty(context: CommandBarContext, descriptors: [CommandDescriptor]) -> [CommandBarResult] {
-        descriptors.compactMap { descriptor in
-            guard let action = descriptor.action(in: context, query: "") else { return nil }
-            return CommandBarResult(id: "command:\(descriptor.id)", title: descriptor.title,
-                                    subtitle: "Command", source: .command, action: action)
-        }
     }
 }

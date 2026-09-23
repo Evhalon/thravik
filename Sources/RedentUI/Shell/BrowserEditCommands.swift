@@ -18,6 +18,10 @@ struct BrowserEditCommands: Commands {
                 .keyboardShortcut("g", modifiers: [.command, .shift])
                 .disabled(!(model?.chrome.isFindBarVisible ?? false))
             Divider()
+            Button("Fill Login") { model?.fillLogin() }
+                .keyboardShortcut("\\", modifiers: .command)
+                .disabled(!(model?.canFillLogin ?? false))
+            Divider()
             Button("Open Location…") { model?.focusAddressBar() }
                 .keyboardShortcut("l")
                 .disabled(model == nil)

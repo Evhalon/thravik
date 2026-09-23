@@ -48,6 +48,9 @@ final class FakeBrowser: BrowserControlling {
     /// Seeded by the tests that need tabs to act on; empty otherwise.
     var stubTabs: [InertTab] = []
     private(set) var selectionCalls: [UUID] = []
+    private(set) var closed: [UUID] = []
+    private(set) var closedSets: [Set<UUID>] = []
+    private(set) var openedURLs: [URL?] = []
 
     init(forgettable: Int = 0) { self.forgettable = forgettable }
 
@@ -67,12 +70,15 @@ final class FakeBrowser: BrowserControlling {
     func undo() {}
     func apply(settings: BrowserSettings) {}
     func resetWorkspace() {}
-    func newTab(url: URL?) -> any BrowserTab { InertTab() }
+    func newTab(url: URL?) -> any BrowserTab {
+        openedURLs.append(url)
+        return InertTab()
+    }
     func newTemporaryTab(url: URL?, expiresAt: Date?) -> any BrowserTab { InertTab() }
     func keepTab(_ id: UUID) {}
     func sweepExpiredTabs(now: Date) -> UUID? { nil }
-    func close(_ id: UUID) {}
-    func closeTabs(_ ids: Set<UUID>) {}
+    func close(_ id: UUID) { closed.append(id) }
+    func closeTabs(_ ids: Set<UUID>) { closedSets.append(ids) }
     func closeOthers(than id: UUID) {}
     func select(_ id: UUID) {
         selectionCalls.append(id)

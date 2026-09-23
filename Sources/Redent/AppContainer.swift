@@ -21,6 +21,7 @@ final class AppContainer {
     let importer: any OTPAuthImporting
     let history: any HistoryStoring
     let bookmarks: any BookmarkStoring
+    let webApps: any WebAppStoring = JSONWebAppStore()
     let browserImporter: any BrowserImporting
     let permissions: SitePermissionLedger
     /// One list for the whole app: a download outlives the window that started
@@ -107,7 +108,7 @@ final class AppContainer {
     /// What a freshly built window starts from: the saved workspace for the
     /// primary window, a blank one for every other.
     func startingSession(for spec: BrowserWindowSpec) -> BrowserSession {
-        guard spec.isPrimary else { return BrowserSession() }
+        guard spec.isPrimary else { return spec.webApp?.session ?? BrowserSession() }
         return (try? restoredSession.get()) ?? BrowserSession()
     }
 

@@ -8,14 +8,18 @@ public struct SitePrivacyPanel: View {
     @State private var model: SitePrivacyModel
     @Environment(\.dismiss) private var dismiss
     @State private var isConfirming = false
+    private let quietReceipt: QuietReceipt?
 
-    public init(model: SitePrivacyModel) {
+    /// `quietReceipt` is nil when Quiet mode is off.
+    public init(model: SitePrivacyModel, quietReceipt: QuietReceipt? = nil) {
         _model = State(initialValue: model)
+        self.quietReceipt = quietReceipt
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(model.origin.displayHost).font(.title2.bold())
+            if let quietReceipt { QuietReceiptRow(receipt: quietReceipt) }
             permissions
             storedData
             if let report = model.report { SiteForgetSummary(report: report) }
@@ -28,7 +32,7 @@ public struct SitePrivacyPanel: View {
             }
         }
         .padding(22)
-        .frame(width: 540, height: 480)
+        .frame(width: 540, height: quietReceipt == nil ? 480 : 530)
         .task { await model.load() }
         .confirmationDialog(
             "Forget \(model.deletionScope)?", isPresented: $isConfirming, titleVisibility: .visible

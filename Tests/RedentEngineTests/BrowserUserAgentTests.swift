@@ -38,7 +38,7 @@ struct BrowserUserAgentTests {
         #expect(name.hasPrefix("Version/"))
         #expect(name.hasSuffix(" Safari/605.1.15"))
         let view = WKWebView(frame: .zero, configuration: WebViewFactory.makeConfiguration(
-            store: .nonPersistent(), blocksTrackers: false, contentBlocker: nil
+            store: .nonPersistent(), options: PageContentOptions(blocksTrackers: false), contentBlocker: nil
         ))
         #expect(view.configuration.applicationNameForUserAgent == name)
         #expect(BrowserUserAgent.normalized(view.customUserAgent) == nil)

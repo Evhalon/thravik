@@ -33,7 +33,7 @@ struct WebViewHostTests {
 
     private func makeView() -> WKWebView {
         WebViewFactory.makeWebView(configuration: WebViewFactory.makeConfiguration(
-            store: .nonPersistent(), blocksTrackers: false, contentBlocker: nil
+            store: .nonPersistent(), options: PageContentOptions(blocksTrackers: false), contentBlocker: nil
         ))
     }
 }

@@ -60,6 +60,11 @@ struct PrivacySettingsPane: View {
                 isOn: $settings.blocksTrackers
             )
             SettingsToggleRow(
+                "Quiet the web",
+                caption: "Declines cookie banners, stops videos that start playing sound on their own, and keeps \"allow notifications\" pitches off the page.",
+                isOn: $settings.quietsPages
+            )
+            SettingsToggleRow(
                 "Remove tracking from links",
                 caption: "Strips click IDs and campaign tags such as utm_source and fbclid before a page loads.",
                 isOn: $settings.stripsTrackingParameters

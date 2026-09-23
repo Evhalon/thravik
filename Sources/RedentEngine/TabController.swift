@@ -88,15 +88,15 @@ public final class TabController: BrowserControlling {
 
     /// Kept in sync by the app when settings change.
     public func apply(settings: BrowserSettings) {
-        let blockingChanged = settings.blocksTrackers != self.settings.blocksTrackers
+        let contentChanged = PageContentOptions(settings) != PageContentOptions(self.settings)
         self.settings = settings
         // Every settings write lands here, including the one a live sidebar drag
         // makes each frame. Swapping a rule list on a running web view forces the
         // content process to re-evaluate the page, so it happens only on a real
-        // change to the toggle.
-        guard blockingChanged else { return }
+        // change to a toggle.
+        guard contentChanged else { return }
         for tab in webTabs {
-            tab.applySettingsChange(blocksTrackers: settings.blocksTrackers)
+            tab.applySettingsChange(PageContentOptions(settings))
         }
     }
 

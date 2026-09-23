@@ -30,13 +30,11 @@ extension WebTab {
         isPlayingAudio = false
     }
 
-    /// Toggles the built-in ad/tracker list on an already-live view when
-    /// settings change, without needing a reload.
-    func applySettingsChange(blocksTrackers: Bool) {
+    /// Swaps the rule lists on an already-live view when settings change,
+    /// without needing a reload.
+    func applySettingsChange(_ options: PageContentOptions) {
         guard let webView else { return }
-        WebViewFactory.setContentBlocking(
-            blocksTrackers, lists: controller?.contentBlocker.compiledLists ?? [], on: webView
-        )
+        WebViewFactory.apply(options, contentBlocker: controller?.contentBlocker, on: webView)
     }
 }
 
@@ -49,7 +47,7 @@ extension TabController {
                 ?? BrowserContainer.defaultID
         )
         warmer.prepare(store: contexts.store(for: context),
-                       blocksTrackers: settings.blocksTrackers, contentBlocker: contentBlocker)
+                       options: PageContentOptions(settings), contentBlocker: contentBlocker)
     }
 
     /// Warms the connection to where the address bar is about to go. A private
@@ -86,7 +84,7 @@ extension TabController {
     func installCompiledBlockList() {
         warmer.discard()
         for tab in webTabs {
-            tab.applySettingsChange(blocksTrackers: settings.blocksTrackers)
+            tab.applySettingsChange(PageContentOptions(settings))
         }
         warmUp()
     }

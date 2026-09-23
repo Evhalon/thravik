@@ -9,6 +9,9 @@ public enum PageSignal: Sendable, Equatable {
     case otpFieldAppeared(origin: Origin, username: String)
     case otpFieldDisappeared
     case identityCaptured(username: String)
+    /// The page is showing an authenticator QR code to enroll two-factor.
+    case twoFactorSetupAppeared(origin: Origin)
+    case twoFactorSetupGone
 }
 
 @MainActor

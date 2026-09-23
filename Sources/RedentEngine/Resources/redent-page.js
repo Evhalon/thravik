@@ -10,7 +10,10 @@
     var CURRENT_PASSWORD_PATTERN = /\b(current|old|existing|previous|attuale|corrente|vecchia|precedente)\b/i;
     var NEW_PASSWORD_PATTERN = /\b(new|change|confirm|repeat|retype|verify|nuova|conferma|ripeti)\b/i;
 
-    var state = { loginSignaled: false, otpPresent: false };
+    var SETUP_APP_PATTERN = /authenticator|authentication app|app di autenticazione|authentifizierungs-?app|application d'authentification|aplicaci[oó]n de autenticaci[oó]n|totp/i;
+    var SETUP_SCAN_PATTERN = /qr|scan|scansiona|scanne|scannez|escanea/i;
+
+    var state = { loginSignaled: false, otpPresent: false, setupPresent: false };
 
     function post(type, payload) {
       try {
@@ -315,6 +318,33 @@
       }
     }
 
+    // A two-factor setup page shows a square code beside words about an
+    // authenticator app. Only that it is here leaves this frame — reading the
+    // code itself is native work, and only when the user asks.
+    function hasSquareCode() {
+      var images = document.querySelectorAll('img, canvas, svg');
+      for (var i = 0; i < images.length; i++) {
+        var rect = images[i].getBoundingClientRect();
+        if (rect.width < 100 || rect.width > 520 || rect.height === 0) continue;
+        var ratio = rect.width / rect.height;
+        if (ratio > 0.85 && ratio < 1.18 && isVisibleField(images[i])) return true;
+      }
+      return false;
+    }
+
+    function detectTwoFactorSetup() {
+      if (!isMainFrame() || !document.body || !hasSquareCode()) return false;
+      var text = document.body.textContent || '';
+      return SETUP_APP_PATTERN.test(text) && SETUP_SCAN_PATTERN.test(text);
+    }
+
+    function checkTwoFactorSetup() {
+      var detected = detectTwoFactorSetup();
+      if (detected === state.setupPresent) return;
+      state.setupPresent = detected;
+      post(detected ? 'twoFactorSetupAppeared' : 'twoFactorSetupGone', { origin: currentOrigin() });
+    }
+
     // --- Scan loop, debounced ------------------------------------------
 
     function scan() {
@@ -328,6 +358,7 @@
         if (near) attachIdentityListener(near);
         checkLoginForm();
         checkOTP();
+        checkTwoFactorSetup();
       } catch (e) {}
     }
 
@@ -352,6 +383,10 @@
       if (state.otpPresent) {
         state.otpPresent = false;
         post('otpFieldDisappeared', {});
+      }
+      if (state.setupPresent) {
+        state.setupPresent = false;
+        post('twoFactorSetupGone', {});
       }
     });
     window.addEventListener('popstate', function () { scheduleScan(); });

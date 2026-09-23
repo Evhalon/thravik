@@ -32,13 +32,13 @@ struct TabOpeningTests {
     func warmSpareRespectsIsolation() async {
         let warmer = WebViewWarmer()
         let store = WKWebsiteDataStore.nonPersistent()
-        warmer.prepare(store: store, blocksTrackers: true, contentBlocker: nil)
+        warmer.prepare(store: store, options: PageContentOptions(), contentBlocker: nil)
 
         var matched: WKWebView?
         for _ in 0..<40 {
-            #expect(warmer.take(store: .nonPersistent(), blocksTrackers: true) == nil)
-            #expect(warmer.take(store: store, blocksTrackers: false) == nil)
-            matched = warmer.take(store: store, blocksTrackers: true)
+            #expect(warmer.take(store: .nonPersistent(), options: PageContentOptions()) == nil)
+            #expect(warmer.take(store: store, options: PageContentOptions(blocksTrackers: false)) == nil)
+            matched = warmer.take(store: store, options: PageContentOptions())
             if matched != nil { break }
             try? await Task.sleep(for: .milliseconds(50))
         }
@@ -49,11 +49,11 @@ struct TabOpeningTests {
     func spareIsNotShared() async {
         let warmer = WebViewWarmer()
         let store = WKWebsiteDataStore.nonPersistent()
-        warmer.prepare(store: store, blocksTrackers: true, contentBlocker: nil)
+        warmer.prepare(store: store, options: PageContentOptions(), contentBlocker: nil)
         let first = await waitForSpare(warmer, store: store)
 
         #expect(first != nil)
-        #expect(warmer.take(store: store, blocksTrackers: true) == nil)
+        #expect(warmer.take(store: store, options: PageContentOptions()) == nil)
     }
 
     @Test("Command-click inherits Container and does not nest")
@@ -115,7 +115,7 @@ struct TabOpeningTests {
     /// sleep loses that race when the suite is busy.
     private func waitForSpare(_ warmer: WebViewWarmer, store: WKWebsiteDataStore) async -> WKWebView? {
         for _ in 0..<40 {
-            if let view = warmer.take(store: store, blocksTrackers: true) { return view }
+            if let view = warmer.take(store: store, options: PageContentOptions()) { return view }
             try? await Task.sleep(for: .milliseconds(50))
         }
         return nil

@@ -1,7 +1,10 @@
 #!/bin/sh
-# Sign the Thravik app with a stable designated requirement. Development uses
-# ad-hoc signing deliberately: looking up a local private key makes every build
-# unlock the login Keychain, while the explicit requirement stays unchanged.
+# Sign the Thravik app. The legacy Keychain pins an ad-hoc app's ACL to its
+# cdhash, which changes on every build, so each rebuild re-prompts for the
+# vault and the authenticator. A certificate-backed signature keeps a stable
+# designated requirement, so "Always Allow" is asked once and then sticks.
+# Local builds pick the Apple Development identity when one is installed;
+# CODESIGN_IDENTITY=- forces ad-hoc (CI does this).
 set -e
 APP_DIR="$1"
 BUNDLE_ID="$2"
@@ -21,7 +24,13 @@ adhoc_sign() {
 		"$APP_DIR"
 }
 
-identity="${CODESIGN_IDENTITY:--}"
+local_identity() {
+	security find-identity -v -p codesigning 2>/dev/null \
+		| sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' | head -n 1
+}
+
+identity="${CODESIGN_IDENTITY:-$(local_identity)}"
+identity="${identity:--}"
 if [ "$identity" = "-" ]; then
 	echo "signing ad hoc with stable requirement"
 	adhoc_sign

@@ -17,6 +17,7 @@ public enum SheetRoute: String, Identifiable, Sendable {
         case .history: self = .history
         case .passwords: self = .passwords
         case .settings: self = .settings
+        case .siteData: self = .sitePrivacy
         }
     }
 }

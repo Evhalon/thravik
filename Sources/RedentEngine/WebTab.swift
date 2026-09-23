@@ -28,6 +28,7 @@ public final class WebTab: Identifiable, BrowserTab {
     public internal(set) var isMuted = false
     public internal(set) var volume: Double = 1
     public internal(set) var isReaderActive = false
+    public internal(set) var quietReceipt = QuietReceipt()
 
     public var isPinned: Bool {
         didSet { snapshot.isPinned = isPinned }

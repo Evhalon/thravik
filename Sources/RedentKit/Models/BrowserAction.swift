@@ -9,6 +9,8 @@ public enum BrowserScreen: String, Hashable, Sendable, CaseIterable {
     case history
     case passwords
     case settings
+    /// The current site's cookies, storage, and permissions.
+    case siteData
 }
 
 /// An intent emitted by menus, gestures, and the Command Bar.
@@ -37,4 +39,25 @@ public enum BrowserAction: Hashable, Sendable {
     case toggleReader
     case toggleMute
     case showScreen(BrowserScreen)
+    case duplicateTab(UUID)
+    /// Closes several tabs as one reversible operation.
+    case closeTabs(Set<UUID>)
+    case reloadAllTabs
+    /// Reloads past the cache.
+    case hardReload
+    case zoomIn
+    case zoomOut
+    case resetZoom
+    case toggleFullScreen
+    case moveTabToGroup(tabID: UUID, groupID: UUID)
+    case newWindow
+    case newPrivateWindow
+    case focusWindow(UUID)
+    case closeWindow
+    /// Hands a tab to another window. Nil opens a new window for it.
+    case moveTabToWindow(tabID: UUID, windowID: UUID?)
+    /// Remembers the current site as a web app.
+    case saveWebApp
+    case openWebApp(UUID)
+    case removeWebApp(UUID)
 }

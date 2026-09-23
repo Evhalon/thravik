@@ -15,7 +15,7 @@ final class WebViewWarmer {
     private struct Spare {
         let view: WKWebView
         let store: ObjectIdentifier
-        let blocksTrackers: Bool
+        let options: PageContentOptions
     }
 
     private var spare: Spare?
@@ -23,23 +23,23 @@ final class WebViewWarmer {
     private var preconnectedAt: [String: Date] = [:]
 
     /// - Returns: the primed view when it was built for the same data store and
-    ///   blocking setting; a mismatch means building fresh, never reusing a view
+    ///   content options; a mismatch means building fresh, never reusing a view
     ///   from another Container.
-    func take(store: WKWebsiteDataStore, blocksTrackers: Bool) -> WKWebView? {
+    func take(store: WKWebsiteDataStore, options: PageContentOptions) -> WKWebView? {
         guard let spare, spare.store == ObjectIdentifier(store),
-              spare.blocksTrackers == blocksTrackers else { return nil }
+              spare.options == options else { return nil }
         self.spare = nil
         return spare.view
     }
 
     /// Builds the next spare after a short pause, so the cost lands in the gap
     /// between actions rather than inside the one the user just took.
-    func prepare(store: WKWebsiteDataStore, blocksTrackers: Bool, contentBlocker: ContentBlocker?) {
+    func prepare(store: WKWebsiteDataStore, options: PageContentOptions, contentBlocker: ContentBlocker?) {
         guard spare == nil, !isPreparing else { return }
         isPreparing = true
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
-            self?.build(store: store, blocksTrackers: blocksTrackers, contentBlocker: contentBlocker)
+            self?.build(store: store, options: options, contentBlocker: contentBlocker)
         }
     }
 
@@ -71,14 +71,14 @@ final class WebViewWarmer {
         spare = nil
     }
 
-    private func build(store: WKWebsiteDataStore, blocksTrackers: Bool, contentBlocker: ContentBlocker?) {
+    private func build(store: WKWebsiteDataStore, options: PageContentOptions, contentBlocker: ContentBlocker?) {
         isPreparing = false
         guard spare == nil else { return }
         let configuration = WebViewFactory.makeConfiguration(
-            store: store, blocksTrackers: blocksTrackers, contentBlocker: contentBlocker
+            store: store, options: options, contentBlocker: contentBlocker
         )
         let view = WebViewFactory.makeWebView(configuration: configuration)
         view.evaluateJavaScript("0") { _, _ in }
-        spare = Spare(view: view, store: ObjectIdentifier(store), blocksTrackers: blocksTrackers)
+        spare = Spare(view: view, store: ObjectIdentifier(store), options: options)
     }
 }

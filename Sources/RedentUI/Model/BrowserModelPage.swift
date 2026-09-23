@@ -87,7 +87,13 @@ extension BrowserModel {
     }
 
     /// ⌘1…⌘8 pick a tab in the current Space; ⌘9 is always the last one.
+    /// With the Command Bar open they run its first nine rows.
     public func selectTab(at index: Int) {
+        // While the bar is open the same keys pick its rows instead.
+        if showsCommandBar {
+            Task { if await commandBar.executeRow(at: index) { dismissCommands() } }
+            return
+        }
         let visible = tabs.visibleTabs
         guard !visible.isEmpty else { return }
         let target = index >= 9 ? visible.count - 1 : index - 1

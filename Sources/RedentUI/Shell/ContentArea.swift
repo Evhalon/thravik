@@ -32,9 +32,13 @@ struct ContentArea: View {
         }
         .animation(.spring(duration: 0.26), value: model.chrome.isFindBarVisible)
         .overlay(alignment: .bottom) {
-            OTPFloatingButton(model: model)
-                .padding(.bottom, Metric.gutter + Metric.pageInset)
-                .animation(.spring(duration: 0.32), value: model.otp.primary?.id)
+            VStack(spacing: Metric.gutter) {
+                TwoFactorSetupButton(model: model)
+                OTPFloatingButton(model: model)
+            }
+            .padding(.bottom, Metric.gutter + Metric.pageInset)
+            .animation(.spring(duration: 0.32), value: model.otp.primary?.id)
+            .animation(.spring(duration: 0.32), value: model.twoFactor.phase)
         }
     }
 }

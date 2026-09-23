@@ -52,12 +52,12 @@ extension WebTab {
     /// and leaves a fresh one warming for whoever needs it next.
     private func makeWebView() -> WKWebView {
         let store = controller?.contexts.store(for: snapshot.browsingContext) ?? .nonPersistent()
-        let blocksTrackers = controller?.settings.blocksTrackers ?? true
+        let options = controller.map { PageContentOptions($0.settings) } ?? PageContentOptions()
         let blocker = controller?.contentBlocker
-        defer { controller?.warmer.prepare(store: store, blocksTrackers: blocksTrackers, contentBlocker: blocker) }
-        if let warm = controller?.warmer.take(store: store, blocksTrackers: blocksTrackers) { return warm }
+        defer { controller?.warmer.prepare(store: store, options: options, contentBlocker: blocker) }
+        if let warm = controller?.warmer.take(store: store, options: options) { return warm }
         return WebViewFactory.makeWebView(configuration: WebViewFactory.makeConfiguration(
-            store: store, blocksTrackers: blocksTrackers, contentBlocker: blocker
+            store: store, options: options, contentBlocker: blocker
         ))
     }
 

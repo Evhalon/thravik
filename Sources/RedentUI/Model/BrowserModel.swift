@@ -9,6 +9,7 @@ public final class BrowserModel {
     public let tabs: any BrowserControlling
     public let autofill: AutofillCoordinator
     public let otp: OTPCoordinator
+    public let twoFactor: TwoFactorSetupCoordinator
     public let address = AddressBarModel()
     public let suggestions: AddressSuggestionsModel
     public let history: any HistoryStoring
@@ -36,6 +37,13 @@ public final class BrowserModel {
     /// Opens another browser window. Set by the composition root, which is the
     /// only layer that knows what a window is; nil in previews and tests.
     @ObservationIgnored public var windowOpener: (@MainActor (_ isPrivate: Bool) -> Void)?
+    /// The app's other windows. Set by the composition root; nil in tests.
+    @ObservationIgnored public var windowDirectory: (any BrowserWindowDirectory)?
+    /// Sites kept as apps, newest list from `webAppStore`.
+    public internal(set) var webApps: [WebApp] = []
+    let webAppStore: (any WebAppStoring)?
+    /// The last queued write to `webAppStore`; reads wait for it.
+    @ObservationIgnored var webAppWrite: Task<Void, Never>?
 
     @ObservationIgnored private let visits: VisitRecorder
     /// `internal` rather than `private`: the persistence policy lives in a
@@ -57,10 +65,12 @@ public final class BrowserModel {
         self.tabs = tabs
         self.autofill = features.autofill
         self.otp = features.otp
+        self.twoFactor = features.twoFactor
         self.suggestions = features.suggestions
         self.history = services.history
         self.bookmarks = services.bookmarks
         self.downloads = services.downloads
+        self.webAppStore = services.webApps
         self.visits = VisitRecorder(history: services.history)
         self.settings = settings
         self.settingsStore = services.settings
@@ -77,6 +87,7 @@ public final class BrowserModel {
         commandBar.onExecute = { [weak self] action in self?.execute(action) }
         split = tabs.session.splitLayout
         split.validate(against: Set(tabs.tabs.map(\.id)))
+        Task { [weak self] in await self?.reloadWebApps() }
     }
 
     public func navigate(to url: URL) {
@@ -86,6 +97,7 @@ public final class BrowserModel {
     public func pageContextChanged() {
         autofill.pageChanged()
         otp.fieldDisappeared()
+        twoFactor.pageChanged()
     }
 
     /// One timer for the whole window, per AGENTS.md §4 — not one per code.
@@ -105,9 +117,13 @@ public final class BrowserModel {
         // coalesced onto the window clock like the workspace itself.
         hasUnsavedSettings = true
         tabs.apply(settings: settings)
+        commandBar.searchEngine = settings.searchEngine
         if old.offersPasswordSave != settings.offersPasswordSave {
             autofill.setEnabled(settings.offersPasswordSave)
         }
-        if !settings.showsTOTPButton { otp.fieldDisappeared() }
+        if !settings.showsTOTPButton {
+            otp.fieldDisappeared()
+            twoFactor.pageChanged()
+        }
     }
 }

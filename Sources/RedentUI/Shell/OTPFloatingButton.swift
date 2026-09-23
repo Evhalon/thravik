@@ -80,13 +80,8 @@ struct OTPFloatingButton: View {
     }
 
     private func fill(_ suggestion: OTPCoordinator.Suggestion) {
-        guard let tab = model.selectedTab else { return }
         Task {
-            await tab.fillOTPCode(suggestion.code.digits)
-            model.otp.markFilled(at: tab.url)
-            if model.otp.originMatched {
-                await model.otp.remember(suggestion)
-            }
+            await model.fillOTP(suggestion)
             withAnimation(.spring(duration: 0.2)) { didFill = true }
             try? await Task.sleep(for: .seconds(1.5))
             withAnimation(.easeOut(duration: 0.25)) { didFill = false }

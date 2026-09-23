@@ -15,6 +15,16 @@ extension WebTab {
         await evaluateFill(function: "redentFillOTP", args: [code])
     }
 
+    /// The visible page as PNG, read locally for the authenticator QR code a
+    /// two-factor setup page shows. Never stored, never logged.
+    public func visiblePageImage() async -> Data? {
+        guard let webView, let image = try? await webView.takeSnapshot(configuration: nil),
+              let tiff = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff)
+        else { return nil }
+        return bitmap.representation(using: .png, properties: [:])
+    }
+
     /// Forwards a signal parsed from the page to whoever the app has
     /// registered as the controller's `signalHandler`.
     func receive(_ signal: PageSignal) {

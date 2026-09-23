@@ -16,6 +16,10 @@ struct NewTabGrid: View {
 
     private let columns = [GridItem(.adaptive(minimum: 96, maximum: 96), spacing: 18)]
 
+    /// A favorite dropped into a folder shrinks away while its neighbours slide over.
+    static let tileTransition = AnyTransition.scale(scale: 0.5).combined(with: .opacity)
+    static let reflow = Animation.spring(response: 0.38, dampingFraction: 0.82)
+
     var body: some View {
         VStack(alignment: .leading, spacing: 26) {
             if !favorites.isEmpty || !folders.isEmpty { favoritesSection }
@@ -46,6 +50,7 @@ struct NewTabGrid: View {
                         onPrepare: { prefetchIcons(for: folder) },
                         onReceiveFavorite: { onMoveFavorite($0, folder) }
                     )
+                    .transition(Self.tileTransition)
                 }
                 ForEach(favorites) { tile in
                     NewTabTileView(
@@ -54,8 +59,10 @@ struct NewTabGrid: View {
                         onRemoveFavorite: { onRemoveFavorite(tile) },
                         onRenameFavorite: { onRenameFavorite(tile) }
                     )
+                    .transition(Self.tileTransition)
                 }
             }
+            .animation(Self.reflow, value: favorites.map(\.id) + folders.map(\.id))
         }
     }
 

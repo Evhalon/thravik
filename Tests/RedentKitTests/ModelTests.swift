@@ -29,6 +29,18 @@ struct ModelTests {
         #expect(try JSONDecoder().decode(BrowserSettings.self, from: legacyData).reopensTabsOnLaunch)
     }
 
+    @Test("Quiet mode is on for new and upgrading users, and a choice to turn it off is kept")
+    func quietModeDefaultsOn() throws {
+        let encoded = try JSONEncoder().encode(BrowserSettings())
+        var values = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        values.removeValue(forKey: "quietsPages")
+        let legacyData = try JSONSerialization.data(withJSONObject: values)
+        #expect(try JSONDecoder().decode(BrowserSettings.self, from: legacyData).quietsPages)
+
+        let off = try JSONEncoder().encode(BrowserSettings(quietsPages: false))
+        #expect(try !JSONDecoder().decode(BrowserSettings.self, from: off).quietsPages)
+    }
+
     @Test("Sidebar width is clamped to the allowed range")
     func sidebarClamping() {
         #expect(BrowserSettings(sidebarWidth: 10).sidebarWidth == BrowserSettings.sidebarWidthRange.lowerBound)

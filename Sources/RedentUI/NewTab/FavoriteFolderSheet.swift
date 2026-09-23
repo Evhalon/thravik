@@ -19,7 +19,7 @@ struct FavoriteFolderSheet: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(folder.name).font(.system(size: 16, weight: .semibold))
-                    Text("\(folder.favoriteCount) favorite\(folder.favoriteCount == 1 ? "" : "s")")
+                    Text("\(tiles.count) favorite\(tiles.count == 1 ? "" : "s") · drag outside to remove")
                         .font(.system(size: 11))
                         .foregroundStyle(Palette.chromeSecondaryText)
                 }
@@ -43,8 +43,10 @@ struct FavoriteFolderSheet: View {
                             onRenameFavorite: { onRenameFavorite(tile) },
                             onRemoveFromFolder: { removeFromFolder(tile) }
                         )
+                        .transition(NewTabGrid.tileTransition)
                     }
                 }
+                .animation(NewTabGrid.reflow, value: tiles.map(\.id))
                 // Room for the favorite badge, hover scale and glow, which the scroll view clips.
                 .padding(12)
             }

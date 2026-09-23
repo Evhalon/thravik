@@ -13,7 +13,7 @@ import WebKit
 enum WebViewFactory {
 
     static func makeConfiguration(
-        store: WKWebsiteDataStore, blocksTrackers: Bool, contentBlocker: ContentBlocker?
+        store: WKWebsiteDataStore, options: PageContentOptions, contentBlocker: ContentBlocker?
     ) -> WKWebViewConfiguration {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = store
@@ -34,7 +34,7 @@ enum WebViewFactory {
         // media and in-flight loads are exempt, so a background video or a page
         // still loading keeps going.
         config.preferences.inactiveSchedulingPolicy = .suspend
-        installContent(into: config, blocksTrackers: blocksTrackers, contentBlocker: contentBlocker)
+        installContent(into: config, options: options, contentBlocker: contentBlocker)
         return config
     }
 
@@ -47,10 +47,10 @@ enum WebViewFactory {
     /// Everything else — the data store, the opener link — is kept as WebKit
     /// built it, which is what lets `window.opener` survive.
     static func makePopupView(
-        configuration: WKWebViewConfiguration, blocksTrackers: Bool, contentBlocker: ContentBlocker?
+        configuration: WKWebViewConfiguration, options: PageContentOptions, contentBlocker: ContentBlocker?
     ) -> WKWebView {
         configuration.userContentController = WKUserContentController()
-        installContent(into: configuration, blocksTrackers: blocksTrackers, contentBlocker: contentBlocker)
+        installContent(into: configuration, options: options, contentBlocker: contentBlocker)
         return makeWebView(configuration: configuration)
     }
 
@@ -67,23 +67,24 @@ enum WebViewFactory {
         return view
     }
 
-    /// Adds or removes the compiled ad/tracker list on an already-live web
-    /// view. Remove first so a late compile cannot add the same list twice.
-    static func setContentBlocking(_ enabled: Bool, lists: [WKContentRuleList], on webView: WKWebView) {
+    /// Brings an already-live web view's rule lists and scripts in line with
+    /// `options`. Remove first so a late compile cannot add the same list
+    /// twice. Scripts take effect from the next page load.
+    static func apply(_ options: PageContentOptions, contentBlocker: ContentBlocker?, on webView: WKWebView) {
         let controller = webView.configuration.userContentController
         controller.removeAllContentRuleLists()
-        if enabled { lists.forEach(controller.add) }
+        contentBlocker?.lists(for: options).forEach(controller.add)
+        controller.removeAllUserScripts()
+        PageScripts.install(into: controller, quiets: options.quietsPages)
     }
 
     private static func installContent(
-        into config: WKWebViewConfiguration, blocksTrackers: Bool, contentBlocker: ContentBlocker?
+        into config: WKWebViewConfiguration, options: PageContentOptions, contentBlocker: ContentBlocker?
     ) {
         // Without a name WebKit's agent stops at "(KHTML, like Gecko)", which
         // reads as an embedded web view to every site that checks.
         config.applicationNameForUserAgent = BrowserUserAgent.safariApplicationName
-        PageScripts.install(into: config.userContentController)
-        if blocksTrackers {
-            contentBlocker?.compiledLists.forEach(config.userContentController.add)
-        }
+        PageScripts.install(into: config.userContentController, quiets: options.quietsPages)
+        contentBlocker?.lists(for: options).forEach(config.userContentController.add)
     }
 }

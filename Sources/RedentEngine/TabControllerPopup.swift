@@ -36,7 +36,7 @@ extension TabController {
     func openPopupTab(configuration: WKWebViewConfiguration, url: URL?, of parent: TabSnapshot) -> WebTab {
         let view = WebViewFactory.makePopupView(
             configuration: configuration,
-            blocksTrackers: settings.blocksTrackers,
+            options: PageContentOptions(settings),
             contentBlocker: contentBlocker
         )
         BrowserUserAgent.apply(to: view, for: url)

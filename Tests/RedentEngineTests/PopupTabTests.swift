@@ -16,11 +16,11 @@ struct PopupTabTests {
     @Test("A popup gets its own content controller")
     func popupControllerIsSeparate() {
         let opener = WebViewFactory.makeConfiguration(
-            store: .nonPersistent(), blocksTrackers: false, contentBlocker: nil
+            store: .nonPersistent(), options: PageContentOptions(blocksTrackers: false), contentBlocker: nil
         )
         let shared = opener.userContentController
         let popup = WebViewFactory.makePopupView(
-            configuration: opener, blocksTrackers: false, contentBlocker: nil
+            configuration: opener, options: PageContentOptions(blocksTrackers: false), contentBlocker: nil
         )
         #expect(popup.configuration.userContentController !== shared)
         #expect(popup.configuration.applicationNameForUserAgent == BrowserUserAgent.safariApplicationName)

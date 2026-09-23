@@ -16,6 +16,8 @@ final class WindowContainer {
     let spec: BrowserWindowSpec
     let model: BrowserModel
     let tabs: TabController
+    /// The AppKit window showing this one, once SwiftUI has attached it.
+    weak var nativeWindow: NSWindow?
 
     init(spec: BrowserWindowSpec, app: AppContainer) {
         self.spec = spec
@@ -30,7 +32,7 @@ final class WindowContainer {
         )
         self.tabs = controller
 
-        let services = BrowserServices(
+        var services = BrowserServices(
             history: app.history,
             bookmarks: app.bookmarks,
             settings: app.settingsStore,
@@ -40,11 +42,15 @@ final class WindowContainer {
             logger: app.logger,
             downloads: app.downloads
         )
+        services.webApps = app.webApps
         let features = BrowserFeatures(
             autofill: AutofillCoordinator(
                 store: app.credentials, logger: app.logger, isEnabled: settings.offersPasswordSave
             ),
             otp: OTPCoordinator(store: app.authenticator, generator: app.generator, logger: app.logger),
+            twoFactor: TwoFactorSetupCoordinator(
+                importer: app.importer, store: app.authenticator, logger: app.logger
+            ),
             suggestions: AddressSuggestionsModel(
                 engine: SuggestionEngine(history: app.history, bookmarks: app.bookmarks)
             )
@@ -69,6 +75,8 @@ final class WindowContainer {
         }
         if controller.tabs.isEmpty { controller.newTab(url: spec.startURL) }
         if let message = app.restoreFailureMessage(for: spec) { model.actionError = message }
+        // An app's window is the page and nothing else; ⌘K still reaches it all.
+        if spec.webApp != nil { model.isFocusMode = true }
         controller.warmUp()
     }
 

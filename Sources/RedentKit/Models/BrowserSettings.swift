@@ -74,6 +74,9 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
     public var blocksTrackers: Bool
     /// Drops click IDs and campaign tags from links before they load.
     public var stripsTrackingParameters: Bool
+    /// Declines cookie banners, stops sound nobody asked for, and keeps
+    /// push-notification pitches off the page.
+    public var quietsPages: Bool
     public var offersPasswordSave: Bool
     public var showsTOTPButton: Bool
     public var searchEngine: SearchEngine
@@ -91,6 +94,7 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
         customHibernationMinutes: Int? = 15,
         blocksTrackers: Bool = true,
         stripsTrackingParameters: Bool = true,
+        quietsPages: Bool = true,
         offersPasswordSave: Bool = true,
         showsTOTPButton: Bool = true,
         searchEngine: SearchEngine = .duckduckgo,
@@ -104,6 +108,7 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
         self.customHibernationMinutes = customHibernationMinutes
         self.blocksTrackers = blocksTrackers
         self.stripsTrackingParameters = stripsTrackingParameters
+        self.quietsPages = quietsPages
         self.offersPasswordSave = offersPasswordSave
         self.showsTOTPButton = showsTOTPButton
         self.searchEngine = searchEngine

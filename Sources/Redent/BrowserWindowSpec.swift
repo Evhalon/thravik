@@ -1,4 +1,5 @@
 import Foundation
+import RedentKit
 
 /// Which window a scene is showing.
 ///
@@ -10,11 +11,14 @@ struct BrowserWindowSpec: Hashable, Codable, Identifiable {
     let isPrivate: Bool
     /// What the window's first tab opens. Nil for a blank new-tab page.
     let startURL: URL?
+    /// Set when the window was opened for a saved web app.
+    let webApp: WebAppWindow?
 
-    init(id: UUID = UUID(), isPrivate: Bool = false, startURL: URL? = nil) {
+    init(id: UUID = UUID(), isPrivate: Bool = false, startURL: URL? = nil, webApp: WebAppWindow? = nil) {
         self.id = id
         self.isPrivate = isPrivate
         self.startURL = startURL
+        self.webApp = webApp
     }
 
     /// The window that owns the saved workspace. Its identity is fixed so the

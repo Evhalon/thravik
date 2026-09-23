@@ -17,7 +17,7 @@ final class PageSignalRouter: NSObject, WKScriptMessageHandler {
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-        if routeMedia(message.body) { return }
+        if routeMedia(message.body) || routeQuiet(message.body) { return }
         guard let signal = Self.parse(message.body) else { return }
         tab?.receive(signal)
     }
@@ -52,6 +52,10 @@ final class PageSignalRouter: NSObject, WKScriptMessageHandler {
         case "identityCaptured":
             guard let username = dict["username"] as? String else { return nil }
             return .identityCaptured(username: username)
+        case "twoFactorSetupAppeared":
+            return parseOrigin(dict).map { .twoFactorSetupAppeared(origin: $0) }
+        case "twoFactorSetupGone":
+            return .twoFactorSetupGone
         default:
             return nil
         }
@@ -68,6 +72,21 @@ final class PageSignalRouter: NSObject, WKScriptMessageHandler {
             guard let frame = dict["frame"] as? String, frame.count <= 64,
                   let audible = dict["audible"] as? Bool else { return true }
             tab?.mediaFrame(frame, isAudible: audible)
+        default:
+            return false
+        }
+        return true
+    }
+
+    /// Quiet mode's receipt is the tab's own display state, like its audio.
+    private func routeQuiet(_ body: Any) -> Bool {
+        guard let dict = body as? [String: Any], let type = dict["type"] as? String else { return false }
+        switch type {
+        case "quietReset":
+            tab?.quietReceipt = QuietReceipt()
+        case "quietAction":
+            if dict["kind"] as? String == "cookieBanner" { tab?.quietReceipt.declinedCookieBanners += 1 }
+            if dict["kind"] as? String == "autoplay" { tab?.quietReceipt.stoppedAutoplays += 1 }
         default:
             return false
         }

@@ -2,8 +2,8 @@ import Foundation
 
 private enum BrowserSettingsCodingKey: String, CodingKey {
     case tabLayout, isTabStripVisible, sidebarWidth, hibernation
-    case customHibernationMinutes, blocksTrackers, stripsTrackingParameters, offersPasswordSave
-    case showsTOTPButton, searchEngine, homepage, reopensTabsOnLaunch
+    case customHibernationMinutes, blocksTrackers, stripsTrackingParameters, quietsPages
+    case offersPasswordSave, showsTOTPButton, searchEngine, homepage, reopensTabsOnLaunch
 }
 
 /// Decoding is explicit so adding a preference never resets saved settings.
@@ -19,6 +19,7 @@ extension BrowserSettings {
             customHibernationMinutes: try values.decodeIfPresent(Int.self, forKey: .customHibernationMinutes) ?? defaults.customHibernationMinutes,
             blocksTrackers: try values.decodeIfPresent(Bool.self, forKey: .blocksTrackers) ?? defaults.blocksTrackers,
             stripsTrackingParameters: try values.decodeIfPresent(Bool.self, forKey: .stripsTrackingParameters) ?? defaults.stripsTrackingParameters,
+            quietsPages: try values.decodeIfPresent(Bool.self, forKey: .quietsPages) ?? defaults.quietsPages,
             offersPasswordSave: try values.decodeIfPresent(Bool.self, forKey: .offersPasswordSave) ?? defaults.offersPasswordSave,
             showsTOTPButton: try values.decodeIfPresent(Bool.self, forKey: .showsTOTPButton) ?? defaults.showsTOTPButton,
             searchEngine: try values.decodeIfPresent(SearchEngine.self, forKey: .searchEngine) ?? defaults.searchEngine,

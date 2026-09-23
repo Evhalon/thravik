@@ -19,13 +19,17 @@ struct BrowserWindowScene: View {
         return BrowserWindowView(model: window.model) { route in
             SheetRouter(route: route, app: app, window: window)
         }
-        .onAppear { window.model.windowOpener = open(isPrivate:) }
+        .onAppear {
+            window.model.windowOpener = open(isPrivate:)
+            window.model.windowDirectory = AppWindowDirectory(app: app, current: spec) { openWindow(value: $0) }
+        }
         .task {
             await app.offerDefaultBrowserIfNeeded(in: window)
         }
         .onDisappear { app.releaseWindow(spec) }
         .background {
             WindowReadyProbe { nativeWindow in
+                window.nativeWindow = nativeWindow
                 let openedExternalLinks = app.drainPendingLinks()
                 delegate.windowBecameReady(nativeWindow, openedExternalLinks: openedExternalLinks)
             }

@@ -26,9 +26,17 @@ final class ContentBlocker {
         guard !hasStarted, let json = ContentBlockList.encodedJSON else { return }
         hasStarted = true
         compile(json, identifier: bundledIdentifier)
+        if let quiet = QuietRuleList.encodedJSON { compile(quiet, identifier: QuietRuleList.identifier) }
         restoreCachedLists()
         retireOldLists()
         if Self.isRemoteRefreshDue { scheduleRemoteUpdate() }
+    }
+
+    /// The compiled lists a view built with `options` carries.
+    func lists(for options: PageContentOptions) -> [WKContentRuleList] {
+        compiledLists.filter { list in
+            list.identifier == QuietRuleList.identifier ? options.quietsPages : options.blocksTrackers
+        }
     }
 
     private static var isRemoteRefreshDue: Bool {

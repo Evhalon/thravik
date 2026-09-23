@@ -8,7 +8,7 @@ import WebKit
 struct WebViewConfigurationTests {
     private func makeView() -> WKWebView {
         WebViewFactory.makeWebView(configuration: WebViewFactory.makeConfiguration(
-            store: .nonPersistent(), blocksTrackers: false, contentBlocker: nil
+            store: .nonPersistent(), options: PageContentOptions(blocksTrackers: false), contentBlocker: nil
         ))
     }
 
@@ -39,7 +39,7 @@ struct WebViewConfigurationTests {
     @Test("An off-screen tab is suspended rather than left running")
     func idleTabsSuspend() {
         let configuration = WebViewFactory.makeConfiguration(
-            store: .nonPersistent(), blocksTrackers: false, contentBlocker: nil
+            store: .nonPersistent(), options: PageContentOptions(blocksTrackers: false), contentBlocker: nil
         )
         #expect(configuration.preferences.inactiveSchedulingPolicy == .suspend)
     }
@@ -47,7 +47,7 @@ struct WebViewConfigurationTests {
     @Test("The page context menu exposes Web Inspector")
     func contextMenuAllowsInspection() {
         let configuration = WebViewFactory.makeConfiguration(
-            store: .nonPersistent(), blocksTrackers: false, contentBlocker: nil
+            store: .nonPersistent(), options: PageContentOptions(blocksTrackers: false), contentBlocker: nil
         )
         let developerExtras = configuration.preferences.value(
             forKey: "developerExtrasEnabled"
@@ -59,7 +59,7 @@ struct WebViewConfigurationTests {
     @Test("Media can start without another click, so YouTube ads cannot stall the player")
     func mediaDoesNotNeedAGesture() {
         let configuration = WebViewFactory.makeConfiguration(
-            store: .nonPersistent(), blocksTrackers: false, contentBlocker: nil
+            store: .nonPersistent(), options: PageContentOptions(blocksTrackers: false), contentBlocker: nil
         )
         #expect(configuration.mediaTypesRequiringUserActionForPlayback.isEmpty)
     }

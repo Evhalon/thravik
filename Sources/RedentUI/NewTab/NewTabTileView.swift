@@ -15,7 +15,7 @@ struct NewTabTileView: View {
     var onRemoveFromFolder: (() -> Void)?
 
     @State private var isHovering = false
-    @State private var fetchedIcon: Data?
+    @State private var artwork: TileArtwork?
 
     var body: some View {
         Button(action: { onOpen(NSEvent.modifierFlags.contains(.command)) }) {
@@ -31,12 +31,12 @@ struct NewTabTileView: View {
         }
         .buttonStyle(PressScaleStyle())
         .scaleEffect(isHovering ? 1.06 : 1)
-        .animation(.spring(duration: 0.25), value: isHovering)
+        .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isHovering)
         .onHover { isHovering = $0 }
         .help(tile.title)
         .contextMenu { menu }
-        .modifier(FavoriteTileDragModifier(bookmarkID: tile.bookmarkID))
-        .task(id: tile.host) { await loadIcon() }
+        .modifier(FavoriteTileDragModifier(tile: tile, artwork: resolvedArtwork))
+        .task(id: tile) { artwork = await TileArtwork.resolve(for: tile) }
     }
 
     @ViewBuilder
@@ -52,66 +52,32 @@ struct NewTabTileView: View {
         }
     }
 
-    private func loadIcon() async {
-        if Self.canDraw(tile.faviconData) { return }
-        fetchedIcon = await SiteIconLoader.shared.icon(for: tile.host)
-    }
-
-    private static func canDraw(_ data: Data?) -> Bool {
-        guard let data, !data.isEmpty, let image = NSImage(data: data) else { return false }
-        return image.isValid
-    }
-
-    private var iconData: Data? {
-        if Self.canDraw(tile.faviconData) { return tile.faviconData }
-        return fetchedIcon
+    /// Decoding and color sampling happen once per tile, not on every hover frame.
+    private var resolvedArtwork: TileArtwork {
+        artwork ?? TileArtwork(iconData: nil, accent: TileArtwork.fallbackAccent(for: tile.host))
     }
 
     private var icon: some View {
-        let accent = DominantColor.extract(from: iconData) ?? fallbackAccent
-        return ZStack {
-            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .fill(accent.opacity(isHovering ? 0.30 : 0.18))
-            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(colors: [.white.opacity(0.28), .white.opacity(0.05)],
-                                   startPoint: .top, endPoint: .bottom),
-                    lineWidth: Metric.hairWidth
-            )
-            if let iconData {
-                FaviconView(data: iconData, host: tile.host, size: 30)
-            } else {
-                FaviconView(data: nil, host: tile.host, size: 30)
-            }
-        }
-        .frame(width: 62, height: 62)
-        .shadow(color: accent.opacity(isHovering ? 0.45 : 0.18), radius: isHovering ? 14 : 7, y: 4)
-        .overlay(alignment: .topTrailing) {
-            if tile.isFavorite {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 8))
-                    .foregroundStyle(.white.opacity(0.85))
-                    .padding(4)
-                    .background(Circle().fill(accent.opacity(0.9)))
-                    .offset(x: 5, y: -5)
-            }
-        }
-    }
-
-    private var fallbackAccent: Color {
-        var hash: UInt64 = 5381
-        for byte in tile.host.utf8 { hash = (hash &* 33) &+ UInt64(byte) }
-        return Color(hue: Double(hash % 360) / 360, saturation: 0.55, brightness: 0.78)
+        FavoriteTileIcon(
+            host: tile.host,
+            iconData: resolvedArtwork.iconData,
+            accent: resolvedArtwork.accent,
+            isFavorite: tile.isFavorite,
+            isLifted: isHovering
+        )
     }
 }
 
 private struct FavoriteTileDragModifier: ViewModifier {
-    let bookmarkID: UUID?
+    let tile: NewTabTile
+    let artwork: TileArtwork
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if let bookmarkID {
-            content.draggable(bookmarkID.uuidString)
+        if let bookmarkID = tile.bookmarkID {
+            content.draggable(bookmarkID.uuidString) {
+                FavoriteDragPreview(tile: tile, iconData: artwork.iconData, accent: artwork.accent)
+            }
         } else {
             content
         }

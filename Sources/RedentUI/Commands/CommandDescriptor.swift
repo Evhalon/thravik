@@ -9,6 +9,9 @@ public struct CommandDescriptor: Identifiable, Sendable {
     public let keywords: [String]
     public let symbol: String
     private let buildAction: @Sendable (CommandBarContext, String) -> BrowserAction?
+    /// Set for a command that needs an argument: pressing it types this into
+    /// the field so the argument can be picked from the rows that follow.
+    public let completion: String?
 
     public init(
         id: String,
@@ -22,10 +25,32 @@ public struct CommandDescriptor: Identifiable, Sendable {
         self.keywords = keywords
         self.symbol = symbol
         self.buildAction = action
+        self.completion = nil
+    }
+
+    /// A command that asks for its argument instead of running.
+    public init(id: String, title: String, keywords: [String] = [], symbol: String = "command", completion: String) {
+        self.id = id
+        self.title = title
+        self.keywords = keywords
+        self.symbol = symbol
+        self.buildAction = { _, _ in nil }
+        self.completion = completion
     }
 
     public func action(in context: CommandBarContext, query: String = "") -> BrowserAction? {
         buildAction(context, query)
+    }
+
+    /// The row this command shows, or nil when it does not apply right now.
+    func row(in context: CommandBarContext, query: String) -> CommandBarResult? {
+        let action = action(in: context, query: query)
+        guard action != nil || completion != nil else { return nil }
+        var row = CommandBarResult(id: "command:\(id)", title: title, subtitle: "Command",
+                                   source: .command, action: action)
+        row.symbol = symbol
+        row.completion = completion
+        return row
     }
 
     func matches(_ query: String) -> Bool {
@@ -37,63 +62,11 @@ public struct CommandDescriptor: Identifiable, Sendable {
         let startsWithTitle = terms.count >= titleTerms.count
             && zip(terms, titleTerms).allSatisfy { $0 == $1 }
         return startsWithTitle || terms.allSatisfy { haystack.contains($0) }
+            || FuzzyMatch.matches(text, fields: [title] + keywords)
     }
 }
 
-public enum DefaultCommandDescriptors {
-    public static let all: [CommandDescriptor] = [
-        CommandDescriptor(id: "new-tab", title: "New Tab", keywords: ["open", "create"], symbol: "plus") { _, _ in .newTab(nil) },
-        CommandDescriptor(id: "close-tab", title: "Close Tab", keywords: ["remove"], symbol: "xmark") { context, _ in
-            context.selectedTabID.map(BrowserAction.closeTab)
-        },
-        CommandDescriptor(id: "reopen-tab", title: "Reopen Closed Tab", keywords: ["restore", "undo"], symbol: "arrow.uturn.backward") { context, _ in
-            context.canReopenLastClosed ? .reopenLastClosed : nil
-        },
-        CommandDescriptor(id: "pin-tab", title: "Pin Current Tab", keywords: ["unpin", "favorite"], symbol: "pin") { context, _ in
-            guard let id = context.selectedTabID,
-                  let tab = context.tabs.first(where: { $0.id == id }) else { return nil }
-            return .pinTab(id, isPinned: !tab.isPinned)
-        },
-        CommandDescriptor(id: "focus-mode", title: "Toggle Focus Mode", keywords: ["distraction", "chrome"], symbol: "rectangle.inset.filled") { _, _ in
-            .toggleFocusMode
-        },
-        CommandDescriptor(id: "sidebar", title: "Toggle Sidebar", keywords: ["rail", "tabs", "layout"], symbol: "sidebar.left") { _, _ in
-            .toggleSidebar
-        },
-        CommandDescriptor(id: "create-space", title: "Create Space", keywords: ["new"], symbol: "plus.square") { _, query in
-            CommandArguments.after("create space", in: query).map(BrowserAction.createSpace)
-        },
-        CommandDescriptor(id: "rename-space", title: "Rename Space", keywords: ["edit"], symbol: "pencil") { context, query in
-            guard let id = context.selectedSpaceID,
-                  let name = CommandArguments.after("rename space", in: query) else { return nil }
-            return .renameSpace(id: id, name: name)
-        },
-        CommandDescriptor(id: "delete-space", title: "Delete Space", keywords: ["remove"], symbol: "trash") { context, _ in
-            guard context.spaces.count > 1, let id = context.selectedSpaceID else { return nil }
-            return .deleteSpace(id)
-        },
-        CommandDescriptor(id: "reload", title: "Reload Page", keywords: ["refresh"], symbol: "arrow.clockwise") { _, _ in .reloadPage },
-        CommandDescriptor(id: "bookmark", title: "Bookmark Page", keywords: ["save", "star", "favorite"], symbol: "star") { _, _ in .bookmarkPage },
-        CommandDescriptor(id: "find", title: "Find on Page", keywords: ["search", "text"], symbol: "text.magnifyingglass") { _, _ in .findOnPage },
-        CommandDescriptor(id: "reader", title: "Toggle Reader", keywords: ["read", "article", "clean"], symbol: "text.page") { _, _ in .toggleReader },
-        CommandDescriptor(id: "mute", title: "Mute or Unmute Tab", keywords: ["sound", "audio", "silence"], symbol: "speaker.slash") { _, _ in .toggleMute },
-        CommandDescriptor(id: "print", title: "Print Page", keywords: ["pdf", "paper"], symbol: "printer") { _, _ in .printPage },
-        CommandDescriptor(id: "downloads", title: "Downloads", keywords: ["files", "saved"], symbol: "arrow.down.circle") { _, _ in .showScreen(.downloads) },
-        CommandDescriptor(id: "bookmarks", title: "Bookmarks", keywords: ["saved", "library"], symbol: "book") { _, _ in .showScreen(.bookmarks) },
-        CommandDescriptor(id: "history", title: "History", keywords: ["visited", "recent"], symbol: "clock.arrow.circlepath") { _, _ in .showScreen(.history) },
-        CommandDescriptor(id: "passwords", title: "Passwords", keywords: ["logins", "vault"], symbol: "key") { _, _ in .showScreen(.passwords) },
-        CommandDescriptor(id: "settings", title: "Settings", keywords: ["preferences", "options"], symbol: "gearshape") { _, _ in .showScreen(.settings) },
-        CommandDescriptor(id: "move-tab", title: "Move Tab", keywords: ["space", "to"], symbol: "arrow.right") { context, query in
-            guard let tabID = context.selectedTabID,
-                  let name = CommandArguments.after("move tab to", in: query),
-                  let spaceID = context.spaces.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame })?.id
-            else { return nil }
-            return .moveTab(tabID: tabID, spaceID: spaceID)
-        }
-    ]
-}
-
-private enum CommandArguments {
+enum CommandArguments {
     static func after(_ prefix: String, in query: String) -> String? {
         guard query.lowercased().hasPrefix(prefix) else { return nil }
         let value = String(query.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)

@@ -60,7 +60,10 @@ struct SheetRouter: View {
 
             case .sitePrivacy:
                 if let privacy = app.sitePrivacyModel(for: window) {
-                    SitePrivacyPanel(model: privacy)
+                    SitePrivacyPanel(
+                        model: privacy,
+                        quietReceipt: model.settings.quietsPages ? model.selectedTab?.quietReceipt : nil
+                    )
                 } else {
                     SheetPlaceholder(message: "Open a website to see its privacy settings.")
                 }

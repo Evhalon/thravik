@@ -17,7 +17,7 @@ struct PasswordFillButton: View {
                     .background(Circle().fill(Palette.accent.opacity(0.16)))
                 labels(for: credential)
                 if model.autofill.suggestions.count > 1 {
-                    PasswordFillPicker(model: model, fill: fill)
+                    PasswordFillPicker(model: model, fill: model.fillCredential)
                 }
             }
             .padding(.leading, Metric.gutter)
@@ -26,7 +26,7 @@ struct PasswordFillButton: View {
             .background { capsule }
             .scaleEffect(isHovering ? 1.035 : 1)
             .contentShape(.capsule)
-            .onTapGesture { fill(credential) }
+            .onTapGesture { model.fillCredential(credential) }
             .onHover { hovering in
                 withAnimation(.spring(duration: 0.25)) { isHovering = hovering }
             }
@@ -57,13 +57,5 @@ struct PasswordFillButton: View {
 
     private func label(for credential: Credential) -> String {
         credential.username.isEmpty ? credential.origin.displayHost : credential.username
-    }
-
-    private func fill(_ credential: Credential) {
-        guard let tab = model.selectedTab else { return }
-        Task {
-            await tab.fillCredential(username: credential.username, password: credential.password)
-            await model.autofill.credentialFilled(credential)
-        }
     }
 }

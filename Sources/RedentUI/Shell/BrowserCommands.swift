@@ -15,7 +15,7 @@ public struct BrowserCommands: Commands {
     public var body: some Commands {
         CommandGroup(replacing: .newItem) { fileItems }
         CommandMenu("Browser") {
-            Button("Command Bar…") { model?.showCommands() }
+            Button("Command Center…") { model?.toggleCommands() }
                 .keyboardShortcut("k")
                 .disabled(model == nil)
             Button("Reload Page") { model?.selectedTab?.reload() }
