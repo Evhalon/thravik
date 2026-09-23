@@ -30,7 +30,7 @@ final class AppContainer {
     /// The once-per-release offer to take over web links.
     let defaultBrowser: DefaultBrowserModel
     /// One per process, so two windows in the same Container share its cookies.
-    let contexts = BrowsingContextRegistry()
+    let contexts = BrowsingContextRegistry(sessionCookies: KeychainSessionCookieStore())
     var siteData: any SiteDataManaging { contexts }
 
     let settingsStore: any SettingsStoring

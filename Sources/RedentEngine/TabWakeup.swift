@@ -36,7 +36,16 @@ extension WebTab {
 
     func navigate(_ url: URL, in view: WKWebView) {
         BrowserUserAgent.apply(to: view, for: url)
-        view.load(URLRequest(url: url))
+        guard let restoration = controller?.contexts.cookieRestoration(for: snapshot.browsingContext) else {
+            view.load(URLRequest(url: url))
+            return
+        }
+        // Loading before the saved session cookies are back would show the
+        // sign-in page to a user who never signed out.
+        Task { [weak view] in
+            await restoration.value
+            view?.load(URLRequest(url: url))
+        }
     }
 
     /// Takes the warm spare when it was built for this tab's own data store,

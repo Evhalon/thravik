@@ -16,6 +16,10 @@ public final class DownloadsModel: DownloadObserving {
     /// Set once a fetch finishes while the panel is closed, so the chrome can
     /// draw the badge that says something arrived.
     public private(set) var hasUnseenCompletion = false
+    /// Bumped once per new download, so the chrome can animate the arrival.
+    public private(set) var arrivals = 0
+    /// Bumped once per download that finishes, for the completion flourish.
+    public private(set) var completions = 0
 
     /// Weak: the engine coordinator and this list are both owned by the app.
     @ObservationIgnored public weak var commands: (any DownloadCommanding)?
@@ -36,12 +40,17 @@ public final class DownloadsModel: DownloadObserving {
     }
 
     public func downloadChanged(_ item: DownloadItem) {
-        if let index = items.firstIndex(where: { $0.id == item.id }) {
-            items[index] = item
+        let previous = items.firstIndex { $0.id == item.id }
+        let wasActive = previous.map { items[$0].isActive } ?? true
+        if let previous {
+            items[previous] = item
         } else {
             items.insert(item, at: 0)
+            arrivals += 1
         }
-        if item.state == .finished { hasUnseenCompletion = true }
+        guard item.state == .finished, wasActive else { return }
+        hasUnseenCompletion = true
+        completions += 1
     }
 
     public func markSeen() { hasUnseenCompletion = false }
@@ -66,6 +75,12 @@ public final class DownloadsModel: DownloadObserving {
     public func revealInFinder(_ item: DownloadItem) {
         guard let destination = item.destination else { return }
         NSWorkspace.shared.activateFileViewerSelecting([destination])
+    }
+
+    public func openDownloadsFolder() {
+        guard let folder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+        else { return }
+        NSWorkspace.shared.open(folder)
     }
 
     public func openFile(_ item: DownloadItem) {

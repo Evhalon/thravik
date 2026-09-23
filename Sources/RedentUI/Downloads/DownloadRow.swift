@@ -2,98 +2,91 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// One file in the downloads list: what it is, how far along, and the one
-/// action that makes sense for the state it is in.
+/// One file in the downloads list: its type icon, how far along it is, and the
+/// one action that makes sense for the state it is in. A finished file opens
+/// on click and can be dragged straight out into Finder or another app.
 struct DownloadRow: View {
     let item: DownloadItem
     let onCancel: () -> Void
     let onReveal: () -> Void
     let onOpen: () -> Void
     let onRemove: () -> Void
+    @State private var isHovering = false
 
     var body: some View {
-        HStack(spacing: Metric.gutter) {
-            Image(systemName: symbol)
-                .font(.system(size: 15, weight: .regular))
-                .foregroundStyle(tint)
-                .frame(width: 22)
-
+        HStack(spacing: 10) {
+            DownloadFileIcon(filename: item.filename)
+                .opacity(item.state == .finished || item.isActive ? 1 : 0.5)
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.filename)
                     .font(.system(size: 12.5, weight: .medium))
                     .foregroundStyle(Palette.chromeText)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                caption
-                if item.isActive { progressBar }
+                DownloadCaption(item: item)
+                if item.isActive { DownloadProgressBar(fraction: item.fraction) }
             }
-
             Spacer(minLength: Metric.tightGutter)
             action
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .frame(height: 48)
+        .background(hoverFill, in: .rect(cornerRadius: Metric.smallRadius))
         .contentShape(.rect)
-        .onTapGesture(count: 2, perform: onOpen)
+        .onHover { isHovering = $0 }
+        .onTapGesture(perform: onOpen)
+        .onDrag(fileProvider)
         .contextMenu {
+            Button("Open", action: onOpen).disabled(item.state != .finished)
             Button("Show in Finder", action: onReveal).disabled(item.destination == nil)
+            Divider()
             Button("Remove from List", action: onRemove)
         }
+        .animation(.easeOut(duration: 0.15), value: isHovering)
     }
 
-    private var caption: some View {
-        Text(captionText)
-            .font(.system(size: 10.5))
-            .foregroundStyle(item.state.isFailure ? Palette.danger : Palette.chromeSecondaryText)
-            .lineLimit(1)
+    private var hoverFill: Color {
+        isHovering && item.state == .finished ? Palette.chromeSecondaryText.opacity(0.12) : .clear
     }
 
-    private var captionText: String {
-        switch item.state {
-        case .running: [item.host, item.sizeCaption].compactMap { $0 }.joined(separator: " — ")
-        case .finished: [item.host, DownloadItem.format(item.bytesReceived)]
-            .compactMap { $0 }.joined(separator: " — ")
-        case .cancelled: "Cancelled"
-        case .failed(let reason): reason
-        }
-    }
-
-    private var progressBar: some View {
-        ProgressView(value: item.fraction ?? 0, total: 1)
-            .progressViewStyle(.linear)
-            .opacity(item.fraction == nil ? 0.45 : 1)
-            .frame(height: 3)
+    /// Hands the finished file itself to the drop target, so it copies or
+    /// moves like any Finder drag.
+    private func fileProvider() -> NSItemProvider {
+        guard item.state == .finished, let url = item.destination,
+              let provider = NSItemProvider(contentsOf: url) else { return NSItemProvider() }
+        provider.suggestedName = url.lastPathComponent
+        return provider
     }
 
     @ViewBuilder
     private var action: some View {
         if item.isActive {
-            Button("Stop", action: onCancel).controlSize(.small)
+            RowIconButton(symbol: "xmark.circle.fill", help: "Stop", action: onCancel)
         } else if item.state == .finished {
-            Button("Show", action: onReveal).controlSize(.small)
+            RowIconButton(symbol: "magnifyingglass.circle.fill", help: "Show in Finder", action: onReveal)
+                .opacity(isHovering ? 1 : 0)
         } else {
-            Button("Remove", action: onRemove).controlSize(.small)
-        }
-    }
-
-    private var symbol: String {
-        switch item.state {
-        case .running: "arrow.down.circle"
-        case .finished: "doc.fill"
-        case .cancelled: "xmark.circle"
-        case .failed: "exclamationmark.triangle.fill"
-        }
-    }
-
-    private var tint: Color {
-        switch item.state {
-        case .running: Palette.accent
-        case .finished: Palette.chromeText
-        case .cancelled: Palette.chromeSecondaryText
-        case .failed: Palette.danger
+            RowIconButton(symbol: "xmark.circle.fill", help: "Remove from List", action: onRemove)
+                .opacity(isHovering ? 1 : 0.6)
         }
     }
 }
 
-private extension DownloadItem.State {
-    var isFailure: Bool { if case .failed = self { true } else { false } }
+/// The small round glyph button at the trailing edge of a row.
+private struct RowIconButton: View {
+    let symbol: String
+    let help: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 15))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Palette.chromeSecondaryText)
+        }
+        .buttonStyle(PressScaleStyle())
+        .help(help)
+        .accessibilityLabel(help)
+    }
 }

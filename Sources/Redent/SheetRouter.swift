@@ -40,8 +40,8 @@ struct SheetRouter: View {
                 )
 
             case .history:
-                HistoryBrowserView(history: app.history, spaceID: model.currentSpaceID) { url in
-                    model.navigate(to: url)
+                HistoryBrowserView(history: app.history, spaceID: model.currentSpaceID) { url, inNewTab in
+                    model.open(url, inNewTab: inNewTab)
                     model.sheet = nil
                 }
 

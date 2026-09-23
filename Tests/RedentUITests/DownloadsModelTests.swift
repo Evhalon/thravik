@@ -82,4 +82,18 @@ struct DownloadsModelTests {
         #expect(commands.cancelled == [item.id])
         #expect(list.items.count == 1)
     }
+
+    @Test("Arrivals and completions each count once per download")
+    func countsAnimationEvents() {
+        let (list, _) = model()
+        var item = DownloadItem(filename: "a.zip")
+        list.downloadChanged(item)
+        item.bytesReceived = 10
+        list.downloadChanged(item)
+        item.state = .finished
+        list.downloadChanged(item)
+        list.downloadChanged(item)
+        #expect(list.arrivals == 1)
+        #expect(list.completions == 1)
+    }
 }

@@ -35,6 +35,7 @@ struct SpacePageDots: View {
                             .background {
                                 Circle().strokeBorder(Palette.hairline, lineWidth: Metric.hairWidth)
                             }
+                            .contentShape(.circle)
                     }
                     .buttonStyle(PressScaleStyle())
                     .help("Manage Spaces")

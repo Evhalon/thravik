@@ -16,6 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         target?.orderFrontRegardless()
     }
 
+    /// Asks SwiftUI for a browser window when a link arrives and none exists.
+    @MainActor var requestWindow: @MainActor () -> Void = SceneReopener.requestWindow
+
     @MainActor var container: AppContainer? {
         didSet { flushPendingLinks() }
     }
@@ -80,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         awaitsWindowForExternalLink = true
         guard let container else {
             pendingLinks.append(contentsOf: urls)
+            requestWindow()
             presentWindow(nil)
             return
         }

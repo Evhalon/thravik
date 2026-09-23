@@ -18,14 +18,30 @@ public final class BrowsingContextRegistry {
     /// Counts are kept per owning controller, so one window re-counting its own
     /// tabs cannot report another window's tabs as gone.
     private var tabCounts: [ObjectIdentifier: [BrowsingContext: Int]] = [:]
+    private let sessionCookies: (any SessionCookieStoring)?
+    private var cookieKeepers: [UUID: SessionCookieKeeper] = [:]
 
-    public init() {}
+    public init(sessionCookies: (any SessionCookieStoring)? = nil) {
+        self.sessionCookies = sessionCookies
+    }
 
     func store(for context: BrowsingContext) -> WKWebsiteDataStore {
         if let existing = loadedStores[context] { return existing }
         let store = Self.makeStore(for: context)
         loadedStores[context] = store
+        if let id = context.containerID, let sessionCookies {
+            cookieKeepers[id] = SessionCookieKeeper(
+                cookieStore: store.httpCookieStore, storage: sessionCookies, container: id
+            )
+        }
         return store
+    }
+
+    /// Still running while a Container's saved session cookies are on their
+    /// way back into its store; `nil` once there is nothing to wait for.
+    func cookieRestoration(for context: BrowsingContext) -> Task<Void, Never>? {
+        guard let id = context.containerID else { return nil }
+        return cookieKeepers[id]?.restoration
     }
 
     /// Re-counts one owner's live tabs in a single pass. Called after any tab
@@ -67,6 +83,7 @@ public final class BrowsingContextRegistry {
             throw BrowsingContextError.notRemovable
         }
         loadedStores[context] = nil
+        await cookieKeepers.removeValue(forKey: id)?.forget()
         try await WKWebsiteDataStore.remove(forIdentifier: id)
     }
 

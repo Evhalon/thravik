@@ -23,6 +23,26 @@ final class WebViewHost: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { nil }
 
+    override func layout() {
+        super.layout()
+        fillWithWebView()
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        fillWithWebView()
+    }
+
+    /// The autoresizing mask only carries a size *delta* forward. Once the web
+    /// view's frame drifts from the host's — WebKit handing it back after
+    /// element fullscreen, or closing a docked inspector — the drift is kept
+    /// for good, and the page lays out wider than the pane that shows it.
+    /// A docked inspector is a sibling that WebKit lays out itself.
+    private func fillWithWebView() {
+        guard subviews.count == 1, webView.superview === self, webView.frame != bounds else { return }
+        webView.frame = bounds
+    }
+
     static func containing(_ webView: WKWebView) -> WebViewHost? {
         webView.superview as? WebViewHost
     }

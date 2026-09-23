@@ -11,6 +11,7 @@ struct AppDelegateTests {
         let delegate = AppDelegate()
         var presentedWindow: NSWindow?
         delegate.presentWindow = { presentedWindow = $0 }
+        delegate.requestWindow = {}
         let link = try #require(URL(string: "https://teams.microsoft.com/l/message/example"))
 
         delegate.application(NSApplication.shared, open: [link])
@@ -24,6 +25,7 @@ struct AppDelegateTests {
         let delegate = AppDelegate()
         var presentedWindow: NSWindow?
         delegate.presentWindow = { presentedWindow = $0 }
+        delegate.requestWindow = {}
         let link = try #require(URL(string: "https://teams.microsoft.com/l/message/example"))
         let window = NSWindow(contentRect: .zero, styleMask: .titled, backing: .buffered, defer: true)
 
@@ -33,5 +35,20 @@ struct AppDelegateTests {
         delegate.windowBecameReady(window, openedExternalLinks: false)
 
         #expect(presentedWindow === window)
+    }
+
+    // Regression: a link that launched the app left it running with no window.
+    @MainActor
+    @Test("A cold-launch link asks SwiftUI for a window")
+    func coldLaunchRequestsWindow() throws {
+        let delegate = AppDelegate()
+        var requests = 0
+        delegate.presentWindow = { _ in }
+        delegate.requestWindow = { requests += 1 }
+        let link = try #require(URL(string: "https://example.com"))
+
+        delegate.application(NSApplication.shared, open: [link])
+
+        #expect(requests == 1)
     }
 }

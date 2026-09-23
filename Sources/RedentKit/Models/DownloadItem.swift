@@ -64,6 +64,17 @@ public struct DownloadItem: Identifiable, Sendable, Equatable {
         return "\(received) of \(Self.format(bytesExpected))"
     }
 
+    /// Seconds left at the average rate so far. `nil` while there is no size
+    /// to divide or too little history to trust — a guess from the first
+    /// instant swings wildly, and a jumping estimate is worse than none.
+    public func secondsRemaining(at now: Date) -> TimeInterval? {
+        let elapsed = now.timeIntervalSince(startedAt)
+        guard isActive, elapsed >= 1, bytesReceived > 0,
+              let bytesExpected, bytesExpected > bytesReceived else { return nil }
+        let rate = Double(bytesReceived) / elapsed
+        return Double(bytesExpected - bytesReceived) / rate
+    }
+
     public static func format(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file

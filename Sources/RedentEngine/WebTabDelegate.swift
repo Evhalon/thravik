@@ -9,8 +9,7 @@ import WebKit
 /// content process — alive forever, even past `hibernate()`.
 @MainActor
 final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
-    /// Readable inside the module so the download hooks in a sibling file can
-    /// reach the tab that started the fetch.
+    /// Module-visible so the download hooks in a sibling file reach the tab.
     private(set) weak var tab: WebTab?
 
     init(tab: WebTab) {
@@ -33,6 +32,7 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
         _ webView: WKWebView,
         decidePolicyFor navigationAction: WKNavigationAction
     ) async -> WKNavigationActionPolicy {
+        if navigationAction.shouldPerformDownload { return .download }
         guard Self.tracksTab(targetFrameIsMain: navigationAction.targetFrame?.isMainFrame) else {
             return .allow
         }

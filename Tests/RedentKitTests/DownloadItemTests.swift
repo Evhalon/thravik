@@ -31,4 +31,27 @@ struct DownloadItemTests {
         #expect(item.sizeCaption.contains("of"))
         #expect(!DownloadItem(filename: "a", bytesReceived: 1_000).sizeCaption.contains("of"))
     }
+
+    @Test("Time left follows the average rate so far")
+    func secondsRemaining() {
+        let start = Date(timeIntervalSince1970: 0)
+        let item = DownloadItem(
+            filename: "a", bytesReceived: 1_000, bytesExpected: 4_000, startedAt: start
+        )
+        #expect(item.secondsRemaining(at: start.addingTimeInterval(10)) == 30)
+    }
+
+    @Test("No estimate without a size, a history, or a running fetch")
+    func secondsRemainingNeedsData() {
+        let start = Date(timeIntervalSince1970: 0)
+        let later = start.addingTimeInterval(10)
+        let unknownSize = DownloadItem(filename: "a", bytesReceived: 1_000, startedAt: start)
+        let tooEarly = DownloadItem(filename: "a", bytesReceived: 1, bytesExpected: 9, startedAt: later)
+        let finished = DownloadItem(
+            filename: "a", bytesReceived: 1, bytesExpected: 9, state: .finished, startedAt: start
+        )
+        #expect(unknownSize.secondsRemaining(at: later) == nil)
+        #expect(tooEarly.secondsRemaining(at: later) == nil)
+        #expect(finished.secondsRemaining(at: later) == nil)
+    }
 }
