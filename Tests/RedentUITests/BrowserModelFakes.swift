@@ -8,14 +8,15 @@ import SwiftUI
 @MainActor
 func makeTestBrowserModel(
     tabs: any BrowserControlling = FakeBrowser(),
-    bookmarks: any BookmarkStoring = InertBookmarkStore()
+    bookmarks: any BookmarkStoring = InertBookmarkStore(),
+    session: any SessionStoring = InertSessionStore()
 ) -> BrowserModel {
     let history = SilentHistory()
     let services = BrowserServices(
         history: history,
         bookmarks: bookmarks,
         settings: InertSettingsStore(),
-        session: InertSessionStore(),
+        session: session,
         logger: SilentLogger(),
         downloads: DownloadsModel()
     )

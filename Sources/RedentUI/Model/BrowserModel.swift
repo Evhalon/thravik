@@ -41,6 +41,7 @@ public final class BrowserModel {
     /// `internal` rather than `private`: the persistence policy lives in a
     /// sibling file to stay under the line limit.
     @ObservationIgnored var hasUnsavedChanges = false
+    @ObservationIgnored var lastTabCount = 0
     @ObservationIgnored var lastSave = Date.distantPast
     @ObservationIgnored var hasUnsavedSettings = false
     @ObservationIgnored var saveTask: Task<Bool?, Never>?
@@ -66,18 +67,12 @@ public final class BrowserModel {
         self.sessionStore = services.session
         self.logger = services.logger
         self.content = content
+        self.lastTabCount = tabs.tabs.count
         var commands = CommandBarModel.Configuration(history: services.history, bookmarks: services.bookmarks)
         commands.searchEngine = settings.searchEngine
         self.commandBar = CommandBarModel(configuration: commands)
         tabs.signalHandler = self
-        tabs.onChange = { [weak self] in
-            guard let self else { return }
-            // Building the id set costs an allocation per change event, and an
-            // unsplit window has no pane to invalidate.
-            if split.isSplit { split.validate(against: Set(tabs.tabs.map(\.id))) }
-            hasUnsavedChanges = true
-            refreshCommandContext()
-        }
+        tabs.onChange = { [weak self] in self?.tabsChanged() }
         tabs.onNavigation = { [weak self] snapshot, id in self?.visits.record(snapshot, navigationID: id) }
         commandBar.onExecute = { [weak self] action in self?.execute(action) }
         split = tabs.session.splitLayout

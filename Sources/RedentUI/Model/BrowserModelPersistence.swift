@@ -3,6 +3,16 @@ import RedentKit
 
 /// When the workspace is written to disk, and on which thread.
 extension BrowserModel {
+    func tabsChanged() {
+        if split.isSplit { split.validate(against: Set(tabs.tabs.map(\.id))) }
+        hasUnsavedChanges = true
+        refreshCommandContext()
+        let tabCount = tabs.tabs.count
+        let closedTab = tabCount < lastTabCount
+        lastTabCount = tabCount
+        if closedTab { persistSession() }
+    }
+
     public func resetWorkspace() {
         split = SplitLayout()
         tabs.resetWorkspace()
