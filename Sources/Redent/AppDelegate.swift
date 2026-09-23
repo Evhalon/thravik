@@ -56,12 +56,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         presentWindow(window)
     }
 
-    @MainActor
-    func presentForExternalLink(_ window: NSWindow?) {
-        awaitsWindowForExternalLink = window == nil
-        presentWindow(window)
-    }
-
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
     }

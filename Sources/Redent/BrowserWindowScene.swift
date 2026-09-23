@@ -31,11 +31,6 @@ struct BrowserWindowScene: View {
             }
             .frame(width: 0, height: 0)
         }
-        .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
-        .onOpenURL { url in
-            app.openExternal([url])
-            delegate.presentForExternalLink(NSApp.keyWindow)
-        }
     }
 
     private func open(isPrivate: Bool) {

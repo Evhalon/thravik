@@ -10,6 +10,7 @@ extension AppContainer {
     /// - Returns: whether a window was there to take them.
     @discardableResult
     func openExternal(_ urls: [URL]) -> Bool {
+        if !urls.isEmpty { didReceiveExternalLink = true }
         let urls = urls.filter { linkDebouncer.admits($0, at: .now) }
         guard let window = primaryWindow else {
             pendingLinks.append(contentsOf: urls)
@@ -32,7 +33,8 @@ extension AppContainer {
     /// The offer to become the default browser, raised once per release and
     /// only over a window that is not already showing something modal.
     func offerDefaultBrowserIfNeeded(in window: WindowContainer) async {
-        guard window.model.sheet == nil, await defaultBrowser.claimOffer() else { return }
+        guard !didReceiveExternalLink, window.model.sheet == nil,
+              await defaultBrowser.claimOffer() else { return }
         window.model.sheet = .defaultBrowser
     }
 }

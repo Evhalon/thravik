@@ -35,7 +35,7 @@ private final class Host: NSView {
     func notifyIfReady() {
         guard let window, window !== notifiedWindow else { return }
         notifiedWindow = window
-        DispatchQueue.main.async { [weak self, weak window] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(200)) { [weak self, weak window] in
             guard let self, let window, self.window === window else { return }
             self.onWindowReady(window)
         }

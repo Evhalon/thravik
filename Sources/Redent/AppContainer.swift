@@ -40,6 +40,7 @@ final class AppContainer {
     /// Links from another app that arrived before a window existed to show
     /// them. Drained by the first window that appears.
     @ObservationIgnored var pendingLinks: [URL] = []
+    @ObservationIgnored var didReceiveExternalLink = false
     /// The same click can reach the app twice, through SwiftUI and AppKit.
     @ObservationIgnored var linkDebouncer = ExternalLinkDebouncer()
 
