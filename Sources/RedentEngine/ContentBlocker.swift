@@ -1,3 +1,4 @@
+import Foundation
 import WebKit
 
 /// Compiles the bundled ad/tracker list once and caches the result.
@@ -6,9 +7,19 @@ import WebKit
 @MainActor
 final class ContentBlocker {
     private static var hasScheduledRemoteUpdate = false
+    /// Lists compiled by the old converter, which turned modifiers it did not
+    /// understand into plain blocks. Left on disk they would come back.
+    private static let retiredIdentifiers = ["app.redent.browser.blocklist.v4"]
+        + AdblockFilterSource.braveDefaults.map { "app.redent.browser.brave.\($0.id).v1" }
+    /// Filter lists move daily at most. Fetching and recompiling five of them
+    /// on every launch cost seconds of CPU right when the first pages load.
+    private static let remoteRefreshInterval: TimeInterval = 24 * 60 * 60
+    private static let lastRefreshKey = "app.redent.adblock.v2.refreshedAt"
+
     private(set) var compiledLists = [WKContentRuleList]()
     private var hasStarted = false
-    private let bundledIdentifier = "app.redent.browser.blocklist.v4"
+    private var isNotifying = false
+    private let bundledIdentifier = "app.redent.browser.blocklist.v5"
     var onCompiled: (@MainActor () -> Void)?
 
     func startCompilingIfNeeded() {
@@ -16,31 +27,46 @@ final class ContentBlocker {
         hasStarted = true
         compile(json, identifier: bundledIdentifier)
         restoreCachedLists()
-        scheduleRemoteUpdate()
+        retireOldLists()
+        if Self.isRemoteRefreshDue { scheduleRemoteUpdate() }
+    }
+
+    private static var isRemoteRefreshDue: Bool {
+        let last = UserDefaults.standard.double(forKey: lastRefreshKey)
+        return Date().timeIntervalSince1970 - last > remoteRefreshInterval
     }
 
     private func scheduleRemoteUpdate() {
         guard Bundle.main.bundleURL.pathExtension != "xctest",
               !Self.hasScheduledRemoteUpdate else { return }
         Self.hasScheduledRemoteUpdate = true
-        Task { await updateBraveLists() }
+        Task(priority: .utility) { await updateBraveLists() }
     }
 
     private var remoteIdentifiers: [String] {
-        AdblockFilterSource.braveDefaults.map { "app.redent.browser.brave.\($0.id).v1" }
+        AdblockFilterSource.braveDefaults.map(Self.remoteIdentifier)
+    }
+
+    private static func remoteIdentifier(_ source: AdblockFilterSource) -> String {
+        "app.redent.browser.brave.\(source.id).v2"
     }
 
     private func restoreCachedLists() {
         for identifier in remoteIdentifiers {
             WKContentRuleListStore.default().lookUpContentRuleList(forIdentifier: identifier) { [weak self] list, _ in
                 Task { @MainActor in
-                    guard let self, let list,
-                          !self.compiledLists.contains(where: { $0.identifier == identifier })
-                    else { return }
-                    self.compiledLists.append(list)
-                    self.onCompiled?()
+                    guard let self else { return }
+                    // A list missing from the store cannot wait a day for the refresh.
+                    guard let list else { return self.scheduleRemoteUpdate() }
+                    self.adopt(list)
                 }
             }
+        }
+    }
+
+    private func retireOldLists() {
+        for identifier in Self.retiredIdentifiers {
+            WKContentRuleListStore.default().removeContentRuleList(forIdentifier: identifier) { _ in }
         }
     }
 
@@ -51,29 +77,52 @@ final class ContentBlocker {
         ) { [weak self] list, _ in
             Task { @MainActor in
                 guard let self, let list else { return }
-                self.compiledLists.removeAll { $0.identifier == identifier }
-                self.compiledLists.append(list)
-                self.onCompiled?()
+                self.adopt(list)
             }
+        }
+    }
+
+    private func adopt(_ list: WKContentRuleList) {
+        compiledLists.removeAll { $0.identifier == list.identifier }
+        compiledLists.append(list)
+        notifyCompiled()
+    }
+
+    /// Lists land one by one at launch. Swapping them into every live view
+    /// makes each page re-evaluate, so arrivals close together share one swap.
+    private func notifyCompiled() {
+        guard !isNotifying else { return }
+        isNotifying = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard let self else { return }
+            self.isNotifying = false
+            self.onCompiled?()
         }
     }
 
     private func updateBraveLists() async {
         let downloader = AdblockListDownloader()
         let parser = AdblockFilterParser()
-        await withTaskGroup(of: (String, String)?.self) { group in
+        var refreshed = true
+        await withTaskGroup(of: (AdblockFilterSource, String)?.self) { group in
             for source in AdblockFilterSource.braveDefaults {
                 group.addTask {
                     guard let text = await downloader.fetch(source),
                           let json = parser.encodedRules(from: text) else { return nil }
-                    return (source.id, json)
+                    return (source, json)
                 }
             }
+            var converted = 0
             for await result in group {
-                guard let (id, json) = result else { continue }
-                compile(json, identifier: "app.redent.browser.brave.\(id).v1")
+                guard let (source, json) = result else { continue }
+                converted += 1
+                compile(json, identifier: Self.remoteIdentifier(source))
             }
+            refreshed = converted == AdblockFilterSource.braveDefaults.count
         }
+        guard refreshed else { return }
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastRefreshKey)
     }
 
     static var ruleListJSON: String? { ContentBlockList.encodedJSON }

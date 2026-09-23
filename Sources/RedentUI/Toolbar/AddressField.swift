@@ -19,7 +19,7 @@ struct AddressField: View {
                 .font(.system(size: 12.5))
                 .foregroundStyle(Palette.chromeText)
                 .focused($isFocused)
-                .onSubmit(model.submitAddress)
+                .onSubmit { model.submitAddress() }
                 .onExitCommand(perform: endEditing)
                 .onChange(of: isFocused) { _, focused in
                     handleFocus(focused)
@@ -34,11 +34,11 @@ struct AddressField: View {
                 .onChange(of: model.chrome.addressFocusEpoch) { _, _ in
                     isFocused = true
                 }
-                .onKeyPress(.downArrow) {
-                    model.moveSuggestionHighlight(by: 1, from: .addressBar) ? .handled : .ignored
-                }
-                .onKeyPress(.upArrow) {
-                    model.moveSuggestionHighlight(by: -1, from: .addressBar) ? .handled : .ignored
+                .suggestionFieldBehavior(model, source: .addressBar, isFocused: isFocused)
+                .onKeyPress(.return, phases: .down) { press in
+                    guard press.modifiers.contains(.command) else { return .ignored }
+                    model.submitAddress(inNewTab: true)
+                    return .handled
                 }
 
             if model.selectedTab?.url != nil {
@@ -66,6 +66,12 @@ struct AddressField: View {
             return
         }
         model.address.beginEditing(with: model.selectedTab)
+        // After the field has taken the full URL, or the select lands on the
+        // shorter display text it is about to replace.
+        Task { @MainActor in
+            await Task.yield()
+            if isFocused { FieldEditor.selectAll() }
+        }
     }
 
     private func commitBlur() async {

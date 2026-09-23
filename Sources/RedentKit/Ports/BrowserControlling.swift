@@ -51,4 +51,6 @@ public protocol BrowserControlling: AnyObject {
     /// - Parameter keeping: every tab currently on screen. A split window shows
     ///   more than one, and none of them may be torn down underneath the user.
     func sweepHibernation(now: Date, keeping: Set<UUID>)
+    /// Opens the connection to `url`'s origin ahead of a likely navigation.
+    func preconnect(to url: URL)
 }

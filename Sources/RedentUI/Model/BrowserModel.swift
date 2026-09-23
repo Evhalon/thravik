@@ -83,40 +83,9 @@ public final class BrowserModel {
         if let tab = selectedTab { tab.load(url) } else { tabs.newTab(url: url) }
     }
 
-    public func submitAddress() {
-        // An armed dropdown row wins over re-parsing the raw text.
-        if let row = suggestions.highlightedRow {
-            suggestions.close()
-            address.finishEditing()
-            navigate(to: row.url)
-            return
-        }
-        suggestions.close()
-        guard let url = address.commit(using: settings.searchEngine) else { return }
-        navigate(to: url)
-    }
-
-    public func open(_ url: URL, inNewTab: Bool) {
-        suggestions.close()
-        address.finishEditing()
-        if inNewTab { tabs.newTab(url: url) } else { navigate(to: url) }
-    }
-
-    public func queryChanged(_ text: String, from source: AddressSuggestionsModel.Source) {
-        suggestions.update(query: text, from: source, searchEngine: settings.searchEngine, spaceID: currentSpaceID)
-    }
-
     public func pageContextChanged() {
         autofill.pageChanged()
         otp.fieldDisappeared()
-    }
-
-    /// Arrow keys in a TextField never reach `onMoveCommand`. The command bar
-    /// already uses `onKeyPress`; the address fields must do the same.
-    public func moveSuggestionHighlight(by offset: Int, from source: AddressSuggestionsModel.Source) -> Bool {
-        guard suggestions.isOpen(for: source) else { return false }
-        suggestions.moveHighlight(by: offset)
-        return true
     }
 
     /// One timer for the whole window, per AGENTS.md §4 — not one per code.

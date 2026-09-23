@@ -42,8 +42,9 @@ enum CommandSearch {
                                     subtitle: entry.url.absoluteString, source: .history,
                                     action: .navigate(entry.url))
         }
-        rows.append(contentsOf: fallbackRows(for: text, searchEngine: source.searchEngine))
-        return Array(rows.prefix(limit))
+        let ordered = CommandRanking.order(rows, direct: directRow(for: text, searchEngine: source.searchEngine),
+                                           search: searchRow(for: text, searchEngine: source.searchEngine), query: text)
+        return Array(ordered.prefix(limit))
     }
 
     /// Bookmarks and the visit leaderboard are per Space; the bar reads the one you are in.
@@ -75,18 +76,18 @@ enum CommandSearch {
         }
     }
 
-    private static func fallbackRows(for query: String, searchEngine: SearchEngine) -> [CommandBarResult] {
-        var rows: [CommandBarResult] = []
-        if let direct = directURL(for: query, searchEngine: searchEngine) {
-            rows.append(CommandBarResult(id: "direct:\(direct.absoluteString)", title: direct.absoluteString,
-                                         subtitle: "Open directly", source: .directURL, action: .navigate(direct)))
+    private static func directRow(for query: String, searchEngine: SearchEngine) -> CommandBarResult? {
+        directURL(for: query, searchEngine: searchEngine).map {
+            CommandBarResult(id: "direct:\($0.absoluteString)", title: $0.absoluteString,
+                             subtitle: "Open address", source: .directURL, action: .navigate($0))
         }
-        if let search = searchEngine.searchURL(for: query) {
-            rows.append(CommandBarResult(id: "search:\(query)", title: query,
-                                         subtitle: "Search with \(searchEngine.label)", source: .search,
-                                         action: .navigate(search)))
+    }
+
+    private static func searchRow(for query: String, searchEngine: SearchEngine) -> CommandBarResult? {
+        searchEngine.searchURL(for: query).map {
+            CommandBarResult(id: "search:\(query)", title: query,
+                             subtitle: "Search \(searchEngine.label)", source: .search, action: .navigate($0))
         }
-        return rows
     }
 
     private static func directURL(for query: String, searchEngine: SearchEngine) -> URL? {

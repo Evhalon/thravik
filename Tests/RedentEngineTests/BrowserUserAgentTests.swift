@@ -19,15 +19,15 @@ struct BrowserUserAgentTests {
 
     @Test("YouTube short links and Music share the media exception")
     func youtubeFamilyIsMedia() throws {
-        #expect(BrowserUserAgent.mediaDomains.contains("youtube.com"))
-        #expect(BrowserUserAgent.mediaDomains.contains("youtu.be"))
+        #expect(MediaRuleExceptions.mediaDomains.contains("youtube.com"))
+        #expect(MediaRuleExceptions.mediaDomains.contains("youtu.be"))
     }
 
     @Test("A lookalike host does not inherit a media exception")
     func lookalikeKeepsTheBlocker() throws {
         let youtube = try #require(URL(string: "https://evil-youtube.com/watch"))
         let origin = try #require(Origin(url: youtube))
-        #expect(!BrowserUserAgent.mediaDomains.contains(origin.registrableDomain))
+        #expect(!MediaRuleExceptions.mediaDomains.contains(origin.registrableDomain))
     }
 
     /// The truncated agent WebKit ships by default is what Google reads as an
@@ -57,7 +57,7 @@ struct BrowserUserAgentTests {
     /// lose ad blocking just because Google's accounts need a real engine.
     @Test("The content-blocker exception covers media, not identity")
     func blockerExceptionStaysOnMedia() {
-        let filters = BrowserUserAgent.mediaTopURLFilters
+        let filters = MediaRuleExceptions.mediaTopURLFilters
         #expect(filters.contains { $0.contains("youtube\\.com") })
         #expect(filters.contains { $0.contains("netflix\\.com") })
         #expect(!filters.contains { $0.contains("google\\.com") })

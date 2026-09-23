@@ -20,7 +20,10 @@ struct PageColumn: View {
         }
         .coordinateSpace(.named(AddressFieldFrameKey.space))
         .onPreferenceChange(AddressFieldFrameKey.self) { addressFieldFrame = $0 }
-        .overlay(alignment: .topLeading) { addressSuggestions }
+        .overlay(alignment: .topLeading) {
+            addressSuggestions
+                .animation(.easeOut(duration: 0.12), value: model.suggestions.isOpen(for: .addressBar))
+        }
     }
 
     /// Lives on the column, not the field: a list drawn inside the toolbar row
@@ -29,7 +32,7 @@ struct PageColumn: View {
     private var addressSuggestions: some View {
         if model.suggestions.isOpen(for: .addressBar), addressFieldFrame != .zero {
             SuggestionList(model: model)
-                .frame(width: 360, alignment: .leading)
+                .frame(width: max(addressFieldFrame.width, 440), alignment: .leading)
                 .offset(x: addressFieldFrame.minX, y: addressFieldFrame.maxY + 5)
         }
     }

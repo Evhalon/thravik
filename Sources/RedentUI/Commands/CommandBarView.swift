@@ -20,7 +20,7 @@ public struct CommandBarView: View {
             results
         }
         .frame(width: 560)
-        .frame(maxHeight: 430)
+        .animation(.snappy(duration: 0.16), value: model.rows.count)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: .black.opacity(0.28), radius: 24, y: 10)
@@ -54,12 +54,13 @@ public struct CommandBarView: View {
             Text("No matching commands or pages")
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, minHeight: 58)
+                .transition(.opacity)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 2) {
                         ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, row in
-                            CommandBarRow(row: row, isSelected: model.selectedIndex == index)
+                            CommandBarRow(row: row, query: model.query, isSelected: model.selectedIndex == index)
                                 .id(row.id)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
@@ -72,12 +73,20 @@ public struct CommandBarView: View {
                     }
                     .padding(8)
                 }
+                .frame(height: resultsHeight)
                 .onChange(of: model.selectedIndex) { _, index in
                     guard let index, model.rows.indices.contains(index) else { return }
                     withAnimation(.easeOut(duration: 0.12)) { proxy.scrollTo(model.rows[index].id) }
                 }
             }
         }
+    }
+
+    /// The panel hugs its results: a two-row answer should not sit in a
+    /// panel sized for twenty.
+    private var resultsHeight: CGFloat {
+        let rows = CGFloat(min(model.rows.count, 9))
+        return rows * CommandBarRow.height + max(rows - 1, 0) * 2 + 16
     }
 
     private func execute() {

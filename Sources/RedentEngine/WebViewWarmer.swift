@@ -20,6 +20,7 @@ final class WebViewWarmer {
 
     private var spare: Spare?
     private var isPreparing = false
+    private var preconnectedAt: [String: Date] = [:]
 
     /// - Returns: the primed view when it was built for the same data store and
     ///   blocking setting; a mismatch means building fresh, never reusing a view
@@ -41,6 +42,29 @@ final class WebViewWarmer {
             self?.build(store: store, blocksTrackers: blocksTrackers, contentBlocker: contentBlocker)
         }
     }
+
+    /// Opens the DNS, TCP and TLS handshakes to `origin` before the user presses
+    /// return — the round trips Chromium browsers hide behind typing. The
+    /// spare's network session is the one its data store's tabs load through,
+    /// so the next navigation there finds the connection already open.
+    func preconnect(to origin: String, store: WKWebsiteDataStore) {
+        guard let spare, spare.store == ObjectIdentifier(store) else { return }
+        let now = Date()
+        // Browsers keep an idle connection for about a minute; asking sooner is noise.
+        if let last = preconnectedAt[origin], now.timeIntervalSince(last) < 30 { return }
+        if preconnectedAt.count > 32 { preconnectedAt.removeAll() }
+        preconnectedAt[origin] = now
+        spare.view.callAsyncJavaScript(
+            Self.preconnectScript, arguments: ["origin": origin], in: nil, in: PageScripts.contentWorld
+        ) { _ in }
+    }
+
+    private static let preconnectScript = """
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = origin;
+    (document.head || document.documentElement).appendChild(link);
+    """
 
     /// Releases the spare and its process. Nothing on screen depends on it.
     func discard() {

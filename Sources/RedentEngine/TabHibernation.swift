@@ -52,6 +52,17 @@ extension TabController {
                        blocksTrackers: settings.blocksTrackers, contentBlocker: contentBlocker)
     }
 
+    /// Warms the connection to where the address bar is about to go. A private
+    /// window's handshakes must not run through the persistent profile.
+    public func preconnect(to url: URL) {
+        guard privateSessionID == nil, let scheme = url.scheme, scheme == "https" || scheme == "http",
+              let host = url.host(), let selected = webTabs.first(where: { $0.id == selectedID })
+        else { return }
+        let port = url.port.map { ":\($0)" } ?? ""
+        let store = contexts.store(for: selected.snapshot.browsingContext)
+        warmer.preconnect(to: "\(scheme)://\(host)\(port)", store: store)
+    }
+
     /// Hibernates every non-selected, non-pinned, silent tab whose snapshot has
     /// been idle past the current hibernation policy's threshold. `.off` (a
     /// `nil` threshold) does nothing. Music in a background tab is the tab in use.

@@ -26,6 +26,19 @@ struct HistoryStoreTests {
         #expect(found.first?.visitCount == 2)
     }
 
+    @Test("A host-prefix match survives a crowd of newer substring matches")
+    func candidateCapKeepsHostPrefix() async throws {
+        let store = makeStore()
+        let old = Date(timeIntervalSinceNow: -86_400)
+        await store.record(url: try url("https://github.com"), title: "GitHub", at: old)
+        for index in 0..<300 {
+            await store.record(url: try url("https://blog\(index).net/digital"), title: "Digital \(index)", at: .now)
+        }
+        let found = await store.search("git", limit: 8)
+        #expect(found.count == 8)
+        #expect(found.first?.url.host() == "github.com")
+    }
+
     @Test("Query strings never reach storage")
     func stripsQuery() async throws {
         let store = makeStore()

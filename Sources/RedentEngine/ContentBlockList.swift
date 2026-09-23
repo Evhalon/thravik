@@ -2,7 +2,7 @@ import Foundation
 
 /// Builds the `WKContentRuleList` JSON Brave's default Shields resemble:
 /// ad networks blocked on every load, trackers only as third-party, leftover
-/// ad slots hidden, YouTube excepted so the player does not die.
+/// ad slots hidden, and media players excepted so they never stall.
 @MainActor
 enum ContentBlockList {
     static var encodedJSON: String? {
@@ -15,7 +15,7 @@ enum ContentBlockList {
         rules.append(contentsOf: catalog.trackerDomains.map { blockRule(domain: $0, thirdParty: true) })
         rules.append(contentsOf: catalog.pathFilters.map(pathRule))
         if !catalog.hideSelectors.isEmpty { rules.append(hideRule(catalog.hideSelectors)) }
-        rules.append(mediaException)
+        rules.append(contentsOf: MediaRuleExceptions.rules)
         return rules
     }
 
@@ -42,16 +42,6 @@ enum ContentBlockList {
         [
             "trigger": ["url-filter": ".*"],
             "action": ["type": "css-display-none", "selector": selectors.joined(separator: ", ")]
-        ]
-    }
-
-    private static var mediaException: [String: Any] {
-        [
-            "trigger": [
-                "url-filter": ".*",
-                "if-top-url": BrowserUserAgent.mediaTopURLFilters
-            ],
-            "action": ["type": "ignore-previous-rules"]
         ]
     }
 

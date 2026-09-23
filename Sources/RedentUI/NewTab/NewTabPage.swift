@@ -130,18 +130,6 @@ struct NewTabPage: View {
     }
 
     private func submit() {
-        // An armed suggestion wins over re-resolving the raw text, exactly as
-        // in the address bar — the two must not disagree about what return does.
-        if let row = model.suggestions.highlightedRow {
-            model.suggestions.close()
-            model.navigate(to: row.url)
-            query = ""
-            return
-        }
-        model.suggestions.close()
-        guard let url = AddressResolverBridge.resolve(query, engine: model.settings.searchEngine)
-        else { return }
-        model.navigate(to: url)
-        query = ""
+        if model.submitNewTabQuery(query) { query = "" }
     }
 }

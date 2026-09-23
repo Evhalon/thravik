@@ -26,7 +26,8 @@ extension HistoryDatabase {
     ) -> [HistoryEntry] {
         var bindings: [SQLiteValue] = []
         let filters = filters(for: request, columnPrefix: "") { value in bindings.append(.text(value)) }
-        let sql = "SELECT \(HistorySchema.columns) FROM visits WHERE \(filters)"
+        let cap = candidateCap(for: request, host: "host", recency: "last_visit") { bindings.append($0) }
+        let sql = "SELECT \(HistorySchema.columns) FROM visits WHERE \(filters)\(cap)"
         return rows(from: connection, sql: sql, bindings: bindings)
     }
 
@@ -49,7 +50,7 @@ extension HistoryDatabase {
           COALESCE(MAX(cv.visited_at), v.last_visit)
         FROM visits v JOIN contextual_visits cv ON cv.url = v.url
         WHERE \(filters)\(context) GROUP BY v.id
-        """
+        """ + candidateCap(for: request, host: "v.host", recency: "MAX(cv.visited_at)") { bindings.append($0) }
         return rows(from: connection, sql: sql, bindings: bindings)
     }
 
@@ -68,6 +69,22 @@ extension HistoryDatabase {
             bind(domain); bind("%.\(HistorySQL.escapedLike(domain))")
         }
         return clauses.joined(separator: " AND ")
+    }
+
+    /// A one-letter query matches most of history, and ranking all of it in
+    /// Swift on every keystroke made typing lag. SQL keeps the likeliest
+    /// candidates — host prefix first, then the most recent — and Swift ranks
+    /// only those.
+    private func candidateCap(
+        for request: HistoryQuery, host: String, recency: String, bind: (SQLiteValue) -> Void
+    ) -> String {
+        let text = request.text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard request.sort == .relevance, !text.isEmpty else { return "" }
+        let prefix = HistorySQL.escapedLike(text)
+        bind(.text("\(prefix)%"))
+        bind(.text("www.\(prefix)%"))
+        bind(.int(Int64(max(request.limit * 25, 250))))
+        return " ORDER BY (\(host) LIKE ? ESCAPE '\\' OR \(host) LIKE ? ESCAPE '\\') DESC, \(recency) DESC LIMIT ?"
     }
 
     private func ranked(_ entries: [HistoryEntry], for request: HistoryQuery) -> [HistoryEntry] {

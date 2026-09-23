@@ -116,7 +116,7 @@ public final class CommandBarModel {
             return
         }
         pending = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(45))
+            try? await Task.sleep(for: .milliseconds(30))
             guard !Task.isCancelled else { return }
             let source = CommandSearch.Source(descriptors: descriptors, history: history,
                 bookmarks: bookmarks, searchEngine: searchEngine)

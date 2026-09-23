@@ -15,88 +15,41 @@ public struct SuggestionEngine: Sendable {
         self.bookmarks = bookmarks
     }
 
+    /// - Parameter allowsCompletion: false while the user is deleting, so
+    ///   backspace removes the completion instead of fighting it.
     public func suggestions(
         for query: String,
-        engine: SearchEngine,
-        spaceID: UUID?,
+        context: SuggestionContext,
+        allowsCompletion: Bool = true,
         limit: Int = 8
-    ) async -> [AddressSuggestion] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return [] }
+    ) async -> SuggestionResult {
+        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return .empty }
 
-        var rows: [AddressSuggestion] = []
-        var seen = Set<String>()
+        // Both stores are asked at once; each is its own actor.
+        async let saved = bookmarks.search(text, in: context.spaceID, limit: limit)
+        async let visited = history.search(text, in: context.spaceID, limit: limit)
+        let (bookmarkHits, historyHits) = await (saved, visited)
 
-        if let direct = directURL(for: trimmed) {
-            rows.append(direct)
-            seen.insert(key(direct.url))
-        }
+        let known = bookmarkHits.map { KnownPage(url: $0.url, title: $0.displayTitle) }
+            + historyHits.map { KnownPage(url: $0.url, title: $0.displayTitle) }
+        let completion = allowsCompletion
+            ? InlineCompletionFinder.completion(for: text, candidates: known.map(\.url))
+            : nil
 
+        var list = SuggestionRows(query: text, searchEngine: context.searchEngine, limit: limit)
+        list.lead(with: completion, known: known)
+        list.add(openTabs: context.openTabs)
         // Saved pages rank above visited ones: bookmarking is an explicit
-        // signal, a visit is often an accident. Only this Space's, though —
-        // the address bar must not leak another profile's saved pages.
-        for bookmark in await bookmarks.search(trimmed, in: spaceID, limit: limit) {
-            guard seen.insert(key(bookmark.url)).inserted else { continue }
-            rows.append(AddressSuggestion(
-                kind: .bookmark,
-                title: bookmark.displayTitle,
-                subtitle: subtitle(for: bookmark.url),
-                url: bookmark.url,
-                faviconData: bookmark.faviconData,
-                score: 1_000
-            ))
-        }
-
-        let roomForHistory = max(0, limit - rows.count - 1)
-        for entry in await history.search(trimmed, in: spaceID, limit: roomForHistory) {
-            guard rows.count < limit - 1, seen.insert(key(entry.url)).inserted else { continue }
-            rows.append(AddressSuggestion(
-                kind: .history,
-                title: entry.displayTitle,
-                subtitle: subtitle(for: entry.url),
-                url: entry.url,
-                score: entry.score()
-            ))
-        }
-
-        // Exactly one search row, always last, so pressing return on an
-        // unmatched query does the same thing every time.
-        if let searchURL = engine.searchURL(for: trimmed) {
-            rows.append(AddressSuggestion(
-                kind: .search,
-                title: trimmed,
-                subtitle: "Search with \(engine.label)",
-                url: searchURL,
-                score: 0
-            ))
-        }
-        return Array(rows.prefix(limit))
-    }
-
-    private func directURL(for query: String) -> AddressSuggestion? {
-        guard let url = AddressResolver.resolve(query, using: .duckduckgo),
-              let origin = Origin(url: url),
-              !url.absoluteString.contains("duckduckgo.com/?q=")
-        else { return nil }
-        return AddressSuggestion(
-            kind: .directURL,
-            title: origin.displayHost,
-            subtitle: "Open directly",
-            url: url,
-            score: 10_000
-        )
-    }
-
-    private func subtitle(for url: URL) -> String {
-        let host = Origin(url: url)?.displayHost ?? url.absoluteString
-        let path = url.path()
-        return path.isEmpty || path == "/" ? host : host + path
-    }
-
-    /// Trailing slashes are the same page; query strings never reach here.
-    private func key(_ url: URL) -> String {
-        var text = url.absoluteString
-        if text.hasSuffix("/") { text.removeLast() }
-        return text.lowercased()
+        // signal, a visit is often an accident.
+        list.add(bookmarkHits.map {
+            AddressSuggestion(kind: .bookmark, title: $0.displayTitle,
+                              subtitle: SuggestionRows.subtitle(for: $0.url), url: $0.url, faviconData: $0.faviconData)
+        })
+        list.add(historyHits.map {
+            AddressSuggestion(kind: .history, title: $0.displayTitle,
+                              subtitle: SuggestionRows.subtitle(for: $0.url), url: $0.url)
+        })
+        return SuggestionResult(rows: list.finish(), completion: completion)
     }
 }

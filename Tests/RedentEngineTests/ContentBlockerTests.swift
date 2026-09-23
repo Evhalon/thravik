@@ -24,6 +24,7 @@ struct ContentBlockerTests {
         #expect(json.contains("googlesyndication"))
         #expect(json.contains("taboola"))
         #expect(json.contains("ignore-previous-rules"))
+        #expect(json.contains("imasdk"))
     }
 
     @Test("Cosmetic hide covers leftover ad slots")

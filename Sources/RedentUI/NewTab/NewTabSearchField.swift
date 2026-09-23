@@ -34,12 +34,7 @@ struct NewTabSearchField: View {
                 .onChange(of: isFocused) { _, focused in
                     if !focused { model.suggestions.close(from: .newTab) }
                 }
-                .onKeyPress(.downArrow) {
-                    model.moveSuggestionHighlight(by: 1, from: .newTab) ? .handled : .ignored
-                }
-                .onKeyPress(.upArrow) {
-                    model.moveSuggestionHighlight(by: -1, from: .newTab) ? .handled : .ignored
-                }
+                .suggestionFieldBehavior(model, source: .newTab, isFocused: isFocused)
                 .onExitCommand { model.suggestions.close(from: .newTab) }
 
             if !text.isEmpty {
@@ -66,7 +61,9 @@ struct NewTabSearchField: View {
             }
             .onTapGesture { isFocused = true }
         }
-        .overlay(alignment: .topLeading) { dropdown }
+        .overlay(alignment: .topLeading) {
+            dropdown.animation(.easeOut(duration: 0.12), value: model.suggestions.isOpen(for: .newTab))
+        }
         .padding(.horizontal, 40)
         .zIndex(3)
     }
