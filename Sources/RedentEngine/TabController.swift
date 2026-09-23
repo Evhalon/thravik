@@ -110,7 +110,7 @@ public final class TabController: BrowserControlling {
             snapshot.lifespan = .temporary(sessionID: privateSessionID, expiresAt: nil, cleanupOnClose: true)
         }
         let tab = WebTab(snapshot: snapshot, controller: self)
-        webTabs.insert(tab, at: insertIndexAfterCurrent())
+        webTabs.insert(tab, at: insertIndex(opening: url, in: snapshot.spaceID))
         updateSelectedID(tab.id)
         // A tab with no address shows Redent's own new-tab page, which is not a
         // web view. Building one anyway is what made ⌘T stutter.

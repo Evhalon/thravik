@@ -50,11 +50,27 @@ extension WebTab {
         // kept the attempted address for the warning. Do not turn that warning
         // into a blank new tab.
         guard url != nil || pageTrustIssue == nil else { return }
-        self.url = url
-        self.origin = url.flatMap(Origin.init(url:))
-        snapshot.url = url
+        setLocation(url)
         if !isLoading, let webView { timelineRecorder.movedWithinDocument(self, webView: webView) }
         navigationEvents.locationChanged(self)
+    }
+
+    func beginNavigation(to url: URL? = nil) {
+        pageTrustIssue = nil
+        isReaderActive = false
+        guard let url else { return }
+        attemptedURL = url
+        setLocation(url)
+    }
+
+    /// Every address change passes here, so a tab that moves to another site
+    /// can join that site's group wherever it sits in the sidebar.
+    private func setLocation(_ url: URL?) {
+        let previousHost = origin?.displayHost
+        self.url = url
+        snapshot.url = url
+        origin = url.flatMap(Origin.init(url:))
+        if origin?.displayHost != previousHost { controller?.settleIntoHostGroup(id) }
     }
 
     private func applyThemeColor(_ color: NSColor?) {

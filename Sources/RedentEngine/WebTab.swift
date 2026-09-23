@@ -128,16 +128,6 @@ public final class WebTab: Identifiable, BrowserTab {
     }
     public func stopLoading() { webView?.stopLoading() }
 
-    func beginNavigation(to url: URL? = nil) {
-        pageTrustIssue = nil
-        isReaderActive = false
-        guard let url else { return }
-        attemptedURL = url
-        self.url = url
-        snapshot.url = url
-        origin = Origin(url: url)
-    }
-
     func handleProvisionalFailure(_ error: any Error) {
         guard let trustIssue = PageTrustIssueResolver.resolve(error) else { return }
         pageTrustIssue = trustIssue

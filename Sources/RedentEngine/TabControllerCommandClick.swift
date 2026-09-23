@@ -17,7 +17,7 @@ extension TabController {
         snapshot.containerID = parent.containerID
         snapshot.lifespan = parent.lifespan
         let tab = WebTab(snapshot: snapshot, controller: self)
-        webTabs.insert(tab, at: insertIndexAfterCurrent())
+        webTabs.insert(tab, at: insertIndex(opening: url, in: snapshot.spaceID))
         if selecting { updateSelectedID(tab.id) }
         tab.wake(loading: url)
         changed()

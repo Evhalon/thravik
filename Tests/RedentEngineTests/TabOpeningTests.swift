@@ -95,6 +95,22 @@ struct TabOpeningTests {
         #expect(browser.selectedID == opened.id)
     }
 
+    @Test("A link to a site with a group opens inside that group")
+    func linkOpensInsideSiteGroup() throws {
+        let browser = controller()
+        let reading = try #require(browser.newTab(url: URL(string: "https://a.com")) as? WebTab)
+        browser.newTab(url: URL(string: "https://b.com/1"))
+        browser.newTab(url: URL(string: "https://b.com/2"))
+        browser.select(reading.id)
+        let groupBefore = browser.session.tabs[1].id
+
+        let link = try #require(URL(string: "https://b.com/3"))
+        let opened = browser.openCommandClickedLink(url: link, from: reading.snapshot)
+
+        #expect(browser.webTabs.map(\.id).last == opened.id)
+        #expect(browser.webTabs[1].id == groupBefore)
+    }
+
     /// Prepare sleeps 300ms then hops back to the main actor; a fixed 500ms
     /// sleep loses that race when the suite is busy.
     private func waitForSpare(_ warmer: WebViewWarmer, store: WKWebsiteDataStore) async -> WKWebView? {
