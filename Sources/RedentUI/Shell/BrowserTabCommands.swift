@@ -15,6 +15,8 @@ struct BrowserTabCommands: Commands {
             Button(pinTitle) { model.flatMap { $0.tabs.selectedID.map($0.tabs.togglePin) } }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
                 .disabled(model?.tabs.selectedID == nil)
+            Button("Duplicate Tab") { model?.duplicateSelectedTab() }
+                .disabled(model?.selectedTab?.url == nil)
             Button("Close Other Tabs") {
                 model.flatMap { $0.tabs.selectedID.map($0.tabs.closeOthers(than:)) }
             }

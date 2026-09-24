@@ -17,6 +17,9 @@ struct TwoFactorSetupButton: View {
                     Text(title).font(.system(size: 13.5, weight: .semibold))
                         .foregroundStyle(Palette.chromeText)
                 }
+                PillDismissButton(help: "Hide for this page") {
+                    withAnimation(.easeOut(duration: 0.25)) { model.twoFactor.dismiss() }
+                }
             }
             .padding(.horizontal, Metric.gutter)
             .padding(.vertical, 9)

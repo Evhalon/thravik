@@ -51,6 +51,7 @@ final class FakeBrowser: BrowserControlling {
     private(set) var closed: [UUID] = []
     private(set) var closedSets: [Set<UUID>] = []
     private(set) var openedURLs: [URL?] = []
+    private(set) var duplicated: [UUID] = []
 
     init(forgettable: Int = 0) { self.forgettable = forgettable }
 
@@ -80,6 +81,11 @@ final class FakeBrowser: BrowserControlling {
     func close(_ id: UUID) { closed.append(id) }
     func closeTabs(_ ids: Set<UUID>) { closedSets.append(ids) }
     func closeOthers(than id: UUID) {}
+    func duplicateTab(_ id: UUID) -> (any BrowserTab)? {
+        guard stubTabs.contains(where: { $0.id == id }) else { return nil }
+        duplicated.append(id)
+        return InertTab()
+    }
     func select(_ id: UUID) {
         selectionCalls.append(id)
         selectedID = id

@@ -7,6 +7,7 @@ import SwiftUI
 /// around it, so the chrome reads as holding it rather than abutting it.
 private struct PageCard: ViewModifier {
     let isInset: Bool
+    @Environment(\.ambientTint) private var tint
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(
@@ -21,23 +22,26 @@ private struct PageCard: ViewModifier {
 
     /// Paints the four spandrels so the card still reads round. `clipShape`
     /// would mask the WKWebView underneath; hardware video then goes black.
+    ///
+    /// They are painted with the window's own backdrop, laid at the same window
+    /// position, so the corner shows exactly the glass behind it. Any flat fill
+    /// stood out as a square notch against the tinted, wallpaper-lit slab.
     @ViewBuilder
     private var cornerCover: some View {
         if isInset {
-            Canvas { context, size in
-                let bounds = CGRect(origin: .zero, size: size)
-                var path = Path(bounds)
-                path.addPath(
-                    RoundedRectangle(cornerRadius: innerRadius, style: .continuous)
-                        .path(in: bounds)
-                )
-                context.fill(path, with: .color(Palette.canvas), style: FillStyle(eoFill: true))
+            GeometryReader { proxy in
+                if let window = proxy.bounds(of: WindowBackdrop.space) {
+                    WindowBackdrop(tint: tint).equatable()
+                        .frame(width: window.width, height: window.height)
+                        .offset(x: window.minX, y: window.minY)
+                } else {
+                    Palette.canvas
+                }
             }
+            .mask { CardSpandrels(radius: Metric.pageRadius).fill(style: FillStyle(eoFill: true)) }
             .allowsHitTesting(false)
         }
     }
-
-    private var innerRadius: CGFloat { Metric.pageRadius - Metric.pageInset }
 
     /// The shadow belongs to a shape *behind* the card, not to the card itself.
     /// Shadowing the content would put the live web view through an offscreen
@@ -50,6 +54,17 @@ private struct PageCard: ViewModifier {
                 .shadow(color: .black.opacity(0.50), radius: 26, y: 8)
                 .shadow(color: .black.opacity(0.28), radius: 5, y: 1)
         }
+    }
+}
+
+/// Everything in the rectangle outside its rounded card, filled even-odd.
+private struct CardSpandrels: Shape {
+    let radius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path(rect)
+        path.addPath(RoundedRectangle(cornerRadius: radius, style: .continuous).path(in: rect))
+        return path
     }
 }
 

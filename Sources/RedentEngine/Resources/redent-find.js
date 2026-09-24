@@ -284,16 +284,45 @@
       return 0;
     }
 
+    function scrollsForReader(style) {
+      return /auto|scroll|overlay/.test(style.overflowY);
+    }
+
+    // Innermost first, and only boxes the reader could scroll by hand. An
+    // `overflow: hidden` shell or carousel is programmatically scrollable too,
+    // and sliding one to a match in an off-canvas menu blanks the whole page.
+    function scrollContainers(element) {
+      var containers = [];
+      var root = document.scrollingElement || document.documentElement;
+      for (var node = element.parentElement; node && node !== root; node = node.parentElement) {
+        if (node === document.body || node.scrollHeight <= node.clientHeight) continue;
+        if (scrollsForReader(window.getComputedStyle(node))) containers.push(node);
+      }
+      return containers;
+    }
+
+    function pageScrolls() {
+      var styles = [document.documentElement, document.body].map(function (element) {
+        return element ? window.getComputedStyle(element).overflowY : 'visible';
+      });
+      return styles.every(function (overflow) { return !/hidden|clip/.test(overflow); });
+    }
+
+    function centre(match, container) {
+      var rect = rectFor(match);
+      var box = container.getBoundingClientRect();
+      if (rect.top >= box.top && rect.bottom <= box.bottom) return;
+      container.scrollTop += rect.top - box.top - (box.height - rect.height) / 2;
+    }
+
     function reveal(match) {
       if (onScreen(match)) return;
       var element = match.control || match.startContainer.parentElement;
       if (!element) return;
-      element.scrollIntoView({ block: 'center', inline: 'nearest' });
-      // scrollIntoView centres the element, which for a long paragraph can
-      // still leave the match itself off screen.
+      scrollContainers(element).forEach(function (container) { centre(match, container); });
       var rect = rectFor(match);
-      if (rect.top < 0 || rect.bottom > window.innerHeight) {
-        window.scrollBy(0, rect.top - window.innerHeight / 2);
+      if (pageScrolls() && (rect.top < 0 || rect.bottom > window.innerHeight)) {
+        window.scrollBy(0, rect.top - (window.innerHeight - rect.height) / 2);
       }
     }
 

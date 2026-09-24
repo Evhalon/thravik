@@ -29,11 +29,12 @@ struct CommandRoutingTests {
         #expect(browser.closed.isEmpty)
     }
 
-    @Test("Duplicating opens the same address in a new tab")
+    @Test("Duplicating asks the engine for a copy beside the source tab")
     func duplicate() throws {
         let (model, browser, _) = window(pages: ["https://a.example/page"])
-        model.execute(.duplicateTab(try #require(browser.stubTabs.first).id))
-        #expect(browser.openedURLs == [URL(string: "https://a.example/page")])
+        let id = try #require(browser.stubTabs.first).id
+        model.execute(.duplicateTab(id))
+        #expect(browser.duplicated == [id])
     }
 
     @Test("A tab leaves only once the other window has taken it")

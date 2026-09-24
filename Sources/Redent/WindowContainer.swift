@@ -43,6 +43,7 @@ final class WindowContainer {
             downloads: app.downloads
         )
         services.webApps = app.webApps
+        services.webAppInstaller = app.webAppInstaller
         let features = BrowserFeatures(
             autofill: AutofillCoordinator(
                 store: app.credentials, logger: app.logger, isEnabled: settings.offersPasswordSave

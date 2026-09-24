@@ -42,6 +42,7 @@ public final class BrowserModel {
     /// Sites kept as apps, newest list from `webAppStore`.
     public internal(set) var webApps: [WebApp] = []
     let webAppStore: (any WebAppStoring)?
+    let webAppInstaller: (any WebAppInstalling)?
     /// The last queued write to `webAppStore`; reads wait for it.
     @ObservationIgnored var webAppWrite: Task<Void, Never>?
 
@@ -71,6 +72,7 @@ public final class BrowserModel {
         self.bookmarks = services.bookmarks
         self.downloads = services.downloads
         self.webAppStore = services.webApps
+        self.webAppInstaller = services.webAppInstaller
         self.visits = VisitRecorder(history: services.history)
         self.settings = settings
         self.settingsStore = services.settings
@@ -96,7 +98,7 @@ public final class BrowserModel {
 
     public func pageContextChanged() {
         autofill.pageChanged()
-        otp.fieldDisappeared()
+        otp.pageChanged()
         twoFactor.pageChanged()
     }
 

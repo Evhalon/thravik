@@ -24,6 +24,9 @@ app: build
 	@mkdir -p "$(APP_DIR)/Contents/MacOS" "$(APP_DIR)/Contents/Resources"
 	@rm -rf "$(APP_DIR)/Contents/MacOS/$(APP)" "$(APP_DIR)/Contents/Resources/"*.bundle
 	@cp "$(BUILD_DIR)/$(EXECUTABLE)" "$(APP_DIR)/Contents/MacOS/$(APP)"
+	@mkdir -p "$(APP_DIR)/Contents/Helpers"
+	@cp "$(BUILD_DIR)/RedentAppShim" "$(APP_DIR)/Contents/Helpers/RedentAppShim"
+	@codesign --force --sign - "$(APP_DIR)/Contents/Helpers/RedentAppShim"
 	@cp Resources/Info.plist "$(APP_DIR)/Contents/Info.plist"
 	@if [ -f Resources/AppIcon.icns ]; then cp Resources/AppIcon.icns "$(APP_DIR)/Contents/Resources/"; fi
 	@copied=0; \

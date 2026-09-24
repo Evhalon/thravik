@@ -6,7 +6,11 @@
   'use strict';
   try {
     var BRIDGE = 'redentBridge';
-    var OTP_PATTERN = /\b(otp|totp|mfa|2fa|two[-_ ]?factor|one[-_ ]?time|auth(entication)?[-_ ]?code|verification[-_ ]?code|security[-_ ]?code|passcode|codice)\b/i;
+    var OTP_PATTERN = /\b(otp|totp|mfa|2fa|two[-_ ]?factor|one[-_ ]?time|auth(entication)?[-_ ]?code|verification[-_ ]?code|security[-_ ]?code|passcode|codice (di )?(verifica|sicurezza|accesso|otp))\b/i;
+    // Card security codes, postcodes and coupons share the words above. A pill
+    // offering a one-time code at checkout is exactly the "random" pill.
+    var NOT_OTP_PATTERN = /\b(cvv|cvc|csc|cid|card|carta|zip|postal|postale|cap|promo|coupon|sconto|discount|gift|fiscale|captcha|iban)\b/i;
+    var LOGIN_PAGE_PATTERN = /log[-_ ]?in|sign[-_ ]?in|signin|auth|account|identifier|accedi|accesso|anmelden|connexion|sso/i;
     var CURRENT_PASSWORD_PATTERN = /\b(current|old|existing|previous|attuale|corrente|vecchia|precedente)\b/i;
     var NEW_PASSWORD_PATTERN = /\b(new|change|confirm|repeat|retype|verify|nuova|conferma|ripeti)\b/i;
 
@@ -229,9 +233,34 @@
       }
     }
 
+    function looksLikeLoginPage() {
+      return LOGIN_PAGE_PATTERN.test(location.pathname + ' ' + location.hash + ' ' + document.title);
+    }
+
+    // Stricter than `findStandaloneUsernameField`, which only has to find where
+    // an identity is typed: this one decides whether to offer a saved login.
+    // A newsletter box asking for an email, on an ordinary article, is not a
+    // sign-in screen.
+    function isLoginUsernameField(el) {
+      if (!isVisibleField(el) || el.closest('[role="search"]')) return false;
+      var tokens = (el.getAttribute('autocomplete') || '').toLowerCase().split(/\s+/);
+      if (tokens.indexOf('username') !== -1) return true;
+      var haystack = [el.getAttribute('name'), el.id, el.getAttribute('placeholder'),
+                      el.getAttribute('aria-label')].filter(Boolean).join(' ');
+      if (/\b(user(name)?|login|userid|utente)\b/i.test(haystack)) return true;
+      var asksEmail = tokens.indexOf('email') !== -1 || /\b(email|e-mail)\b/i.test(haystack);
+      return asksEmail && looksLikeLoginPage();
+    }
+
+    function hasLoginForm() {
+      if (findPasswordFields().some(isVisibleField)) return true;
+      var standalone = findStandaloneUsernameField();
+      return standalone !== null && isLoginUsernameField(standalone);
+    }
+
     function checkLoginForm() {
       if (!isMainFrame()) return;
-      var present = findPasswordFields().length > 0 || findStandaloneUsernameField() !== null;
+      var present = hasLoginForm();
       if (present && !state.loginSignaled) {
         state.loginSignaled = true;
         post('loginFormDetected', { origin: currentOrigin() });
@@ -264,11 +293,13 @@
     }
 
     function otpAttributesMatch(el) {
+      var autocomplete = (el.getAttribute('autocomplete') || '').toLowerCase();
+      if (autocomplete.indexOf('cc-') === 0 || autocomplete === 'postal-code') return false;
       var haystack = [
         el.getAttribute('name'), el.id, el.getAttribute('aria-label'),
         el.getAttribute('placeholder'), labelText(el)
       ].filter(Boolean).join(' ');
-      return OTP_PATTERN.test(haystack);
+      return OTP_PATTERN.test(haystack) && !NOT_OTP_PATTERN.test(haystack);
     }
 
     function findExplicitOTPField() {
@@ -389,6 +420,9 @@
         post('twoFactorSetupGone', {});
       }
     });
+    // Login dialogs often exist hidden and are only revealed with a class
+    // change, which the childList observer does not see. Focus does.
+    document.addEventListener('focusin', function () { scheduleScan(); }, true);
     window.addEventListener('popstate', function () { scheduleScan(); });
     window.addEventListener('pageshow', function () { scheduleScan(); });
 

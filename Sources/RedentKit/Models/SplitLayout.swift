@@ -1,73 +1,94 @@
 import Foundation
 
-/// Which tabs a window shows side by side, and which pane the chrome acts on.
+/// A set of tabs a window shows side by side, the way Dia does it: the split
+/// is one entry in the tab list, on screen whenever one of its tabs is the
+/// selection, and set aside — not undone — when the user selects another tab.
 ///
-/// Capped at two panes on purpose: a second live renderer already costs real
-/// memory, and this browser exists because that cost is not free. One tab never
-/// appears in both panes — WebKit cannot mount one view twice.
-public struct SplitLayout: Codable, Sendable, Hashable {
+/// Capped at `maximumPanes`: every pane is a live renderer, and this browser
+/// exists because that cost is not free. One tab never appears in two panes —
+/// WebKit cannot mount one view twice.
+public struct SplitLayout: Sendable, Hashable {
     public enum Orientation: String, Codable, Sendable, Hashable {
         case horizontal
         case vertical
     }
 
-    public enum Pane: String, Codable, Sendable, Hashable {
-        case primary
-        case secondary
-    }
+    public static let maximumPanes = 4
+    /// The smallest share of the window a drag can leave a pane with.
+    public static let minimumFraction = 0.12
 
-    public static let minimumRatio = 0.25
-    public static let maximumRatio = 0.75
-
-    public private(set) var secondaryTabID: UUID?
-    public private(set) var activePane: Pane = .primary
+    /// The panes' tabs, in pane order. Empty, or at least two.
+    public internal(set) var tabIDs: [UUID] = []
     public var orientation: Orientation = .horizontal
-    public private(set) var ratio: Double = 0.5
+    /// Each pane's share of the window, in pane order. Always sums to one.
+    public internal(set) var fractions: [Double] = []
 
     public init() {}
 
-    public var isSplit: Bool { secondaryTabID != nil }
+    public var isSplit: Bool { tabIDs.count > 1 }
+    public var paneCount: Int { tabIDs.count }
+    public var canAddPane: Bool { paneCount < Self.maximumPanes }
 
+    /// Whether the split is what the window shows for this selection.
+    public func isShowing(primary: UUID?) -> Bool {
+        guard isSplit, let primary else { return false }
+        return tabIDs.contains(primary)
+    }
+
+    /// Puts `tabID` beside the selection. Splitting from a tab outside the
+    /// current split starts a new one — a window holds a single split.
     public mutating func split(with tabID: UUID, primary: UUID?) {
-        guard tabID != primary else { return }
-        secondaryTabID = tabID
-        activePane = .secondary
+        guard let primary, tabID != primary else { return }
+        if !tabIDs.contains(primary) { tabIDs = [primary] }
+        guard !tabIDs.contains(tabID), canAddPane else { return }
+        tabIDs.append(tabID)
+        equalize()
     }
 
-    public mutating func closeSecondary() {
-        secondaryTabID = nil
-        activePane = .primary
+    /// Ends the split; every tab in it stays open.
+    public mutating func closeSplit() {
+        tabIDs = []
+        fractions = []
     }
 
-    public mutating func focus(_ pane: Pane) {
-        guard pane == .primary || isSplit else { return }
-        activePane = pane
+    /// Takes one tab out. A split left with one tab is no split at all.
+    public mutating func remove(_ tabID: UUID) {
+        guard let index = tabIDs.firstIndex(of: tabID) else { return }
+        tabIDs.remove(at: index)
+        if tabIDs.count < 2 { closeSplit() } else { equalize() }
     }
 
-    public mutating func togglePane() {
-        focus(activePane == .primary ? .secondary : .primary)
-    }
-
-    /// Clamped so a drag can never collapse a pane to nothing.
-    public mutating func setRatio(_ value: Double) {
-        ratio = min(max(value, Self.minimumRatio), Self.maximumRatio)
+    /// Moves the seam after pane `divider` by `delta`, a share of the window.
+    /// Only the two panes either side of it change size, and neither can be
+    /// dragged below `minimumFraction`.
+    public mutating func resize(divider: Int, from start: [Double], by delta: Double) {
+        guard start.count == paneCount, fractions.count == paneCount,
+              (0..<paneCount - 1).contains(divider) else { return }
+        let pair = start[divider] + start[divider + 1]
+        let leading = min(max(start[divider] + delta, Self.minimumFraction), pair - Self.minimumFraction)
+        fractions = start
+        fractions[divider] = leading
+        fractions[divider + 1] = pair - leading
     }
 
     /// A pane whose tab was closed or moved away stops being a pane.
-    public mutating func validate(against tabIDs: Set<UUID>) {
-        guard let id = secondaryTabID, !tabIDs.contains(id) else { return }
-        closeSecondary()
+    public mutating func validate(against existing: Set<UUID>) {
+        for id in tabIDs where !existing.contains(id) { remove(id) }
     }
 
-    /// The tab the chrome acts on: keyboard, autofill, one-time codes.
-    public func activeTabID(primary: UUID?) -> UUID? {
-        guard activePane == .secondary, let secondaryTabID else { return primary }
-        return secondaryTabID
+    /// The pane after the one showing `primary`, wrapping round.
+    public func tabID(after primary: UUID?) -> UUID? {
+        guard isShowing(primary: primary), let primary, let index = tabIDs.firstIndex(of: primary) else { return nil }
+        return tabIDs[(index + 1) % paneCount]
     }
 
     /// Everything on screen. Hibernation must spare all of it, not just the
     /// window's selection.
     public func visibleTabIDs(primary: UUID?) -> Set<UUID> {
-        Set([primary, secondaryTabID].compactMap { $0 })
+        isShowing(primary: primary) ? Set(tabIDs) : Set([primary].compactMap { $0 })
+    }
+
+    private mutating func equalize() {
+        fractions = Array(repeating: 1 / Double(paneCount), count: paneCount)
     }
 }

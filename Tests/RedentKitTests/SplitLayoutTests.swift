@@ -4,12 +4,12 @@ import Testing
 
 @Suite("Split View layout")
 struct SplitLayoutTests {
-    @Test("An unsplit window has one pane and acts on the selection")
+    @Test("An unsplit window shows only its selection")
     func single() {
         let primary = UUID()
         let layout = SplitLayout()
         #expect(!layout.isSplit)
-        #expect(layout.activeTabID(primary: primary) == primary)
+        #expect(!layout.isShowing(primary: primary))
         #expect(layout.visibleTabIDs(primary: primary) == [primary])
     }
 
@@ -21,72 +21,105 @@ struct SplitLayoutTests {
         #expect(!layout.isSplit)
     }
 
-    @Test("Both panes count as on screen, so neither can be hibernated")
-    func bothVisible() {
+    @Test("Every pane counts as on screen, so none can be hibernated")
+    func allVisible() {
+        let primary = UUID(), second = UUID(), third = UUID()
+        var layout = SplitLayout()
+        layout.split(with: second, primary: primary)
+        layout.split(with: third, primary: primary)
+        #expect(layout.tabIDs == [primary, second, third])
+        #expect(layout.visibleTabIDs(primary: second) == [primary, second, third])
+    }
+
+    @Test("Selecting a tab outside the split sets it aside without ending it")
+    func splitIsSetAside() {
+        let primary = UUID(), second = UUID(), other = UUID()
+        var layout = SplitLayout()
+        layout.split(with: second, primary: primary)
+        #expect(!layout.isShowing(primary: other))
+        #expect(layout.visibleTabIDs(primary: other) == [other])
+        #expect(layout.isShowing(primary: second))
+    }
+
+    @Test("Panes stop at the cap, and one tab never fills two")
+    func capAndDuplicates() {
         let primary = UUID()
-        let secondary = UUID()
         var layout = SplitLayout()
-        layout.split(with: secondary, primary: primary)
-        #expect(layout.visibleTabIDs(primary: primary) == [primary, secondary])
+        let extra = (0..<6).map { _ in UUID() }
+        extra.forEach { layout.split(with: $0, primary: primary) }
+        layout.split(with: extra[0], primary: primary)
+        #expect(layout.paneCount == SplitLayout.maximumPanes)
+        #expect(Set(layout.tabIDs).count == layout.tabIDs.count)
     }
 
-    @Test("The chrome acts on the active pane, not on the window's selection")
-    func activePaneOwnsTheChrome() {
+    @Test("Splitting from a tab outside the split starts a new one")
+    func newSplitReplacesOld() {
+        let first = UUID(), second = UUID(), third = UUID(), fourth = UUID()
+        var layout = SplitLayout()
+        layout.split(with: second, primary: first)
+        layout.split(with: fourth, primary: third)
+        #expect(layout.tabIDs == [third, fourth])
+    }
+
+    @Test("Switching panes cycles through all of them")
+    func cycling() {
+        let primary = UUID(), second = UUID(), third = UUID()
+        var layout = SplitLayout()
+        layout.split(with: second, primary: primary)
+        layout.split(with: third, primary: primary)
+        #expect(layout.tabID(after: primary) == second)
+        #expect(layout.tabID(after: third) == primary)
+    }
+
+    @Test("A drag moves one seam and can never collapse a pane")
+    func resizeIsClamped() {
         let primary = UUID()
-        let secondary = UUID()
         var layout = SplitLayout()
-        layout.split(with: secondary, primary: primary)
-        #expect(layout.activeTabID(primary: primary) == secondary)
-
-        layout.togglePane()
-        #expect(layout.activeTabID(primary: primary) == primary)
+        layout.split(with: UUID(), primary: primary)
+        layout.split(with: UUID(), primary: primary)
+        let start = layout.fractions
+        layout.resize(divider: 0, from: start, by: -1)
+        #expect(layout.fractions[0] == SplitLayout.minimumFraction)
+        #expect(layout.fractions[2] == start[2])
+        #expect(abs(layout.fractions.reduce(0, +) - 1) < 0.0001)
     }
 
-    @Test("With one pane there is nothing to switch to")
-    func focusNeedsASecondPane() {
+    @Test("A split left with one tab is no split")
+    func removingDownToOne() {
+        let primary = UUID(), second = UUID()
         var layout = SplitLayout()
-        layout.focus(.secondary)
-        #expect(layout.activePane == .primary)
-    }
-
-    @Test("A drag can never collapse a pane to nothing")
-    func ratioIsClamped() {
-        var layout = SplitLayout()
-        layout.setRatio(0)
-        #expect(layout.ratio == SplitLayout.minimumRatio)
-        layout.setRatio(4)
-        #expect(layout.ratio == SplitLayout.maximumRatio)
-    }
-
-    @Test("Closing the split keeps both tabs and returns the chrome to the selection")
-    func closingKeepsTabs() {
-        let primary = UUID()
-        let secondary = UUID()
-        var layout = SplitLayout()
-        layout.split(with: secondary, primary: primary)
-        layout.closeSecondary()
+        layout.split(with: second, primary: primary)
+        layout.remove(second)
         #expect(!layout.isSplit)
-        #expect(layout.activeTabID(primary: primary) == primary)
+        #expect(layout.tabIDs.isEmpty)
     }
 
     @Test("A pane whose tab was closed stops being a pane")
     func validation() {
-        let primary = UUID()
-        let secondary = UUID()
+        let primary = UUID(), second = UUID(), third = UUID()
         var layout = SplitLayout()
-        layout.split(with: secondary, primary: primary)
-        layout.validate(against: [primary])
-        #expect(!layout.isSplit)
-        #expect(layout.activePane == .primary)
+        layout.split(with: second, primary: primary)
+        layout.split(with: third, primary: primary)
+        layout.validate(against: [primary, third])
+        #expect(layout.tabIDs == [primary, third])
+        #expect(layout.fractions.count == 2)
     }
 
-    @Test("A pane whose tab is still open survives validation")
-    func validationKeepsLiveTabs() {
+    @Test("A layout round-trips through its own encoding")
+    func roundTrip() throws {
         let primary = UUID()
-        let secondary = UUID()
         var layout = SplitLayout()
-        layout.split(with: secondary, primary: primary)
-        layout.validate(against: [primary, secondary])
-        #expect(layout.isSplit)
+        layout.split(with: UUID(), primary: primary)
+        layout.split(with: UUID(), primary: primary)
+        let decoded = try JSONDecoder().decode(SplitLayout.self, from: JSONEncoder().encode(layout))
+        #expect(decoded.tabIDs == layout.tabIDs)
+        #expect(decoded.fractions.count == 3)
+    }
+
+    @Test("A layout saved by an earlier build restores as no split")
+    func legacyDecoding() throws {
+        let json = #"{"secondaryTabID":"\#(UUID().uuidString)","activePane":"secondary","ratio":0.3}"#
+        let layout = try JSONDecoder().decode(SplitLayout.self, from: Data(json.utf8))
+        #expect(!layout.isSplit)
     }
 }

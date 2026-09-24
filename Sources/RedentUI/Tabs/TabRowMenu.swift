@@ -9,6 +9,15 @@ struct TabRowMenu: View {
     var body: some View {
         Button(tab.isPinned ? "Unpin Tab" : "Pin Tab", action: actions.onTogglePin)
         Button(tab.isMuted ? "Unmute Tab" : "Mute Tab") { tab.setMuted(!tab.isMuted) }
+        if let onDuplicate = actions.onDuplicate {
+            Button("Duplicate Tab", action: onDuplicate)
+        }
+        if let onSplit = actions.onSplit {
+            Button("Open in Split View", action: onSplit)
+        }
+        if let onUnsplit = actions.onUnsplit {
+            Button("Remove from Split View", action: onUnsplit)
+        }
         if let onUngroup = actions.onUngroup {
             Button("Remove from Group", action: onUngroup)
         }

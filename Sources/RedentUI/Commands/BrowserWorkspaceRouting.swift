@@ -27,9 +27,14 @@ extension BrowserModel {
         return true
     }
 
+    /// The copy lands beside the pane the user is looking at.
+    public func duplicateSelectedTab() {
+        guard let id = selectedTab?.id else { return }
+        tabs.duplicateTab(id)
+    }
+
     private func duplicateTab(_ id: UUID) throws {
-        guard let url = tabs.tabs.first(where: { $0.id == id })?.url else { throw CommandActionError.unavailable }
-        tabs.newTab(url: url)
+        guard tabs.duplicateTab(id) != nil else { throw CommandActionError.unavailable }
     }
 
     /// Only tabs with a live page reload. A hibernated one loads fresh when

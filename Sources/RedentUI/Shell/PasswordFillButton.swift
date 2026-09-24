@@ -19,6 +19,9 @@ struct PasswordFillButton: View {
                 if model.autofill.suggestions.count > 1 {
                     PasswordFillPicker(model: model, fill: model.fillCredential)
                 }
+                PillDismissButton(help: "Hide for this page") {
+                    withAnimation(.spring(duration: 0.3)) { model.autofill.dismissFillOffer() }
+                }
             }
             .padding(.leading, Metric.gutter)
             .padding(.trailing, Metric.gutter + 2)

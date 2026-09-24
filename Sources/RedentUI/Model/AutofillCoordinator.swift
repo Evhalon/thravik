@@ -21,6 +21,9 @@ public final class AutofillCoordinator {
     var isEnabled: Bool
     private var lastObservedOrigin: Origin??
     private var lookupID = UUID()
+    /// Set when the user closes the offer. Holds until the page changes, so a
+    /// login form the page re-renders cannot bring back what was waved away.
+    private var isFillDismissed = false
 
     public init(store: any CredentialStoring, logger: any EventLogging, isEnabled: Bool = true) {
         self.store = store
@@ -33,7 +36,11 @@ public final class AutofillCoordinator {
     public var identityHint: String {
         lastUsername.isEmpty ? (suggestions.first?.username ?? "") : lastUsername
     }
-    public var shouldOfferFill: Bool { isLoginFormPresent && hasSuggestions && pendingSave == nil }
+    public var shouldOfferFill: Bool {
+        isLoginFormPresent && hasSuggestions && pendingSave == nil && !isFillDismissed
+    }
+
+    public func dismissFillOffer() { isFillDismissed = true }
 
     public func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
@@ -54,6 +61,7 @@ public final class AutofillCoordinator {
             return
         }
         if self.origin != origin {
+            isFillDismissed = false
             isLoginFormPresent = false
             self.origin = origin
             suggestions = []
@@ -77,6 +85,7 @@ public final class AutofillCoordinator {
     public func pageChanged() {
         lookupID = UUID()
         lastObservedOrigin = .some(nil)
+        isFillDismissed = false
         suggestions = []
         origin = nil
         isLoginFormPresent = false

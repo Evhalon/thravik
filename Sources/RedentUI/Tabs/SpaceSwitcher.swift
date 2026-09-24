@@ -2,9 +2,10 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// Current Space as a quiet identity chip. Menu switches; orbs below do the rest.
+/// A Space as a quiet identity chip. Menu switches; orbs below do the rest.
 struct SpaceSwitcher: View {
     let model: BrowserModel
+    let current: BrowserSpace?
     @State private var isHovering = false
 
     var body: some View {
@@ -48,10 +49,6 @@ struct SpaceSwitcher: View {
         .frame(height: Metric.tabRowHeight)
         .contentShape(.rect)
         .chromeHoverEffect(isActive: isHovering, radius: Metric.mediumRadius)
-    }
-
-    private var current: BrowserSpace? {
-        model.tabs.session.spaces.first { $0.id == model.tabs.session.selectedSpaceID }
     }
 
     private func icon(for space: BrowserSpace) -> String {

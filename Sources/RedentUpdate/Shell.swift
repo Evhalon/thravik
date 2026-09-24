@@ -3,8 +3,8 @@ import Foundation
 /// Runs a command-line tool and suspends until it exits, rather than blocking
 /// a thread on `waitUntilExit`. The update path shells out to `hdiutil`,
 /// `codesign` and `ditto` — reimplementing any of them would be worse.
-enum Shell {
-    static func run(_ tool: String, _ arguments: [String]) async throws {
+public enum Shell {
+    public static func run(_ tool: String, _ arguments: [String]) async throws {
         let status = try await exitStatus(tool, arguments)
         guard status == 0 else {
             throw UpdateError.toolFailed((tool as NSString).lastPathComponent, status)

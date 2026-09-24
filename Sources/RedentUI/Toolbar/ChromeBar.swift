@@ -12,7 +12,7 @@ struct ChromeBar: View {
     var body: some View {
         HStack(spacing: Metric.tightGutter) {
             if !model.isSidebarVisible {
-                SpaceSwitcher(model: model).frame(minWidth: 96, maxWidth: 168)
+                SpaceSwitcher(model: model, current: model.currentSpace).frame(minWidth: 96, maxWidth: 168)
             }
             NavigationControls(model: model)
                 .frame(width: 132)

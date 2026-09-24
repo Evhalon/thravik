@@ -111,31 +111,6 @@ struct FindInPageTests {
     }
 
     private func pageSaying(_ body: String) async throws -> WebTab {
-        let controller = TabController(
-            session: BrowserSession(tabs: [TabSnapshot()], selectedTabID: nil),
-            settings: BrowserSettings(),
-            logger: QuietFindLogger()
-        )
-        let tab = try #require(controller.webTabs.first)
-        tab.wake(loading: nil)
-        let view = try #require(tab.webView)
-        view.loadHTMLString("<body>\(body)</body>", baseURL: URL(string: "https://example.com"))
-        for _ in 0..<200 {
-            let ready = try? await view.callAsyncJavaScript(
-                "return typeof window.redentFind === 'function' && !!document.body",
-                in: nil,
-                contentWorld: PageScripts.contentWorld
-            ) as? Bool
-            if ready == true { return tab }
-            try await Task.sleep(for: .milliseconds(20))
-        }
-        Issue.record("The find script never reached the page")
-        return tab
+        try await FindTestPage.saying(body)
     }
-}
-
-private struct QuietFindLogger: EventLogging {
-    func debug(_ message: @autoclosure () -> String) {}
-    func notice(_ message: @autoclosure () -> String) {}
-    func error(_ message: @autoclosure () -> String) {}
 }

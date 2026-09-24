@@ -11,6 +11,10 @@ public struct WindowBackdrop: View, @MainActor Equatable {
 
     @Environment(\.colorScheme) private var scheme
 
+    /// The window's frame. Surfaces that must show the slab through a hole
+    /// draw another backdrop aligned to it rather than guessing its color.
+    public static let space = NamedCoordinateSpace.named("redent.windowBackdrop")
+
     public init(tint: Color?) {
         self.tint = tint
     }

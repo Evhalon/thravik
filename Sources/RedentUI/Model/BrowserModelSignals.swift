@@ -21,7 +21,7 @@ extension BrowserModel: PageSignalHandling {
             guard selectedTab?.snapshot.isTemporary == false else { return }
             Task { await autofill.credentialSubmitted(candidate) }
         case .otpFieldAppeared(let origin, let username):
-            guard settings.showsTOTPButton else { return }
+            guard settings.showsTOTPButton, !otp.isDismissed else { return }
             let hint = username.isEmpty ? autofill.identityHint : username
             Task { await otp.fieldAppeared(at: origin, username: hint) }
         case .otpFieldDisappeared:

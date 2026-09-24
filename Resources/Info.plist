@@ -42,6 +42,11 @@
         <key>CFBundleURLName</key><string>Web</string>
         <key>CFBundleURLSchemes</key><array><string>http</string><string>https</string></array>
       </dict>
+      <!-- Each installed web app's launcher opens its window through this. -->
+      <dict>
+        <key>CFBundleURLName</key><string>Web App</string>
+        <key>CFBundleURLSchemes</key><array><string>redent-webapp</string></array>
+      </dict>
     </array>
 </dict>
 </plist>

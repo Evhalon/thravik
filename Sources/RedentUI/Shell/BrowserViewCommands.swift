@@ -49,23 +49,28 @@ struct BrowserViewCommands: Commands {
         Button(splitTitle, action: toggleSplit)
             .keyboardShortcut("d", modifiers: [.command, .shift])
             .disabled(model == nil)
+        Button("Add Pane") { model?.splitWithNextTab() }
+            .keyboardShortcut("d", modifiers: [.command, .option])
+            .disabled(!(model.map { $0.isShowingSplit && $0.split.canAddPane } ?? false))
+        Button("Close Pane") { model?.closeActivePane() }
+            .disabled(!(model?.isShowingSplit ?? false))
         Button("Switch Pane") { model?.toggleActivePane() }
             .keyboardShortcut("]", modifiers: [.command, .option])
-            .disabled(!(model?.split.isSplit ?? false))
+            .disabled(!(model?.isShowingSplit ?? false))
         Button("Flip Split") { model?.toggleSplitOrientation() }
-            .disabled(!(model?.split.isSplit ?? false))
+            .disabled(!(model?.isShowingSplit ?? false))
     }
 
     private func toggleSplit() {
         guard let model else { return }
-        if model.split.isSplit { model.closeSplit() } else { model.splitWithNextTab() }
+        if model.isShowingSplit { model.closeSplit() } else { model.splitWithNextTab() }
     }
 
     private var tabStripTitle: String { (model?.showsTabStrip ?? false) ? "Hide Tabs" : "Show Tabs" }
     private var sidebarTitle: String { (model?.isSidebarVisible ?? false) ? "Hide Sidebar" : "Show Sidebar" }
     private var focusTitle: String { (model?.isFocusMode ?? false) ? "Exit Focus Mode" : "Focus Mode" }
     private var readerTitle: String { (model?.isReaderActive ?? false) ? "Hide Reader" : "Show Reader" }
-    private var splitTitle: String { (model?.split.isSplit ?? false) ? "Close Split" : "Split View" }
+    private var splitTitle: String { (model?.isShowingSplit ?? false) ? "Close Split" : "Split View" }
 
     private var layoutBinding: Binding<TabLayout> {
         Binding(

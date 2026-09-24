@@ -30,6 +30,8 @@ public protocol BrowserControlling: AnyObject {
     /// Closes expired background tabs.
     /// - Returns: the selected tab now asking to be kept or closed, if any.
     @discardableResult func sweepExpiredTabs(now: Date) -> UUID?
+    /// Opens a copy of the tab right after it and selects the copy.
+    @discardableResult func duplicateTab(_ id: UUID) -> (any BrowserTab)?
     func close(_ id: UUID)
     /// Closes several tabs as one reversible operation.
     func closeTabs(_ ids: Set<UUID>)

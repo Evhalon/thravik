@@ -7,6 +7,9 @@ struct TabRowActions {
     let onSelect: () -> Void
     let onClose: () -> Void
     let onTogglePin: () -> Void
+    var onDuplicate: (() -> Void)?
+    var onSplit: (() -> Void)?
+    var onUnsplit: (() -> Void)?
     var onCloseOthers: (() -> Void)?
     var onUngroup: (() -> Void)?
     /// Visual order after a live drag. Nil for rows that cannot reorder.

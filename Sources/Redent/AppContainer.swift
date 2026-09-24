@@ -22,6 +22,7 @@ final class AppContainer {
     let history: any HistoryStoring
     let bookmarks: any BookmarkStoring
     let webApps: any WebAppStoring = JSONWebAppStore()
+    let webAppInstaller: any WebAppInstalling
     let browserImporter: any BrowserImporting
     let permissions: SitePermissionLedger
     /// One list for the whole app: a download outlives the window that started
@@ -69,6 +70,7 @@ final class AppContainer {
             self.restoredSession = .success(BrowserSession())
         }
 
+        self.webAppInstaller = WebAppBundleInstaller(host: .current(), logger: logger)
         let credentials = KeychainCredentialStore()
         self.credentials = credentials
         self.authenticator = KeychainTOTPStore()
@@ -90,6 +92,7 @@ final class AppContainer {
         coordinator.observer = downloads
         downloads.commands = coordinator
         Task { await permissions.load() }
+        observeWebAppLaunchers()
     }
 
     /// Memoised: SwiftUI re-evaluates a scene's body freely, and rebuilding a
@@ -103,6 +106,7 @@ final class AppContainer {
 
     func releaseWindow(_ spec: BrowserWindowSpec) {
         windows.removeValue(forKey: spec)?.retire()
+        if let appID = spec.webApp?.appID { webAppWindowClosed(appID) }
     }
 
     /// What a freshly built window starts from: the saved workspace for the

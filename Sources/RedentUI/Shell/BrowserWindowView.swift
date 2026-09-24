@@ -43,6 +43,7 @@ public struct BrowserWindowView<Sheets: View>: View {
                     .zIndex(0)
             }
         }
+        .coordinateSpace(WindowBackdrop.space)
         .clipped()
         .environment(\.ambientTint, ambientTint)
         .animation(.spring(duration: 0.34), value: usesSidebar)

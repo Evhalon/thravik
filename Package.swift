@@ -7,7 +7,8 @@ let package = Package(
     name: "Redent",
     platforms: [.macOS("26.0")],
     products: [
-        .executable(name: "Redent", targets: ["Redent"])
+        .executable(name: "Redent", targets: ["Redent"]),
+        .executable(name: "RedentAppShim", targets: ["RedentAppShim"])
     ],
     targets: [
         .target(name: "RedentKit", swiftSettings: strict),
@@ -23,6 +24,7 @@ let package = Package(
             dependencies: ["RedentKit", "RedentCrypto", "RedentOTPAuth", "RedentDesign"],
             swiftSettings: strict
         ),
+        .executableTarget(name: "RedentAppShim", dependencies: ["RedentKit"], swiftSettings: strict),
         .executableTarget(
             name: "Redent",
             dependencies: [

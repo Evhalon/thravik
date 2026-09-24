@@ -11,6 +11,8 @@ public struct BrowserServices {
     public let downloads: DownloadsModel
     /// Sites kept as apps. Nil where there is nowhere to keep them.
     public var webApps: (any WebAppStoring)?
+    /// Gives each web app an app of its own in Applications. Nil in tests.
+    public var webAppInstaller: (any WebAppInstalling)?
 
     public init(history: any HistoryStoring, bookmarks: any BookmarkStoring,
                 settings: any SettingsStoring, session: any SessionStoring,

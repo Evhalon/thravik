@@ -7,13 +7,16 @@ import SwiftUI
 struct PagePane: View {
     @Bindable var model: BrowserModel
     let tab: (any BrowserTab)?
-    let pane: SplitLayout.Pane
+    let pane: Int
+    @State private var isHovering = false
 
     var body: some View {
         content
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
             .background { if tab?.url != nil { Palette.canvas } }
             .overlay(alignment: .top) { activeEdge }
+            .overlay(alignment: .topTrailing) { closeButton }
+            .onHover { isHovering = $0 }
             .contentShape(.rect)
             .onTapGesture { focusIfNeeded() }
     }
@@ -28,7 +31,7 @@ struct PagePane: View {
             }
         } else if let tab, tab.url != nil {
             model.content(tab.id).id(tab.id)
-        } else if pane == .primary {
+        } else if pane == 0 {
             NewTabPage(model: model)
                 .id(tab?.id)
         } else {
@@ -39,15 +42,28 @@ struct PagePane: View {
     /// A no-op tap still mutates `split` and SwiftUI rebuilds the page card,
     /// which is enough to send a live video layer black.
     private func focusIfNeeded() {
-        guard model.split.isSplit, model.split.activePane != pane else { return }
-        model.split.focus(pane)
+        guard model.isShowingSplit else { return }
+        model.focusPane(pane)
+    }
+
+    /// Shown on hover only, so a split page keeps its whole top edge until the
+    /// pointer is over it.
+    @ViewBuilder
+    private var closeButton: some View {
+        if model.isShowingSplit && isHovering, let tab {
+            PillDismissButton(help: "Remove this tab from the split") {
+                model.removeFromSplit(tab.id)
+            }
+            .padding(Metric.tightGutter)
+            .transition(.opacity)
+        }
     }
 
     /// Only drawn while the window is actually split: with one pane there is
     /// nothing to distinguish it from.
     @ViewBuilder
     private var activeEdge: some View {
-        if model.split.isSplit && model.split.activePane == pane {
+        if model.isShowingSplit && tab?.id == model.tabs.selectedID {
             Rectangle()
                 .fill(Palette.accent)
                 .frame(height: 2)

@@ -6,7 +6,7 @@ import SwiftUI
 ///
 /// Only what is on screen is kept in the view tree — rendering hidden web views
 /// is what makes other browsers cost a gigabyte at twenty tabs. A split window
-/// shows two, and no more.
+/// shows one page per pane, and no more.
 struct ContentArea: View {
     @Bindable var model: BrowserModel
 

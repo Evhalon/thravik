@@ -25,21 +25,47 @@ extension BrowserModel {
         guard let windowDirectory else { return }
         windowDirectory.open(app, at: url, in: currentSpace)
         tabs.close(tab.id)
+        installAndLaunch(app)
     }
 
     func openWebApp(_ id: UUID) throws {
-        guard let app = webApps.first(where: { $0.id == id }) else { throw CommandActionError.unavailable }
-        guard let windowDirectory else {
-            tabs.newTab(url: app.url)
-            return
-        }
-        let space = tabs.session.spaces.first { $0.id == app.spaceID }
-        windowDirectory.open(app, at: nil, in: space)
+        let app = try presentWebApp(id)
+        installAndLaunch(app)
+    }
+
+    /// The app's own launcher asked for its window — from the Dock, Spotlight
+    /// or Finder. On a cold start the saved apps may not be read yet.
+    public func openWebAppLink(_ id: UUID) async {
+        if !webApps.contains(where: { $0.id == id }) { await reloadWebApps() }
+        do { try presentWebApp(id) } catch { actionError = "That web app is no longer saved." }
     }
 
     func removeWebApp(_ id: UUID) {
+        let removed = webApps.first { $0.id == id }
         webApps.removeAll { $0.id == id }
         write { await $0.delete(id) }
+        if let removed, let webAppInstaller { Task { await webAppInstaller.uninstall(removed) } }
+    }
+
+    /// Shows the app's window without touching its launcher — the path the
+    /// launcher itself calls, which must not start it again.
+    @discardableResult
+    private func presentWebApp(_ id: UUID) throws -> WebApp {
+        guard let app = webApps.first(where: { $0.id == id }) else { throw CommandActionError.unavailable }
+        guard let windowDirectory else {
+            tabs.newTab(url: app.url)
+            return app
+        }
+        let space = tabs.session.spaces.first { $0.id == app.spaceID }
+        windowDirectory.open(app, at: nil, in: space)
+        return app
+    }
+
+    /// Writes the app into Applications on first use and puts it in the Dock
+    /// beside its window. Launching one already running only reaffirms it.
+    private func installAndLaunch(_ app: WebApp) {
+        guard let webAppInstaller else { return }
+        Task { await webAppInstaller.launch(app) }
     }
 
     /// Writes land in the order they were asked for.

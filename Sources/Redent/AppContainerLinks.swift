@@ -16,7 +16,7 @@ extension AppContainer {
             pendingLinks.append(contentsOf: urls)
             return false
         }
-        for url in urls { window.model.open(url, inNewTab: true) }
+        for url in openWebAppLinks(urls, from: window) { window.model.open(url, inNewTab: true) }
         return true
     }
 
@@ -26,7 +26,7 @@ extension AppContainer {
         guard !pendingLinks.isEmpty, let window = primaryWindow else { return false }
         let waiting = pendingLinks
         pendingLinks.removeAll()
-        for url in waiting { window.model.open(url, inNewTab: true) }
+        for url in openWebAppLinks(waiting, from: window) { window.model.open(url, inNewTab: true) }
         return true
     }
 

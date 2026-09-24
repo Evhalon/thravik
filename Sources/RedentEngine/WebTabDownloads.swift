@@ -4,8 +4,8 @@ import WebKit
 /// The three places WebKit can decide a navigation is a file rather than a
 /// page. All of them end in the same coordinator.
 extension WebTabNavigationDelegate {
-    /// A response the web view cannot render, or one the server marked as an
-    /// attachment, is a download — that is what makes a link to a `.zip` or an
+    /// A response the web view cannot render, a data file such as a CSV, or
+    /// one the server marked as an attachment, is a download — that is what makes a link to a `.zip` or an
     /// exported PDF save instead of doing nothing at all.
     func webView(
         _ webView: WKWebView,
@@ -14,6 +14,7 @@ extension WebTabNavigationDelegate {
         let disposition = (navigationResponse.response as? HTTPURLResponse)?
             .value(forHTTPHeaderField: "Content-Disposition")
         let saves = DownloadPolicy.shouldDownload(
+            mimeType: navigationResponse.response.mimeType,
             canShowMIMEType: navigationResponse.canShowMIMEType,
             contentDisposition: disposition
         )

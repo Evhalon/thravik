@@ -18,13 +18,18 @@ struct TopTabStrip: View {
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 3) {
                     ForEach(model.tabs.visibleTabs, id: \.id) { tab in
-                        TopTabItem(
-                            tab: tab,
-                            isSelected: tab.id == model.tabs.selectedID,
-                            namespace: selection,
-                            actions: actions(for: tab),
-                            drag: drag
-                        )
+                        if !model.isInSplit(tab.id) {
+                            TopTabItem(
+                                tab: tab,
+                                isSelected: tab.id == model.tabs.selectedID,
+                                namespace: selection,
+                                actions: actions(for: tab),
+                                drag: drag
+                            )
+                        } else if tab.id == model.split.tabIDs.first {
+                            SplitTabRow(model: model, namespace: selection)
+                                .frame(width: 120 * CGFloat(model.split.paneCount))
+                        }
                     }
                 }
                 .padding(.vertical, 5)
@@ -46,6 +51,9 @@ struct TopTabStrip: View {
             onSelect: { model.tabs.select(tab.id) },
             onClose: { model.tabs.close(tab.id) },
             onTogglePin: { model.tabs.togglePin(tab.id) },
+            onDuplicate: tab.url == nil ? nil : { _ = model.tabs.duplicateTab(tab.id) },
+            onSplit: model.canSplit(with: tab.id) ? { model.splitWith(tab.id) } : nil,
+            onUnsplit: model.isInSplit(tab.id) ? { model.removeFromSplit(tab.id) } : nil,
             onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
             onReorder: { model.commitTabDrag(tab.id, order: $0) }
         )

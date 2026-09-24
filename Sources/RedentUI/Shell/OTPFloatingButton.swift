@@ -19,6 +19,9 @@ struct OTPFloatingButton: View {
                 if model.otp.suggestions.count > 1 || model.otp.isUnmatched {
                     OTPAccountPicker(model: model)
                 }
+                PillDismissButton(help: "Hide for this page") {
+                    withAnimation(.spring(duration: 0.32)) { model.otp.dismiss() }
+                }
             }
             .padding(.leading, Metric.gutter)
             .padding(.trailing, Metric.gutter + 2)

@@ -19,6 +19,9 @@ public final class OTPCoordinator {
     public private(set) var originMatched = false
     public private(set) var identityMatched = false
     public private(set) var didFill = false
+    /// The user closed the button on this page. Only a page change clears it:
+    /// a field the page re-renders must not bring it straight back.
+    public private(set) var isDismissed = false
     public var pinnedAccountID: UUID?
 
     private let store: any TOTPAccountStoring
@@ -67,6 +70,16 @@ public final class OTPCoordinator {
     }
 
     public func fieldDisappeared() { resetChallenge() }
+
+    public func dismiss() {
+        resetChallenge()
+        isDismissed = true
+    }
+
+    public func pageChanged() {
+        resetChallenge()
+        isDismissed = false
+    }
 
     public func markFilled(at url: URL?) {
         didFill = true
