@@ -1,30 +1,82 @@
 import Foundation
 import RedentKit
 
-/// One Keychain item per Container holds its session cookies as JSON.
-public struct KeychainSessionCookieStore: SessionCookieStoring {
-    private let keychain: KeychainStore
+/// Holds every Container's session cookies in one Keychain item, so a new
+/// signing identity costs one "Always Allow" for all Spaces, not one per Space.
+public actor KeychainSessionCookieStore: SessionCookieStoring {
+    private static let vaultAccount = "redent-session-cookie-vault-v1"
+    private static let label = "Thravik session cookies"
+    private let vault: KeychainStore
+    private let legacy: KeychainStore
+    /// Shared by concurrent first reads, so Spaces restoring at launch wait on
+    /// one unlock instead of each raising its own.
+    private var loading: Task<[UUID: [StoredCookie]]?, Never>?
 
     public init(service: String = "app.redent.session-cookies") {
-        keychain = KeychainStore(service: service)
+        vault = KeychainStore(service: "\(service).vault")
+        legacy = KeychainStore(service: service)
     }
 
     public func load(container: UUID) async -> [StoredCookie] {
-        guard let item = try? await keychain.fetch(account: container.uuidString),
-              let cookies = try? JSONDecoder().decode([StoredCookie].self, from: item.valueData)
-        else { return [] }
-        return cookies
+        await contents()?[container] ?? []
     }
 
     public func save(_ cookies: [StoredCookie], container: UUID) async {
-        guard !cookies.isEmpty else { return await remove(container: container) }
-        guard let data = try? JSONEncoder().encode(cookies) else { return }
-        try? await keychain.upsert(
-            account: container.uuidString, label: "Redent session cookies", valueData: data
-        )
+        await edit { $0[container] = cookies.isEmpty ? nil : cookies }
     }
 
     public func remove(container: UUID) async {
-        try? await keychain.delete(account: container.uuidString)
+        await edit { $0[container] = nil }
+    }
+
+    /// A vault that could not be read is never written: saving one Space's
+    /// cookies over it would erase every other Space's.
+    private func edit(_ change: (inout [UUID: [StoredCookie]]) -> Void) async {
+        guard var cookies = await contents() else { return }
+        let before = cookies
+        change(&cookies)
+        guard cookies != before else { return }
+        loading = Task { cookies }
+        try? await write(cookies)
+    }
+
+    private func contents() async -> [UUID: [StoredCookie]]? {
+        if let loading { return await loading.value }
+        let task = Task { await self.read() }
+        loading = task
+        return await task.value
+    }
+
+    private func read() async -> [UUID: [StoredCookie]]? {
+        do {
+            let item = try await vault.loadOrUnlock(account: Self.vaultAccount, label: Self.label)
+            return try SessionCookieVaultCodec.decode(item.valueData)
+        } catch VaultError.itemNotFound {
+            return await migrateLegacy()
+        } catch {
+            return nil
+        }
+    }
+
+    /// Only items readable without a dialog move over. Asking per leftover
+    /// item is the prompt storm this store exists to end; a Space whose old
+    /// item stays locked signs in again once instead.
+    private func migrateLegacy() async -> [UUID: [StoredCookie]] {
+        let items = await legacy.fetchAll()
+        let cookies = SessionCookieVaultCodec.decodeLegacy(items)
+        guard !cookies.isEmpty else { return [:] }
+        guard (try? await write(cookies)) != nil else { return cookies }
+        for item in items {
+            try? await legacy.delete(account: item.account)
+        }
+        return cookies
+    }
+
+    private func write(_ cookies: [UUID: [StoredCookie]]) async throws {
+        try await vault.upsert(
+            account: Self.vaultAccount,
+            label: Self.label,
+            valueData: try SessionCookieVaultCodec.encode(cookies)
+        )
     }
 }

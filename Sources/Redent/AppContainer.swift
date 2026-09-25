@@ -92,6 +92,7 @@ final class AppContainer {
         coordinator.observer = downloads
         downloads.commands = coordinator
         Task { await permissions.load() }
+        KeychainMigration.run(credentials: credentials, authenticator: authenticator)
         observeWebAppLaunchers()
     }
 
