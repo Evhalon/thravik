@@ -13,10 +13,6 @@ public final class DefaultBrowserModel {
     /// Whether macOS currently hands web links to this app. Refreshed on
     /// demand — Launch Services has no change notification worth listening to.
     public private(set) var isDefault = false
-    /// Set when the user answered the system's panel with a no, so the sheet
-    /// can say so instead of closing as though it worked. Cleared while a new
-    /// attempt is in flight: the last answer is not this one's.
-    public private(set) var didFail = false
 
     private let manager: any DefaultBrowserManaging
     private let store: any DefaultBrowserPromptStoring
@@ -50,15 +46,18 @@ public final class DefaultBrowserModel {
         isDefault = await manager.isDefault()
     }
 
-    /// - Returns: whether the system agreed, so the caller knows to dismiss.
-    public func makeDefault() async -> Bool {
+    /// Hands the question to macOS and returns at once.
+    ///
+    /// The system's own panel is the confirmation, and its answer reaches
+    /// Launch Services seconds behind the click — so nothing waits on it to
+    /// decide whether to close, and nothing calls a slow yes a no.
+    public func requestDefault() {
+        guard !isWorking else { return }
         isWorking = true
-        didFail = false
-        defer { isWorking = false }
-        let succeeded = await manager.makeDefault()
-        isDefault = succeeded
-        didFail = !succeeded
-        return succeeded
+        Task {
+            isDefault = await manager.makeDefault()
+            isWorking = false
+        }
     }
 
     /// "Don't ask again" — the offer never comes back, on any release.

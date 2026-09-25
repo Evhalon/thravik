@@ -23,7 +23,7 @@ struct DefaultBrowserRow: View {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Palette.accent)
             } else {
-                Button("Make Default") { Task { await model.makeDefault() } }
+                Button("Make Default") { model.requestDefault() }
                     .disabled(model.isWorking)
             }
         }

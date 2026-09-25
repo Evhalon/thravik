@@ -25,14 +25,6 @@ public struct DefaultBrowserSheet: View {
                     + "come here instead of Safari. macOS will ask you to confirm."
             )
 
-            if model.didFail {
-                Text("macOS kept the current default. You can change it any time in "
-                     + "System Settings › Desktop & Dock.")
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(Palette.danger)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
             Spacer(minLength: 0)
             buttons
         }
@@ -50,15 +42,11 @@ public struct DefaultBrowserSheet: View {
 
             Spacer()
             Button("Not Now") { dismiss() }
-            Button("Use \(AppIdentity.displayName)", action: makeDefault)
-                .keyboardShortcut(.defaultAction)
-                .disabled(model.isWorking)
-        }
-    }
-
-    private func makeDefault() {
-        Task {
-            if await model.makeDefault() { dismiss() }
+            Button("Use \(AppIdentity.displayName)") {
+                model.requestDefault()
+                dismiss()
+            }
+            .keyboardShortcut(.defaultAction)
         }
     }
 }
