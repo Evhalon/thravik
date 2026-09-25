@@ -10,13 +10,9 @@ private struct PageCard: ViewModifier {
     @Environment(\.ambientTint) private var tint
 
     func body(content: Content) -> some View {
-        let shape = RoundedRectangle(
-            cornerRadius: isInset ? Metric.pageRadius : 0,
-            style: .continuous
-        )
-        return content
+        content
             .overlay { cornerCover }
-            .background { shadowPlate(shape) }
+            .background { shadowPlate(cardShape) }
             .animation(.spring(duration: 0.3), value: isInset)
     }
 
@@ -26,6 +22,9 @@ private struct PageCard: ViewModifier {
     /// They are painted with the window's own backdrop, laid at the same window
     /// position, so the corner shows exactly the glass behind it. Any flat fill
     /// stood out as a square notch against the tinted, wallpaper-lit slab.
+    ///
+    /// The card's shadow falls on that glass too, so the cover casts it again.
+    /// Without it the corners read as a pale halo against the darkened slab.
     @ViewBuilder
     private var cornerCover: some View {
         if isInset {
@@ -38,9 +37,24 @@ private struct PageCard: ViewModifier {
                     Palette.canvas
                 }
             }
+            .overlay { castShadow }
             .mask { CardSpandrels(radius: Metric.pageRadius).fill(style: FillStyle(eoFill: true)) }
             .allowsHitTesting(false)
         }
+    }
+
+    /// The plate's shadow with the plate itself cut away, so the corner's soft
+    /// edge blends page into glass rather than into a black rim.
+    private var castShadow: some View {
+        ZStack {
+            shadowPlate(cardShape)
+            cardShape.fill(.black).blendMode(.destinationOut)
+        }
+        .compositingGroup()
+    }
+
+    private var cardShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: isInset ? Metric.pageRadius : 0, style: .continuous)
     }
 
     /// The shadow belongs to a shape *behind* the card, not to the card itself.

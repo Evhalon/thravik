@@ -46,10 +46,11 @@ extension WebTab {
     /// A URL change with no load behind it is a same-document move — a router
     /// or an anchor — which never reaches the navigation delegate.
     func applyURL(_ url: URL?) {
-        // A failed TLS navigation clears WKWebView.url after the delegate has
-        // kept the attempted address for the warning. Do not turn that warning
-        // into a blank new tab.
-        guard url != nil || pageTrustIssue == nil else { return }
+        // A fresh view whose first load fails — offline, VPN not up yet, a TLS
+        // error, a cancel — clears WKWebView.url. Taken literally that erases
+        // the tab's address, and a tab with no address *is* the new-tab page:
+        // the sidebar keeps the page's title while the window shows home.
+        guard let url else { return }
         setLocation(url)
         if !isLoading, let webView { timelineRecorder.movedWithinDocument(self, webView: webView) }
         navigationEvents.locationChanged(self)

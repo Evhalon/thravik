@@ -57,6 +57,10 @@ public final class WebTab: Identifiable, BrowserTab {
     @ObservationIgnored var findRequestID: UInt = 0
 
     init(snapshot: TabSnapshot, controller: TabController?) {
+        var snapshot = snapshot
+        // A failed first load used to erase the address and it was saved that
+        // way; the tab's own path still knows where it was.
+        snapshot.url = snapshot.url ?? snapshot.timeline.current?.url
         self.id = snapshot.id
         self.snapshot = snapshot
         self.title = snapshot.title
