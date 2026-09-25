@@ -21,14 +21,27 @@ jobs:
       - name: Run quality gates
         run: make verify
 
-      - name: Build release
+      - name: Import Developer ID certificate
         env:
-          CODESIGN_IDENTITY: '-'
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: sh scripts/import-signing-identity.sh
+
+      - name: Build signed release
+        env:
+          REQUIRE_SIGNING: '1'
         run: |
           version="0.1.${GITHUB_RUN_NUMBER}"
           sh scripts/set-version.sh "$version" "$GITHUB_RUN_NUMBER"
           make release
           echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Notarize and staple
+        env:
+          NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: sh scripts/notarize-release.sh dist/Thravik-macOS.dmg
 
       - name: Publish GitHub release
         env:
