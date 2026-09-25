@@ -10,9 +10,11 @@ extension BrowserModel {
         suggestions.update(query: text, from: source, context: context)
         // Whatever return would open right now — the search engine for a
         // query, the site for an address — gets its handshake started early.
-        if let likely = AddressResolver.resolve(text, using: settings.searchEngine) {
-            tabs.preconnect(to: likely)
-        }
+        let likely = AddressResolver.resolve(text, using: settings.searchEngine)
+        if let likely { tabs.preconnect(to: likely) }
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let search = settings.searchEngine.searchURL(for: query)
+        prerenderSchedule.queryChanged(query, search: likely == search ? likely : nil, on: tabs)
     }
 
     /// Return in the address bar. ⌘-return keeps the current page and opens

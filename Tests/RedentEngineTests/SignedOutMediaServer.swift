@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import os
 import Testing
 
 /// A loopback server that plays the part of an Octane instance: the page's own
@@ -10,6 +11,10 @@ final class SignedOutMediaServer: Sendable {
     private let listener: NWListener
     private let video: Data
     private let servesVideoToFetch: Bool
+    private let pageRequests = OSAllocatedUnfairLock(initialState: 0)
+
+    /// How many times the page itself — not its video — was asked for.
+    var pageRequestCount: Int { pageRequests.withLock { $0 } }
 
     init(video: Data, servesVideoToFetch: Bool = true) throws {
         listener = try NWListener(using: .tcp, on: .any)
@@ -55,6 +60,8 @@ final class SignedOutMediaServer: Sendable {
     private func response(to request: String) -> Data {
         let path = request.split(separator: " ", maxSplits: 2).dropFirst().first ?? "/"
         guard path.hasSuffix(".mp4") else {
+            // A favicon lookup follows every finished load; it is not the page.
+            if !path.contains(".") { pageRequests.withLock { $0 += 1 } }
             return reply("200 OK", type: "text/html", body: Data(Self.page.utf8))
         }
         let signIn = Data(Self.signInPage.utf8)

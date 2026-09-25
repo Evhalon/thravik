@@ -47,6 +47,7 @@ public final class BrowserModel {
     @ObservationIgnored var webAppWrite: Task<Void, Never>?
 
     @ObservationIgnored private let visits: VisitRecorder
+    @ObservationIgnored let prerenderSchedule = SearchPrerenderSchedule()
     /// `internal` rather than `private`: the persistence policy lives in a
     /// sibling file to stay under the line limit.
     @ObservationIgnored var hasUnsavedChanges = false

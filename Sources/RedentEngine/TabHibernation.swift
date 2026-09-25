@@ -42,11 +42,7 @@ extension TabController {
     /// Builds the spare web view ahead of the first navigation, so opening a
     /// tab does not pay for a content process launch on the main thread.
     public func warmUp() {
-        let context = BrowsingContext.container(
-            workspace.spaces.first { $0.id == workspace.selectedSpaceID }?.containerID
-                ?? BrowserContainer.defaultID
-        )
-        warmer.prepare(store: contexts.store(for: context),
+        warmer.prepare(store: contexts.store(for: spaceContext),
                        options: PageContentOptions(settings), contentBlocker: contentBlocker)
     }
 
@@ -82,7 +78,7 @@ extension TabController {
     /// Compilation finishes after the first tabs exist. Attach then, and
     /// drop the spare so the next wake is built with the list already on it.
     func installCompiledBlockList() {
-        warmer.discard()
+        warmer.contentRulesChanged(contentBlocker)
         for tab in webTabs {
             tab.applySettingsChange(PageContentOptions(settings))
         }

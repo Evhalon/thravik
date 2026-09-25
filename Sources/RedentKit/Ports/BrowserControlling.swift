@@ -55,4 +55,6 @@ public protocol BrowserControlling: AnyObject {
     func sweepHibernation(now: Date, keeping: Set<UUID>)
     /// Opens the connection to `url`'s origin ahead of a likely navigation.
     func preconnect(to url: URL)
+    /// Loads the results page for a search ahead of return; `nil` drops it.
+    func prerender(_ url: URL?)
 }

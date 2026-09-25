@@ -19,6 +19,8 @@ final class WebViewWarmer {
     }
 
     private var spare: Spare?
+    /// The page return would show for the search being typed.
+    let prerenderer = SearchPrerenderer()
     private var isPreparing = false
     private var preconnectedAt: [String: Date] = [:]
 
@@ -66,9 +68,18 @@ final class WebViewWarmer {
     (document.head || document.documentElement).appendChild(link);
     """
 
-    /// Releases the spare and its process. Nothing on screen depends on it.
+    /// Releases the spare, any prerendered page, and their processes. Nothing
+    /// on screen depends on either.
     func discard() {
         spare = nil
+        prerenderer.discard()
+    }
+
+    /// The spare was built without the new rules and is cheap to build again;
+    /// the prerendered page gets them in place, like a live tab.
+    func contentRulesChanged(_ contentBlocker: ContentBlocker?) {
+        spare = nil
+        prerenderer.refreshContent(contentBlocker)
     }
 
     private func build(store: WKWebsiteDataStore, options: PageContentOptions, contentBlocker: ContentBlocker?) {

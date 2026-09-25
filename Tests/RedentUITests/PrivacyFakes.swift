@@ -99,6 +99,8 @@ final class FakeBrowser: BrowserControlling {
     func reopenLastClosed() {}
     func sweepHibernation(now: Date, keeping visible: Set<UUID>) {}
     func preconnect(to url: URL) {}
+    private(set) var prerendered: [URL?] = []
+    func prerender(_ url: URL?) { prerendered.append(url) }
 
     func forgetClosedTabs(matching domain: String) -> Int {
         forgottenDomains.append(domain)
