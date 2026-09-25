@@ -12,6 +12,7 @@ struct EngineResourcesTests {
         #expect(bundle.url(forResource: "adblock-catalog", withExtension: "json") != nil)
         #expect(bundle.url(forResource: "redent-page", withExtension: "js") != nil)
         #expect(bundle.url(forResource: "redent-media", withExtension: "js") != nil)
+        #expect(bundle.url(forResource: "redent-media-rescue", withExtension: "js") != nil)
     }
 
     @Test("A missing resource bundle degrades the catalog instead of trapping")
