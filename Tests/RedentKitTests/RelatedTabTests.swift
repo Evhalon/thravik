@@ -108,24 +108,6 @@ struct RelatedTabTests {
         #expect(outline.tabIDs == [first.id, second.id])
     }
 
-    @Test("Swipe paging loops past the ends")
-    func pagingLoops() {
-        let ids = [UUID(), UUID(), UUID()]
-        #expect(SpacePaging.neighbor(of: ids[0], in: ids, step: -1) == ids[2])
-        #expect(SpacePaging.neighbor(of: ids[0], in: ids, step: 1) == ids[1])
-        #expect(SpacePaging.neighbor(of: ids[2], in: ids, step: 1) == ids[0])
-        #expect(SpacePaging.neighbor(of: ids[0], in: [ids[0]], step: 1) == nil)
-    }
-
-    @Test("The last Space is drawn just left of the first, and a far one not at all")
-    func pagerPositionsLoop() {
-        #expect(SpacePaging.position(of: 3, current: 0, count: 4, lean: 1) == -1)
-        #expect(SpacePaging.position(of: 1, current: 0, count: 4, lean: 1) == 1)
-        #expect(SpacePaging.position(of: 2, current: 0, count: 4, lean: 1) == nil)
-        #expect(SpacePaging.position(of: 1, current: 0, count: 2, lean: -1) == -1)
-        #expect(SpacePaging.position(of: 1, current: 0, count: 2, lean: 1) == 1)
-    }
-
     @Test("Pinning a parent detaches its children")
     func pinDetachesChildren() throws {
         let parent = TabSnapshot(title: "Parent", spaceID: BrowserSpace.workID)

@@ -16,6 +16,9 @@ public struct SpaceSwipe: Equatable, Sendable {
     private static let axisSlop = 3.0
     /// Past the first or last Space the page moves this fraction of the fingers.
     private static let edgeResistance = 0.25
+    /// Sideways must clearly win: a slightly diagonal scroll of the list
+    /// would otherwise nudge the whole page and make the rail shimmy.
+    private static let horizontalDominance = 1.5
 
     public private(set) var axis: Axis = .undecided
     /// Raw finger travel; negative is towards the next Space.
@@ -56,7 +59,7 @@ public struct SpaceSwipe: Equatable, Sendable {
         pendingX += deltaX
         pendingY += deltaY
         guard abs(pendingX) + abs(pendingY) >= Self.axisSlop else { return }
-        axis = abs(pendingX) > abs(pendingY) ? .horizontal : .vertical
+        axis = abs(pendingX) > abs(pendingY) * Self.horizontalDominance ? .horizontal : .vertical
         if axis == .horizontal { travel = pendingX - deltaX }
     }
 }

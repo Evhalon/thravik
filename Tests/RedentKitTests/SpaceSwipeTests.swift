@@ -50,4 +50,13 @@ struct SpaceSwipeTests {
         #expect(swipe.offset(hasPrevious: true, hasNext: false) == -50)
         #expect(swipe.settle(pageWidth: 200, hasPrevious: true, hasNext: false) == 0)
     }
+
+    @Test("A diagonal scroll stays with the tab list instead of nudging the page")
+    func diagonalScrollIsVertical() {
+        var swipe = SpaceSwipe()
+        let first = swipe.add(deltaX: -4, deltaY: -3)
+        let next = swipe.add(deltaX: -6, deltaY: -5)
+        #expect(!first && !next)
+        #expect(swipe.axis == .vertical)
+    }
 }

@@ -5,7 +5,7 @@ import SwiftUI
 /// row under the fingers so the next Space is already in view before it is
 /// chosen; letting go settles on one page.
 ///
-/// The row loops: past the last Space the first slides in again.
+/// The row loops: past the last Space the first slides in again, one page on.
 /// Only the current Space and its two neighbours are built — enough to show
 /// what the swipe is heading for, without a live tab list per Space.
 struct SpacePager<Page: View>: View {
@@ -18,33 +18,50 @@ struct SpacePager<Page: View>: View {
     /// The way the row last turned, so with two Spaces the one just left
     /// slides out on the side it went.
     @State private var lastStep = 1
+    /// The page in view, counted without wrapping. Pages are identified by it
+    /// rather than by Space, so each keeps its place across the loop's seam.
+    @State private var anchor = 0
 
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .top) {
-                ForEach(nearby, id: \.space.id) { item in
-                    page(item.space)
+                ForEach(slots) { slot in
+                    page(slot.space)
                         .frame(width: proxy.size.width, height: proxy.size.height)
-                        .offset(x: CGFloat(item.position) * proxy.size.width + dragOffset)
+                        .offset(x: CGFloat(slot.side) * proxy.size.width + dragOffset)
+                        // A neighbour is clipped out of sight but would still
+                        // take clicks and scrolls meant for the web page beside
+                        // the rail, and select a tab in another Space.
+                        .allowsHitTesting(slot.side == 0)
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
             .clipped()
+            .contentShape(.rect)
+            // A jump of several Spaces cuts straight there: sliding would drag
+            // the pages in between across the rail.
+            .transaction { if abs(currentPage - anchor) > 1 { $0.animation = nil } }
             .overlay {
                 HorizontalSwipeCatcher(handlers: handlers(pageWidth: proxy.size.width))
                     .allowsHitTesting(false)
             }
         }
+        .onChange(of: currentPage) { _, page in anchor = page }
     }
 
     private var currentIndex: Int {
         spaces.firstIndex { $0.id == selectedID } ?? 0
     }
 
-    private var nearby: [(position: Int, space: BrowserSpace)] {
-        spaces.indices.compactMap { index in
-            SpacePaging.position(of: index, current: currentIndex, count: spaces.count, lean: lean)
-                .map { ($0, spaces[index]) }
+    private var currentPage: Int {
+        SpacePaging.nearestPage(showing: currentIndex, from: anchor, count: spaces.count, lean: lastStep)
+    }
+
+    private var slots: [Slot] {
+        let current = currentPage
+        return SpacePaging.sides(count: spaces.count, lean: lean).map { side in
+            let space = spaces[SpacePaging.index(ofPage: current + side, count: spaces.count)]
+            return Slot(page: current + side, side: side, space: space)
         }
     }
 
@@ -83,4 +100,18 @@ struct SpacePager<Page: View>: View {
             dragOffset = 0
         }
     }
+}
+
+/// One page drawn by the pager.
+private struct Slot: Identifiable {
+    struct ID: Hashable {
+        let page: Int
+        let spaceID: UUID
+    }
+
+    let page: Int
+    let side: Int
+    let space: BrowserSpace
+
+    var id: ID { ID(page: page, spaceID: space.id) }
 }
