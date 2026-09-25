@@ -11,6 +11,7 @@ extension WebTab {
             if let url, let webView { navigate(url, in: webView) }
             return
         }
+        if let url, adoptPrerendered(url) { return }
         let view = makeWebView()
         install(view)
         if let target = url ?? snapshot.url {
@@ -41,10 +42,20 @@ extension WebTab {
             return
         }
         // Loading before the saved session cookies are back would show the
-        // sign-in page to a user who never signed out.
+        // sign-in page to a user who never signed out. But the Keychain can be
+        // waiting on an unlock dialog, and a page must not wait on that: past
+        // the grace period it loads now and reloads once the sign-ins are back.
+        let gate = FirstLoadGate()
         Task { [weak view] in
             await restoration.value
-            view?.load(URLRequest(url: url))
+            guard let view else { return }
+            if gate.open() { view.load(URLRequest(url: url)) } else if view.backForwardList.backList.isEmpty {
+                view.reload()
+            }
+        }
+        Task { [weak view] in
+            try? await Task.sleep(for: FirstLoadGate.grace)
+            if let view, gate.open() { view.load(URLRequest(url: url)) }
         }
     }
 
@@ -62,7 +73,7 @@ extension WebTab {
     }
 
     /// Wires a view — however it was built — to this tab.
-    private func install(_ view: WKWebView) {
+    func install(_ view: WKWebView) {
         let delegate = WebTabNavigationDelegate(tab: self)
         view.navigationDelegate = delegate
         view.uiDelegate = delegate
@@ -78,5 +89,19 @@ extension WebTab {
         webView = view
         isHibernated = false
         setupObservers(on: view)
+    }
+}
+
+/// Whichever of the restore and the grace period ends first loads the page.
+@MainActor
+private final class FirstLoadGate {
+    /// A Keychain read that needs no dialog finishes well inside this.
+    static let grace = Duration.milliseconds(400)
+    private var isOpen = false
+
+    /// - Returns: true for the first caller only.
+    func open() -> Bool {
+        defer { isOpen = true }
+        return !isOpen
     }
 }
