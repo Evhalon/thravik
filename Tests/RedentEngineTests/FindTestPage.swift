@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import RedentKit
 import Testing
@@ -7,6 +8,13 @@ import WebKit
 /// A real tab showing a small page, once the find script has reached it.
 @MainActor
 enum FindTestPage {
+    /// Tabs are built with `inactiveSchedulingPolicy = .suspend`, and a view
+    /// outside a window counts as inactive: on a loaded CI runner WebKit could
+    /// suspend the page before its load ever ran. Find is only used on a page
+    /// that is on screen, so the test page is too. Kept for the process's life
+    /// because nothing else retains a window that is only ordered in.
+    private static var windows: [NSWindow] = []
+
     static func saying(_ body: String, head: String = "") async throws -> WebTab {
         let controller = TabController(
             session: BrowserSession(tabs: [TabSnapshot()], selectedTabID: nil),
@@ -17,19 +25,39 @@ enum FindTestPage {
         tab.wake(loading: nil)
         let view = try #require(tab.webView)
         // A real viewport, so a match can be off screen and need revealing.
-        view.frame = CGRect(x: 0, y: 0, width: 800, height: 600)
-        view.loadHTMLString("<head>\(head)</head><body>\(body)</body>", baseURL: URL(string: "https://example.com"))
-        for _ in 0..<200 {
+        show(view, width: 800, height: 600)
+        let html = "<head>\(head)</head><body>\(body)</body>"
+        for _ in 0..<2 {
+            view.loadHTMLString(html, baseURL: URL(string: "https://example.com"))
+            if try await scriptArrives(in: view, within: .seconds(10)) { return tab }
+        }
+        Issue.record("The find script never reached the page")
+        return tab
+    }
+
+    private static func show(_ view: WKWebView, width: CGFloat, height: CGFloat) {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: width, height: height),
+            styleMask: [.titled], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.contentView = view
+        window.orderFrontRegardless()
+        windows.append(window)
+    }
+
+    private static func scriptArrives(in view: WKWebView, within limit: Duration) async throws -> Bool {
+        let deadline = ContinuousClock.now + limit
+        while ContinuousClock.now < deadline {
             let ready = try? await view.callAsyncJavaScript(
                 "return typeof window.redentFind === 'function' && !!document.body",
                 in: nil,
                 contentWorld: PageScripts.contentWorld
             ) as? Bool
-            if ready == true { return tab }
+            if ready == true { return true }
             try await Task.sleep(for: .milliseconds(20))
         }
-        Issue.record("The find script never reached the page")
-        return tab
+        return false
     }
 }
 
