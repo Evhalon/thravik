@@ -26,11 +26,11 @@ enum FindTestPage {
         let view = try #require(tab.webView)
         // A real viewport, so a match can be off screen and need revealing.
         show(view, width: 800, height: 600)
-        let html = "<head>\(head)</head><body>\(body)</body>"
-        for _ in 0..<2 {
-            view.loadHTMLString(html, baseURL: URL(string: "https://example.com"))
-            if try await scriptArrives(in: view, within: .seconds(10)) { return tab }
-        }
+        view.loadHTMLString("<head>\(head)</head><body>\(body)</body>", baseURL: URL(string: "https://example.com"))
+        // Generous, because a loaded runner can stall every web view for tens
+        // of seconds. Never reload to recover: a slow first load would land
+        // later and wipe the find state mid-test.
+        if try await pageIsReady(view, within: .seconds(60)) { return tab }
         Issue.record("The find script never reached the page")
         return tab
     }
@@ -46,7 +46,8 @@ enum FindTestPage {
         windows.append(window)
     }
 
-    private static func scriptArrives(in view: WKWebView, within limit: Duration) async throws -> Bool {
+    /// Settled too, so no pending navigation can replace the page under the test.
+    private static func pageIsReady(_ view: WKWebView, within limit: Duration) async throws -> Bool {
         let deadline = ContinuousClock.now + limit
         while ContinuousClock.now < deadline {
             let ready = try? await view.callAsyncJavaScript(
@@ -54,7 +55,7 @@ enum FindTestPage {
                 in: nil,
                 contentWorld: PageScripts.contentWorld
             ) as? Bool
-            if ready == true { return true }
+            if ready == true, !view.isLoading { return true }
             try await Task.sleep(for: .milliseconds(20))
         }
         return false
