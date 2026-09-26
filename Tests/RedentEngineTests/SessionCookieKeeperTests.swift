@@ -27,6 +27,33 @@ struct SessionCookieKeeperTests {
         #expect(registry.cookieRestoration(for: context) == nil)
     }
 
+    /// WebKit notifies only the first cookie change, so a sign-in after it
+    /// was never saved and the user was signed out at the next launch.
+    @Test("Every sign-in during a session is saved, not only the first")
+    func savesLaterSignIns() async throws {
+        let container = UUID()
+        let storage = MemoryCookieStorage(cookies: [:])
+        let registry = BrowsingContextRegistry(sessionCookies: storage)
+        let context = BrowsingContext.container(container)
+        let cookies = registry.store(for: context).httpCookieStore
+        await registry.cookieRestoration(for: context)?.value
+
+        for token in ["first", "second"] {
+            await cookies.setCookie(try #require(Self.sessionCookie(value: token)))
+            await registry.flushSessionCookies()
+        }
+
+        let saved = await storage.load(container: container)
+        #expect(saved.map(\.value) == ["second"])
+    }
+
+    private static func sessionCookie(value: String) -> HTTPCookie? {
+        StoredCookie(
+            name: "SESSION", value: value, domain: "app.example.lan", path: "/",
+            flags: (isSecure: false, isHTTPOnly: true)
+        ).httpCookie
+    }
+
     @Test("A private window never restores or keeps session cookies")
     func ephemeralIsIgnored() {
         let registry = BrowsingContextRegistry(sessionCookies: MemoryCookieStorage(cookies: [:]))

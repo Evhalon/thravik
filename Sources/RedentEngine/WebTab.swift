@@ -140,5 +140,8 @@ public final class WebTab: Identifiable, BrowserTab {
         pageTrustIssue = trustIssue
     }
 
-    func finishNavigation() { attemptedURL = nil }
+    func finishNavigation() {
+        attemptedURL = nil
+        controller?.contexts.pageDidLoad(in: snapshot.browsingContext)
+    }
 }

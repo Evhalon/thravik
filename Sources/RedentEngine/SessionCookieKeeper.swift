@@ -5,8 +5,9 @@ import WebKit
 /// Mirrors one Container's session cookies into durable storage, and puts them
 /// back into its store at launch before any page asks for them.
 ///
-/// Saves follow WebKit's own change notifications, so a force-quit loses at
-/// most the last `saveDelay` of changes rather than everything since launch.
+/// WebKit reports only the first cookie change after an observer registers,
+/// so its notice alone saved one change per launch and lost every later
+/// sign-in. Page loads and the app's way out trigger saves as well.
 @MainActor
 final class SessionCookieKeeper: NSObject, WKHTTPCookieStoreObserver {
     private static let saveDelay = Duration.seconds(1)
@@ -34,6 +35,21 @@ final class SessionCookieKeeper: NSObject, WKHTTPCookieStoreObserver {
         MainActor.assumeIsolated { scheduleSave() }
     }
 
+    /// A page finished loading: the moment a sign-in's cookies have settled.
+    func pageDidLoad() {
+        guard restoration == nil else { return }
+        scheduleSave()
+    }
+
+    /// Writes now. Skipped until the restore is done, since saving the store
+    /// before its saved cookies are back would erase them.
+    func flush() async {
+        guard restoration == nil else { return }
+        pendingSave?.cancel()
+        pendingSave = nil
+        await save()
+    }
+
     func forget() async {
         pendingSave?.cancel()
         cookieStore.remove(self)
@@ -53,6 +69,8 @@ final class SessionCookieKeeper: NSObject, WKHTTPCookieStoreObserver {
         // Observing only now keeps the restore itself from triggering a save.
         cookieStore.add(self)
         restoration = nil
+        // A page may have signed in while the restore was still running.
+        scheduleSave()
     }
 
     private func scheduleSave() {

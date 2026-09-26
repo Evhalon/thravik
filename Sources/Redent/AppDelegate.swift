@@ -27,6 +27,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// common case when a click in Mail is what launched the app.
     @MainActor private var pendingLinks: [URL] = []
     @MainActor private var awaitsWindowForExternalLink = false
+    @MainActor private var didAnswerTermination = false
+    /// A Keychain dialog nobody answers must not keep the app from quitting.
+    private static let cookieFlushLimit = Duration.seconds(2)
 
     /// Register before launch completes so the URL that starts Redent is not
     /// consumed by SwiftUI as a request for an empty window.
@@ -62,6 +65,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
+    }
+
+    /// Leaving the app is often the step before quitting or force-quitting it.
+    @MainActor
+    func applicationDidResignActive(_ notification: Notification) {
+        guard let contexts = container?.contexts else { return }
+        Task { await contexts.flushSessionCookies() }
+    }
+
+    /// Session cookies are written before the process goes, so a sign-in made
+    /// just before quitting is still there at the next launch.
+    @MainActor
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let contexts = container?.contexts else { return .terminateNow }
+        Task {
+            await contexts.flushSessionCookies()
+            answerTermination(sender)
+        }
+        Task {
+            try? await Task.sleep(for: Self.cookieFlushLimit)
+            answerTermination(sender)
+        }
+        return .terminateLater
+    }
+
+    @MainActor
+    private func answerTermination(_ sender: NSApplication) {
+        guard !didAnswerTermination else { return }
+        didAnswerTermination = true
+        sender.reply(toApplicationShouldTerminate: true)
     }
 
     @MainActor

@@ -44,6 +44,18 @@ public final class BrowsingContextRegistry {
         return cookieKeepers[id]?.restoration
     }
 
+    /// WebKit's cookie-change notice cannot be relied on past the first
+    /// change, so a finished page load is when a sign-in gets saved.
+    func pageDidLoad(in context: BrowsingContext) {
+        guard let id = context.containerID else { return }
+        cookieKeepers[id]?.pageDidLoad()
+    }
+
+    /// Writes every Container's session cookies now, before the app goes.
+    public func flushSessionCookies() async {
+        for keeper in cookieKeepers.values { await keeper.flush() }
+    }
+
     /// Re-counts one owner's live tabs in a single pass. Called after any tab
     /// mutation, so the registry cannot drift out of step with the tab list the
     /// way paired retain/release calls would.
