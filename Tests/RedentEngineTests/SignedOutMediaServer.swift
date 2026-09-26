@@ -11,15 +11,19 @@ final class SignedOutMediaServer: Sendable {
     private let listener: NWListener
     private let video: Data
     private let servesVideoToFetch: Bool
+    private let responseDelay: DispatchTimeInterval
     private let pageRequests = OSAllocatedUnfairLock(initialState: 0)
 
     /// How many times the page itself — not its video — was asked for.
     var pageRequestCount: Int { pageRequests.withLock { $0 } }
 
-    init(video: Data, servesVideoToFetch: Bool = true) throws {
+    /// - Parameter responseDelay: how long each answer is held back, to keep
+    ///   a page from committing while a test acts on its request.
+    init(video: Data, servesVideoToFetch: Bool = true, responseDelay: DispatchTimeInterval = .seconds(0)) throws {
         listener = try NWListener(using: .tcp, on: .any)
         self.video = video
         self.servesVideoToFetch = servesVideoToFetch
+        self.responseDelay = responseDelay
     }
 
     /// - Returns: the page's address once the listener is accepting.
@@ -51,9 +55,10 @@ final class SignedOutMediaServer: Sendable {
         connection.start(queue: .global())
         connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [self] data, _, _, _ in
             let request = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-            connection.send(content: response(to: request), completion: .contentProcessed { _ in
-                connection.cancel()
-            })
+            let answer = response(to: request)
+            DispatchQueue.global().asyncAfter(deadline: .now() + responseDelay) {
+                connection.send(content: answer, completion: .contentProcessed { _ in connection.cancel() })
+            }
         }
     }
 

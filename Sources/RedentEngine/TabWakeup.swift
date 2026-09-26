@@ -49,9 +49,7 @@ extension WebTab {
         Task { [weak view] in
             await restoration.value
             guard let view else { return }
-            if gate.open() { view.load(URLRequest(url: url)) } else if view.backForwardList.backList.isEmpty {
-                view.reload()
-            }
+            if gate.open() { view.load(URLRequest(url: url)) } else { FirstLoadGate.reload(url, in: view) }
         }
         Task { [weak view] in
             try? await Task.sleep(for: FirstLoadGate.grace)
@@ -103,5 +101,14 @@ private final class FirstLoadGate {
     func open() -> Bool {
         defer { isOpen = true }
         return !isOpen
+    }
+
+    /// Loads the first page again now that the sign-ins are back, unless the
+    /// user has moved on. Before that page commits there is nothing for
+    /// `reload()` to reload, so the load still in flight is started over.
+    static func reload(_ url: URL, in view: WKWebView) {
+        let history = view.backForwardList
+        guard history.backList.isEmpty else { return }
+        if history.currentItem == nil { view.load(URLRequest(url: url)) } else { view.reload() }
     }
 }

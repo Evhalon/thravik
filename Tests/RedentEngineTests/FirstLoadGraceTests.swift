@@ -13,20 +13,42 @@ struct FirstLoadGraceTests {
     func loadsThenReloads() async throws {
         let server = try SignedOutMediaServer(video: Data())
         defer { server.stop() }
-        let url = try await server.start()
-        let storage = UnlockPendingStorage()
-        let registry = BrowsingContextRegistry(sessionCookies: storage)
-        let controller = TabController(
-            session: BrowserSession(tabs: [TabSnapshot(url: url)], selectedTabID: nil),
-            settings: BrowserSettings(), logger: SilentGraceLogger(), contexts: registry
-        )
+        let (controller, storage) = try await makeController(url: server.start())
         let tab = try #require(controller.webTabs.first)
 
         tab.wake(loading: nil)
         #expect(try await settles { server.pageRequestCount == 1 })
+        #expect(try await settles { tab.webView?.backForwardList.currentItem != nil })
 
         await storage.unlock()
         #expect(try await settles { server.pageRequestCount == 2 })
+    }
+
+    /// `reload()` does nothing before a page commits, so an unlock landing
+    /// while the first page was still on its way used to lose the sign-ins.
+    @Test("An unlock before the first page commits still loads it signed in")
+    func unlockBeforeCommitLoadsAgain() async throws {
+        let server = try SignedOutMediaServer(video: Data(), responseDelay: .seconds(2))
+        defer { server.stop() }
+        let (controller, storage) = try await makeController(url: server.start())
+        let tab = try #require(controller.webTabs.first)
+
+        tab.wake(loading: nil)
+        #expect(try await settles { server.pageRequestCount == 1 })
+        #expect(tab.webView?.backForwardList.currentItem == nil)
+
+        await storage.unlock()
+        #expect(try await settles { server.pageRequestCount == 2 })
+    }
+
+    private func makeController(url: URL) -> (TabController, UnlockPendingStorage) {
+        let storage = UnlockPendingStorage()
+        let controller = TabController(
+            session: BrowserSession(tabs: [TabSnapshot(url: url)], selectedTabID: nil),
+            settings: BrowserSettings(), logger: SilentGraceLogger(),
+            contexts: BrowsingContextRegistry(sessionCookies: storage)
+        )
+        return (controller, storage)
     }
 
     private func settles(_ condition: () -> Bool) async throws -> Bool {
