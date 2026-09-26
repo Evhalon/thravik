@@ -46,8 +46,7 @@ final class AppContainer {
     /// The same click can reach the app twice, through SwiftUI and AppKit.
     @ObservationIgnored var linkDebouncer = ExternalLinkDebouncer()
 
-    /// Restored once, and handed to the primary window whenever it is built.
-    private var restoredSession: Result<BrowserSession, any Error>
+    @ObservationIgnored private var primaryWorkspace: PrimaryWorkspace
     /// Readable beyond this file, and only here: the update wiring in a
     /// sibling file has to reach every window to clear its sheet before the
     /// process can quit.
@@ -65,9 +64,9 @@ final class AppContainer {
         let sessionStore = UserDefaultsSessionStore()
         self.sessionStore = sessionStore
         if settingsStore.load().reopensTabsOnLaunch {
-            self.restoredSession = Result { try sessionStore.loadRecoverable() }
+            self.primaryWorkspace = PrimaryWorkspace(restored: Result { try sessionStore.loadRecoverable() })
         } else {
-            self.restoredSession = .success(BrowserSession())
+            self.primaryWorkspace = PrimaryWorkspace(restored: .success(BrowserSession()))
         }
 
         self.webAppInstaller = WebAppBundleInstaller(host: .current(), logger: logger)
@@ -106,7 +105,11 @@ final class AppContainer {
     }
 
     func releaseWindow(_ spec: BrowserWindowSpec) {
-        windows.removeValue(forKey: spec)?.retire()
+        let released = windows.removeValue(forKey: spec)
+        released?.retire()
+        if spec.isPrimary, let released {
+            primaryWorkspace.windowReleased(with: released.model.durableSession())
+        }
         if let appID = spec.webApp?.appID { webAppWindowClosed(appID) }
     }
 
@@ -114,13 +117,13 @@ final class AppContainer {
     /// primary window, a blank one for every other.
     func startingSession(for spec: BrowserWindowSpec) -> BrowserSession {
         guard spec.isPrimary else { return spec.webApp?.session ?? BrowserSession() }
-        return (try? restoredSession.get()) ?? BrowserSession()
+        return primaryWorkspace.session
     }
 
     /// The saved workspace could not be read. Reported once, by the window that
     /// would have shown it.
     func restoreFailureMessage(for spec: BrowserWindowSpec) -> String? {
-        guard spec.isPrimary, case .failure = restoredSession else { return nil }
+        guard spec.isPrimary, primaryWorkspace.restoreFailed else { return nil }
         return "Saved workspace could not be restored. Original data was preserved."
     }
 

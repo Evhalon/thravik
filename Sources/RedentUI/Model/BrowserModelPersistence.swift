@@ -63,7 +63,8 @@ extension BrowserModel {
         settingsStore.save(settings)
     }
 
-    private func durableSession() -> BrowserSession {
+    /// What the window would restore to: its tabs plus the split it shows.
+    public func durableSession() -> BrowserSession {
         var session = tabs.session
         session.splitLayout = split
         return session
