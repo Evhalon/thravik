@@ -14,11 +14,17 @@ enum AppTermination {
     private static let maximumWaitAttempts = 40
 
     @MainActor
-    static func quit(dismissing dismissPresentations: @MainActor () -> Void) {
+    static func quit(
+        dismissing dismissPresentations: @MainActor () -> Void,
+        terminate: @escaping @MainActor () -> Void = { NSApp.terminate(nil) }
+    ) {
         dismissPresentations()
         Task { @MainActor in
             await waitForSheetsToDetach()
-            NSApp.terminate(nil)
+            // Not from inside this task: `terminate` spins a nested event loop
+            // until the delegate answers, and the delegate answers from main-actor
+            // tasks that cannot start while this one still holds the actor.
+            RunLoop.main.perform { MainActor.assumeIsolated(terminate) }
         }
     }
 
