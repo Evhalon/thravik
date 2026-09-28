@@ -24,11 +24,14 @@ final class DevToolsPanel {
 
     @ObservationIgnored private let tap: WebInspectorTap
     @ObservationIgnored private let host = DevToolsHostChannel()
+    @ObservationIgnored private lazy var saver = DevToolsFileSaver(frontend: frontend)
     @ObservationIgnored private var waiting: [String] = []
     @ObservationIgnored private var isReady = false
     @ObservationIgnored private var isClosed = false
 
-    init?(inspecting webView: WKWebView) {
+    /// `panel` names the panel to open on, such as `"console"`; nil keeps the
+    /// one DevTools showed last.
+    init?(inspecting webView: WKWebView, panel: String? = nil) {
         let scheme = DevToolsFrontendScheme()
         guard scheme.isAvailable, let hostScript = DevToolsHostChannel.script else { return nil }
         let configuration = WKWebViewConfiguration()
@@ -38,6 +41,9 @@ final class DevToolsPanel {
         configuration.userContentController.addUserScript(
             WKUserScript(source: hostScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
+        if let panel {
+            configuration.userContentController.addUserScript(Self.selectingPanel(panel))
+        }
         configuration.userContentController.add(host, name: DevToolsHostChannel.handlerName)
         frontend = WKWebView(frame: .zero, configuration: configuration)
         tap = WebInspectorTap(webView: webView)
@@ -48,6 +54,8 @@ final class DevToolsPanel {
         host.onClose = { [weak self] in self?.close() }
         host.onOpenURL = { [weak self] in self?.onOpenURL?($0) }
         host.onPageBounds = { [weak self] in self?.pageBounds = $0 }
+        host.onSave = { [weak self] in self?.saver.save($0) }
+        host.onAppend = { [weak self] in self?.saver.append(url: $0, content: $1) }
         host.onDeviceScale = { [weak self] in
             self?.deviceScale = $0
             self?.onDeviceScaleChange?()
@@ -86,6 +94,14 @@ final class DevToolsPanel {
         frontend.callAsyncJavaScript(
             "InspectorFrontendAPI.dispatchMessage(message)", arguments: ["message": message], in: nil, in: .page
         )
+    }
+
+    /// DevTools opens on the panel its stored preference names, so the choice
+    /// is written there before the frontend reads it.
+    private static func selectingPanel(_ panel: String) -> WKUserScript {
+        let name = panel.filter { $0.isLetter || $0 == "-" }
+        let source = #"localStorage.setItem("panel-selected-tab", JSON.stringify("\#(name)"));"#
+        return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
     }
 
     private static let storeID = UUID(uuidString: "6C1B3A52-0B0E-4E57-9E0D-DE7700151A00") ?? UUID()

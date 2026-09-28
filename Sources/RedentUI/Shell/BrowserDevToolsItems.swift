@@ -12,5 +12,8 @@ struct BrowserDevToolsItems: View {
         }
         .keyboardShortcut("i", modifiers: [.command, .option])
         .disabled(!(model?.canToggleDevTools ?? false))
+        Button("JavaScript Console") { model?.toggleConsole() }
+            .keyboardShortcut("j", modifiers: [.command, .option])
+            .disabled(!(model?.canToggleDevTools ?? false))
     }
 }

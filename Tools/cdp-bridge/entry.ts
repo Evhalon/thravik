@@ -9,10 +9,13 @@
 
 import { Session, isSessionID, type Message } from "./cdp/session";
 import { installConsole } from "./cdp/console";
+import { installCSS } from "./cdp/css";
 import { installDebugger } from "./cdp/debugger";
+import { installDOM } from "./cdp/dom";
 import { installEmulation } from "./cdp/emulation";
 import { installFallback } from "./cdp/fallback";
 import { installNetwork } from "./cdp/network";
+import { installOverlay } from "./cdp/overlay";
 import { installPage } from "./cdp/page";
 import { installRuntime } from "./cdp/runtime";
 
@@ -50,8 +53,14 @@ function route(active: Session, message: unknown): boolean {
   const inner = parse(outer.params?.message);
   if (!inner) return true;
   active.fromBackend(inner);
+  if (WITHHELD.has(inner.method ?? "")) return false;
   return !isSessionID(inner.id);
 }
+
+// Events the hidden Web Inspector answers by bringing its window to the
+// front — a pause, a picked element, `inspect()`. Chrome's DevTools is the one
+// showing them, so the hidden one never hears of them.
+const WITHHELD = new Set(["Debugger.paused", "Debugger.resumed", "DOM.inspect", "Inspector.inspect"]);
 
 function tap(name: string) {
   const original = InspectorFrontendAPI[name];
@@ -62,7 +71,32 @@ function tap(name: string) {
   };
 }
 
+let bringToFront: (() => void) | null = null;
+
+/** Keeps the hidden Web Inspector hidden whatever else asks it to show. */
+function holdWindowBack() {
+  const host = InspectorFrontendHost as any;
+  if (bringToFront || typeof host.bringToFront !== "function") return;
+  bringToFront = host.bringToFront;
+  try {
+    host.bringToFront = () => {};
+  } catch {
+    bringToFront = null;
+  }
+}
+
+function releaseWindow() {
+  if (!bringToFront) return;
+  try {
+    (InspectorFrontendHost as any).bringToFront = bringToFront;
+  } catch {
+    // Left in place: the tab's Web Inspector is closed with the tap anyway.
+  }
+  bringToFront = null;
+}
+
 function attach() {
+  holdWindowBack();
   const transport = {
     toBackend: (raw: string) => InspectorFrontendHost.sendMessageToBackend(raw),
     toTools: toNative,
@@ -74,6 +108,9 @@ function attach() {
   installNetwork(session);
   installDebugger(session);
   installEmulation(session);
+  installDOM(session);
+  installOverlay(session);
+  installCSS(session);
   installFallback(session);
 }
 
@@ -81,7 +118,10 @@ if (!(window as any).__redentDevTools) {
   DISPATCHERS.forEach(tap);
   (window as any).__redentDevTools = {
     attach,
-    detach: () => { session = null; },
+    detach: () => {
+      session = null;
+      releaseWindow();
+    },
     fromTools: (raw: string) => session?.fromTools(raw),
   };
 }

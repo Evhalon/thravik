@@ -13,6 +13,32 @@
   const notImplemented = { error: "Not available in Redent" };
   const noop = () => {};
 
+  // Chrome gives every shadow root its own selection; WebKit keeps one per
+  // document and has no `ShadowRoot.getSelection`. Tree rows ask it on every
+  // click before toggling, so without it expanding a console object or a
+  // network section threw, and only a double click still got through.
+  if (typeof ShadowRoot.prototype.getSelection !== "function") {
+    ShadowRoot.prototype.getSelection = function () { return this.ownerDocument.getSelection(); };
+  }
+
+  // Chrome's frontend defers work — parsing in the Sources editor, queued
+  // panel updates — to idle time and background tasks, through APIs WebKit
+  // lacks and calls unchecked; each call would throw instead of running.
+  if (typeof globalThis.requestIdleCallback !== "function") {
+    globalThis.requestIdleCallback = (callback, options) => setTimeout(() => {
+      const start = performance.now();
+      callback({ didTimeout: false, timeRemaining: () => Math.max(0, 50 - (performance.now() - start)) });
+    }, Math.min(options?.timeout ?? 1, 1));
+    globalThis.cancelIdleCallback = (id) => clearTimeout(id);
+  }
+  if (typeof globalThis.scheduler !== "object") {
+    const later = (delay) => new Promise((resolve) => setTimeout(resolve, delay ?? 0));
+    globalThis.scheduler = {
+      postTask: (task, options) => later(options?.delay).then(() => task()),
+      yield: () => later(0),
+    };
+  }
+
   // Device mode lays the emulated screen out in the rectangle it reports for
   // the page, already shrunk to fit; Redent zooms the page by the same scale
   // so it still lays out at the device's own width. Everything else about the
@@ -49,8 +75,12 @@
     openInNewTab: (url) => post({ kind: "open", url: String(url) }),
     openSearchResultsInNewTab: noop,
     showItemInFolder: noop,
-    save: noop,
-    append: noop,
+    // Redent asks where in a save panel, then answers with `savedURL` or
+    // `canceledSaveURL`, and `appendedToURL` for each streamed chunk.
+    save: (url, content, forceSaveAs, isBase64) => post({
+      kind: "save", url: String(url), content: String(content ?? ""), forceSaveAs: !!forceSaveAs, base64: !!isBase64,
+    }),
+    append: (url, content) => post({ kind: "append", url: String(url), content: String(content ?? "") }),
     close: noop,
     getPreferences: (callback) => {
       const preferences = {};

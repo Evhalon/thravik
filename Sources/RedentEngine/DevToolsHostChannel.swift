@@ -17,6 +17,9 @@ final class DevToolsHostChannel: NSObject, WKScriptMessageHandler {
     var onPageBounds: ((CGRect) -> Void)?
     /// How far device mode shrank the emulated screen; nil when it stops.
     var onDeviceScale: ((Double?) -> Void)?
+    /// A file DevTools wants saved, then the text it streams into it.
+    var onSave: ((DevToolsFileSaver.Request) -> Void)?
+    var onAppend: ((_ url: String, _ content: String) -> Void)?
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let kind = body["kind"] as? String else { return }
@@ -40,6 +43,15 @@ final class DevToolsHostChannel: NSObject, WKScriptMessageHandler {
             onPageBounds?(CGRect(x: value("x"), y: value("y"), width: value("width"), height: value("height")))
         case "device":
             onDeviceScale?((body["scale"] as? NSNumber)?.doubleValue)
+        case "save":
+            guard let url = body["url"] as? String, let content = body["content"] as? String else { return }
+            onSave?(.init(
+                url: url, content: content,
+                isBase64: (body["base64"] as? Bool) == true, forceSaveAs: (body["forceSaveAs"] as? Bool) == true
+            ))
+        case "append":
+            guard let url = body["url"] as? String, let content = body["content"] as? String else { return }
+            onAppend?(url, content)
         default:
             break
         }

@@ -26,6 +26,10 @@ export class SessionState {
   debuggerEnabled = false;
   /** Domains whose earlier state WebKit already replayed to this session. */
   readonly replayed = new Set<string>();
+  /** Every DOM node Chrome has been told about, without its children:
+   *  WebKit cannot describe a node on request, so the bridge remembers. */
+  readonly nodes = new Map<number, any>();
+  private sources = new Map<string, string>();
   private contextsByFrame = new Map<string, number[]>();
   private originsByFrame = new Map<string, string>();
 
@@ -54,6 +58,17 @@ export class SessionState {
 
   origin(frameId: string): string {
     return this.originsByFrame.get(frameId) ?? "";
+  }
+
+  /** A parsed script's text, fetched once. Large bundles are skipped: they
+   *  are read only to find top-level names for autocompletion. */
+  async scriptSource(scriptId: string, fetch: (id: string) => Promise<any>): Promise<string> {
+    const known = this.sources.get(scriptId);
+    if (known !== undefined) return known;
+    const text = await fetch(scriptId).then((r) => String(r.scriptSource ?? "")).catch(() => "");
+    const kept = text.length > 2_000_000 ? "" : text;
+    this.sources.set(scriptId, kept);
+    return kept;
   }
 
   readonly isAnnounced = (scriptId: string): boolean => this.debuggerEnabled && this.scripts.has(scriptId);

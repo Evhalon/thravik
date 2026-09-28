@@ -49,13 +49,37 @@ export function preview(p: any): any {
     type: p.type,
     description: p.description,
     overflow: !!p.overflow,
-    properties: (p.properties ?? []).filter((q: any) => !q.internal).map(propertyPreview),
+    properties: (p.properties ?? []).map((q: any) => (q.internal ? internalPreview(q) : propertyPreview(q))).filter(Boolean),
   };
   if (p.subtype && SUBTYPES.has(p.subtype)) out.subtype = p.subtype;
   if (p.entries) out.entries = p.entries.map((e: any) => ({
     ...(e.key ? { key: preview(e.key) } : {}),
     value: preview(e.value),
   }));
+  return out;
+}
+
+/** WebKit's internal slots, as the `[[Name]]` Chrome shows them under. */
+export const INTERNAL_NAMES: Record<string, string> = {
+  status: "[[PromiseState]]",
+  result: "[[PromiseResult]]",
+  targetFunction: "[[TargetFunction]]",
+  boundThis: "[[BoundThis]]",
+  boundArgs: "[[BoundArgs]]",
+  target: "[[Target]]",
+  handler: "[[Handler]]",
+  iteratedObject: "[[IteratorTarget]]",
+  iterationKind: "[[IteratorKind]]",
+};
+
+export function internalName(name: string): string {
+  return INTERNAL_NAMES[name] ?? `[[${name.charAt(0).toUpperCase()}${name.slice(1)}]]`;
+}
+
+function internalPreview(q: any): any {
+  const out = propertyPreview(q);
+  out.name = internalName(q.name);
+  if (q.name === "status" && out.value === "resolved") out.value = "fulfilled";
   return out;
 }
 
@@ -94,7 +118,8 @@ export function stackTrace(st: any, isKnown: (scriptId: string) => boolean = () 
 
 export function callFrame(f: any): any {
   return {
-    functionName: f.functionName ?? "",
+    // Chrome names top-level code `(anonymous)`, which an empty name draws.
+    functionName: f.functionName === "global code" || f.functionName === "eval code" ? "" : f.functionName ?? "",
     scriptId: String(f.scriptId ?? "0"),
     url: f.url ?? "",
     lineNumber: zeroBased(f.lineNumber),

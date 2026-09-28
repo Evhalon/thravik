@@ -6,39 +6,42 @@
 // collection's entries through a separate command.
 
 import type { Session } from "./session";
-import { remoteObject } from "./values";
-
-const INTERNAL_NAMES: Record<string, string> = {
-  status: "[[PromiseState]]",
-  result: "[[PromiseResult]]",
-  targetFunction: "[[TargetFunction]]",
-  boundThis: "[[BoundThis]]",
-  boundArgs: "[[BoundArgs]]",
-  target: "[[Target]]",
-  handler: "[[Handler]]",
-  iteratedObject: "[[IteratorTarget]]",
-  iterationKind: "[[IteratorKind]]",
-};
+import { internalName, remoteObject } from "./values";
 
 // A collection's entries are listed under a synthetic object id: Chrome
 // expands `[[Entries]]` by asking for that id's properties.
 const ENTRIES_PREFIX = "redent-entries:";
+// A function's closures, likewise, under `[[Scopes]]`.
+const SCOPES_PREFIX = "redent-scopes:";
+
+const SCOPE_TITLES: Record<string, string> = {
+  global: "Global", with: "With Block", closure: "Closure", catch: "Catch", functionName: "Closure",
+  globalLexicalEnvironment: "Script", nestedLexical: "Block",
+};
 
 export function installProperties(s: Session) {
   s.handle("Runtime.getProperties", async (p) => {
     if (typeof p.objectId === "string" && p.objectId.startsWith(ENTRIES_PREFIX)) {
       return entries(s, p.objectId.slice(ENTRIES_PREFIX.length));
     }
-    const [r, preview] = await Promise.all([
+    if (typeof p.objectId === "string" && p.objectId.startsWith(SCOPES_PREFIX)) {
+      return scopes(s, p.objectId.slice(SCOPES_PREFIX.length));
+    }
+    // Chrome asks for accessors in a second, separate call; the internals
+    // belong to the first.
+    const internals = !p.accessorPropertiesOnly;
+    const [r, preview, fn] = await Promise.all([
       s.call("Runtime.getProperties", {
         objectId: p.objectId, ownProperties: !!p.ownProperties, generatePreview: p.generatePreview,
       }),
-      p.ownProperties ? s.call("Runtime.getPreview", { objectId: p.objectId }).catch(() => ({})) : {},
+      internals ? s.call("Runtime.getPreview", { objectId: p.objectId }).catch(() => ({})) : {},
+      internals ? s.call("Debugger.getFunctionDetails", { functionId: p.objectId }).catch(() => ({})) : {},
     ]);
     const out = properties(r, p);
     if (COLLECTIONS.has(preview.preview?.subtype)) {
       out.internalProperties.push(entriesProperty(p.objectId, preview.preview?.size));
     }
+    if (fn.details) out.internalProperties.push(...functionInternals(p.objectId, fn.details));
     return out;
   });
 }
@@ -82,7 +85,7 @@ function descriptor(d: any) {
 }
 
 function internal(d: any) {
-  const name = INTERNAL_NAMES[d.name] ?? `[[${d.name.charAt(0).toUpperCase()}${d.name.slice(1)}]]`;
+  const name = internalName(d.name);
   const value = remoteObject(d.value);
   if (d.name === "status" && value?.value === "resolved") value.value = "fulfilled";
   return { name, value };
@@ -134,4 +137,37 @@ function entryObject(e: any) {
       ],
     },
   };
+}
+
+/** `[[FunctionLocation]]`, which links a function to its source, and
+ *  `[[Scopes]]`, the closures it can see. */
+function functionInternals(objectId: string, details: any): any[] {
+  const out: any[] = [{
+    name: "[[FunctionLocation]]",
+    value: { type: "object", subtype: "internal#location", value: details.location, description: "Object" },
+  }];
+  const count = details.scopeChain?.length ?? 0;
+  if (count) {
+    out.push({
+      name: "[[Scopes]]",
+      value: { type: "object", subtype: "internal#scopeList", className: "Array", description: `Scopes[${count}]`, objectId: SCOPES_PREFIX + objectId },
+    });
+  }
+  return out;
+}
+
+async function scopes(s: Session, functionId: string) {
+  const details = (await s.call("Debugger.getFunctionDetails", { functionId })).details;
+  const result = (details?.scopeChain ?? []).map((scope: any, index: number) => {
+    const title = SCOPE_TITLES[scope.type] ?? "Closure";
+    const name = scope.name ?? (scope.type === "closure" ? details.displayName || details.name : "");
+    return {
+      name: String(index), configurable: false, enumerable: true, isOwn: true,
+      value: {
+        type: "object", subtype: "internal#scope", className: "Object",
+        description: name ? `${title} (${name})` : title, objectId: scope.object?.objectId,
+      },
+    };
+  });
+  return { result, internalProperties: [] };
 }

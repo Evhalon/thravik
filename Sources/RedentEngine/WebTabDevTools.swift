@@ -8,9 +8,15 @@ extension WebTab {
         if isShowingDevTools { closeDevTools() } else { showDevTools() }
     }
 
+    /// Opens DevTools on the Console, or closes them if they are open.
+    public func toggleConsole() {
+        if isShowingDevTools { closeDevTools() } else { showDevTools(panel: "console") }
+    }
+
     /// Opens the panel, or leaves it open. Needs a live page to inspect.
-    func showDevTools() {
-        guard devToolsPanel == nil, let webView, let panel = DevToolsPanel(inspecting: webView) else { return }
+    func showDevTools(panel name: String? = nil) {
+        guard devToolsPanel == nil, let webView,
+              let panel = DevToolsPanel(inspecting: webView, panel: name) else { return }
         panel.onClose = { [weak self, weak panel] in
             guard let self, self.devToolsPanel === panel else { return }
             self.devToolsPanel = nil
@@ -38,6 +44,10 @@ extension WebTab {
 extension TabController {
     public func toggleDevTools(_ id: UUID) {
         webTabs.first { $0.id == id }?.toggleDevTools()
+    }
+
+    public func toggleConsole(_ id: UUID) {
+        webTabs.first { $0.id == id }?.toggleConsole()
     }
 
     public func isShowingDevTools(_ id: UUID) -> Bool {

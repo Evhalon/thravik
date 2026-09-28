@@ -10,4 +10,9 @@ extension BrowserModel {
         guard let id = selectedTab?.id else { return }
         tabs.toggleDevTools(id)
     }
+
+    func toggleConsole() {
+        guard let id = selectedTab?.id else { return }
+        tabs.toggleConsole(id)
+    }
 }

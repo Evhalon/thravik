@@ -59,6 +59,8 @@ public protocol BrowserControlling: AnyObject {
     func prerender(_ url: URL?)
     /// Shows or hides Chrome's DevTools under the tab's page.
     func toggleDevTools(_ id: UUID)
+    /// Opens DevTools on the Console, or closes them if they are open.
+    func toggleConsole(_ id: UUID)
     func isShowingDevTools(_ id: UUID) -> Bool
 }
 
@@ -66,5 +68,6 @@ extension BrowserControlling {
     /// A controller without an engine behind it — a test double — has no
     /// DevTools to show.
     public func toggleDevTools(_ id: UUID) {}
+    public func toggleConsole(_ id: UUID) {}
     public func isShowingDevTools(_ id: UUID) -> Bool { false }
 }

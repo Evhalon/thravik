@@ -10,6 +10,8 @@
     scripts = new Map;
     debuggerEnabled = false;
     replayed = new Set;
+    nodes = new Map;
+    sources = new Map;
     contextsByFrame = new Map;
     originsByFrame = new Map;
     addContext(id, frameId) {
@@ -33,6 +35,15 @@
     }
     origin(frameId) {
       return this.originsByFrame.get(frameId) ?? "";
+    }
+    async scriptSource(scriptId, fetch) {
+      const known = this.sources.get(scriptId);
+      if (known !== undefined)
+        return known;
+      const text = await fetch(scriptId).then((r) => String(r.scriptSource ?? "")).catch(() => "");
+      const kept = text.length > 2000000 ? "" : text;
+      this.sources.set(scriptId, kept);
+      return kept;
     }
     isAnnounced = (scriptId) => this.debuggerEnabled && this.scripts.has(scriptId);
     track(id, request) {
@@ -254,7 +265,7 @@
       type: p.type,
       description: p.description,
       overflow: !!p.overflow,
-      properties: (p.properties ?? []).filter((q) => !q.internal).map(propertyPreview)
+      properties: (p.properties ?? []).map((q) => q.internal ? internalPreview(q) : propertyPreview(q)).filter(Boolean)
     };
     if (p.subtype && SUBTYPES.has(p.subtype))
       out.subtype = p.subtype;
@@ -263,6 +274,27 @@
         ...e.key ? { key: preview(e.key) } : {},
         value: preview(e.value)
       }));
+    return out;
+  }
+  var INTERNAL_NAMES = {
+    status: "[[PromiseState]]",
+    result: "[[PromiseResult]]",
+    targetFunction: "[[TargetFunction]]",
+    boundThis: "[[BoundThis]]",
+    boundArgs: "[[BoundArgs]]",
+    target: "[[Target]]",
+    handler: "[[Handler]]",
+    iteratedObject: "[[IteratorTarget]]",
+    iterationKind: "[[IteratorKind]]"
+  };
+  function internalName(name) {
+    return INTERNAL_NAMES[name] ?? `[[${name.charAt(0).toUpperCase()}${name.slice(1)}]]`;
+  }
+  function internalPreview(q) {
+    const out = propertyPreview(q);
+    out.name = internalName(q.name);
+    if (q.name === "status" && out.value === "resolved")
+      out.value = "fulfilled";
     return out;
   }
   function propertyPreview(q) {
@@ -297,7 +329,7 @@
   }
   function callFrame(f) {
     return {
-      functionName: f.functionName ?? "",
+      functionName: f.functionName === "global code" || f.functionName === "eval code" ? "" : f.functionName ?? "",
       scriptId: String(f.scriptId ?? "0"),
       url: f.url ?? "",
       lineNumber: zeroBased(f.lineNumber),
@@ -322,6 +354,79 @@
         exception: result
       }
     };
+  }
+
+  // cdp/errors.ts
+  var READ_ERROR = `function () {
+  return { text: String(this), stack: typeof this.stack === "string" ? this.stack : "",
+    line: this.line, column: this.column, url: this.sourceURL };
+}`;
+  function parseStack(stack) {
+    const frames = [];
+    for (const line of stack.split(`
+`)) {
+      if (!line.trim())
+        continue;
+      const at = line.lastIndexOf("@");
+      const name = at >= 0 ? line.slice(0, at) : "";
+      const location = at >= 0 ? line.slice(at + 1) : line;
+      const match = /^(.*):(\d+):(\d+)$/.exec(location);
+      if (!match) {
+        if (location === "[native code]")
+          frames.push({ functionName: name, url: "native", lineNumber: 0, columnNumber: 0 });
+        continue;
+      }
+      frames.push({ functionName: name, url: match[1], lineNumber: Number(match[2]), columnNumber: Number(match[3]) });
+    }
+    return frames;
+  }
+  function v8Line(f) {
+    const name = f.functionName === "global code" || f.functionName === "eval code" ? "" : f.functionName;
+    const where = f.url === "native" ? "native" : `${f.url || "<anonymous>"}:${f.lineNumber}:${f.columnNumber}`;
+    return name ? `    at ${name} (${where})` : `    at ${where}`;
+  }
+  async function readError(s, objectId) {
+    const r = await s.call("Runtime.callFunctionOn", { objectId, functionDeclaration: READ_ERROR, returnByValue: true });
+    return r.wasThrown ? null : r.result?.value;
+  }
+  async function withStack(s, o) {
+    if (o?.subtype !== "error" || !o.objectId)
+      return o;
+    const e = await readError(s, o.objectId).catch(() => null);
+    if (!e)
+      return o;
+    const frames = parseStack(e.stack);
+    const head = o.description ?? e.text;
+    return frames.length ? { ...o, description: [head, ...frames.map(v8Line)].join(`
+`) } : o;
+  }
+  function installErrors(s) {
+    s.handle("Runtime.getExceptionDetails", async (p) => {
+      const e = await readError(s, p.errorObjectId);
+      if (!e)
+        throw new ProtocolError("Could not read the error");
+      const frames = parseStack(e.stack);
+      return {
+        exceptionDetails: {
+          exceptionId: 1,
+          text: e.text,
+          lineNumber: Math.max(0, (e.line ?? 1) - 1),
+          columnNumber: Math.max(0, (e.column ?? 1) - 1),
+          ...e.url ? { url: e.url } : {},
+          ...frames.length ? {
+            stackTrace: {
+              callFrames: frames.filter((f) => f.url !== "native").map((f) => ({
+                functionName: f.functionName === "global code" ? "" : f.functionName,
+                scriptId: "",
+                url: f.url,
+                lineNumber: f.lineNumber - 1,
+                columnNumber: f.columnNumber - 1
+              }))
+            }
+          } : {}
+        }
+      };
+    });
   }
 
   // cdp/console.ts
@@ -349,11 +454,22 @@
     let queue = Promise.resolve();
     s.on("Console.messageAdded", ({ message }) => {
       queue = queue.then(async () => {
-        last = translate(s, await withPreviews(s, message));
+        last = await withErrorStacks(s, translate(s, await withPreviews(s, message)));
         if (last)
           s.emit(last.method, last.params);
       });
     });
+    s.on("Console.messagesCleared", ({ reason }) => {
+      if (reason !== "console-api")
+        return;
+      s.emit("Runtime.consoleAPICalled", {
+        type: "clear",
+        args: [{ type: "string", value: "console.clear" }],
+        executionContextId: s.state.mainContextId || 1,
+        timestamp: Date.now()
+      });
+    });
+    s.on("Inspector.inspect", ({ object, hints }) => inspectRequested(s, object, hints ?? {}));
     s.on("Console.messageRepeatCountUpdated", () => {
       if (last)
         s.emit(last.method, { ...last.params, timestamp: Date.now() });
@@ -369,14 +485,32 @@
     }
     return { method: "Log.entryAdded", params: { entry: logEntry(s, m) } };
   }
+  function apiType(m) {
+    if (m.type === "log" || !m.type)
+      return m.level === "debug" && !m.parameters?.length ? "count" : level(m.level);
+    return API_TYPES[m.type] ?? "log";
+  }
+  function timestamp(m) {
+    return typeof m.timestamp === "number" && m.timestamp > 1e9 ? m.timestamp * 1000 : Date.now();
+  }
+  async function withErrorStacks(s, t) {
+    if (!t)
+      return t;
+    if (t.method === "Runtime.consoleAPICalled") {
+      t.params.args = await Promise.all(t.params.args.map((a) => withStack(s, a)));
+    } else if (t.method === "Runtime.exceptionThrown") {
+      t.params.exceptionDetails.exception = await withStack(s, t.params.exceptionDetails.exception);
+    }
+    return t;
+  }
   function apiCall(s, m) {
-    const type = m.type === "log" || !m.type ? level(m.level) : API_TYPES[m.type] ?? "log";
+    const type = apiType(m);
     const args = m.parameters?.length ? m.parameters.map(remoteObject) : [{ type: "string", value: m.text ?? "" }];
     return {
       type,
       args,
       executionContextId: s.state.mainContextId || 1,
-      timestamp: Date.now(),
+      timestamp: timestamp(m),
       stackTrace: stackTrace(m.stackTrace, s.state.isAnnounced)
     };
   }
@@ -403,7 +537,7 @@
     const text = inPromise ? m.text.slice(IN_PROMISE.length) : m.text ?? "Error";
     const thrown = m.parameters?.[0] ? remoteObject(m.parameters[0]) : { type: "object", subtype: "error", className: text.split(":")[0] || "Error", description: text };
     return {
-      timestamp: Date.now(),
+      timestamp: timestamp(m),
       exceptionDetails: {
         exceptionId: 1,
         text: inPromise ? "Uncaught (in promise)" : "Uncaught",
@@ -422,12 +556,474 @@
       source: LOG_SOURCES.has(m.source) ? m.source : m.source === "css" ? "rendering" : "other",
       level: m.level === "debug" ? "verbose" : m.level === "log" ? "info" : m.level,
       text: m.text ?? "",
-      timestamp: Date.now(),
+      timestamp: timestamp(m),
       url: m.url,
       lineNumber: m.line ? zeroBased(m.line) : undefined,
       stackTrace: stackTrace(m.stackTrace, s.state.isAnnounced),
       networkRequestId: m.networkRequestId
     };
+  }
+  async function inspectRequested(s, object, hints) {
+    let held = object;
+    if (object?.objectId) {
+      const stash = s.call("Runtime.callFunctionOn", {
+        objectId: object.objectId,
+        functionDeclaration: `function () { globalThis[${JSON.stringify(HELD)}] = this; }`
+      });
+      await stash.catch(() => {});
+      const r = await s.call("Runtime.evaluate", {
+        expression: `(() => { const v = globalThis[${JSON.stringify(HELD)}]; delete globalThis[${JSON.stringify(HELD)}]; return v; })()`,
+        objectGroup: "redent-inspected",
+        generatePreview: true,
+        contextId: s.state.mainContextId || undefined
+      }).catch(() => null);
+      if (r?.result?.objectId)
+        held = r.result;
+    }
+    s.emit("Runtime.inspectRequested", { object: remoteObject(held), hints, executionContextId: s.state.mainContextId || 1 });
+  }
+  var HELD = "__redentInspected";
+
+  // cdp/dom.ts
+  function domNode(s, n) {
+    if (!n)
+      return n;
+    const out = {
+      nodeId: n.nodeId,
+      backendNodeId: n.nodeId,
+      nodeType: n.nodeType,
+      nodeName: n.nodeName,
+      localName: n.localName ?? "",
+      nodeValue: n.nodeValue ?? ""
+    };
+    for (const key of ["childNodeCount", "attributes", "documentURL", "baseURL", "publicId", "systemId", "xmlVersion", "frameId", "pseudoType", "shadowRootType"]) {
+      if (n[key] !== undefined)
+        out[key] = n[key];
+    }
+    if (n.children)
+      out.children = n.children.map((c) => domNode(s, c));
+    if (n.contentDocument)
+      out.contentDocument = domNode(s, n.contentDocument);
+    if (n.templateContent)
+      out.templateContent = domNode(s, n.templateContent);
+    if (n.shadowRoots)
+      out.shadowRoots = n.shadowRoots.map((c) => domNode(s, c));
+    if (n.pseudoElements)
+      out.pseudoElements = n.pseudoElements.map((c) => domNode(s, c));
+    if (n.localName === "svg" || n.attributes?.includes("http://www.w3.org/2000/svg"))
+      out.isSVG = true;
+    const { children, contentDocument, templateContent, shadowRoots, pseudoElements, ...shallow } = out;
+    s.state.nodes.set(n.nodeId, shallow);
+    return out;
+  }
+  async function nodeIdOf(s, p) {
+    const id = p.nodeId || p.backendNodeId;
+    if (id)
+      return id;
+    if (p.objectId)
+      return (await s.call("DOM.requestNode", { objectId: p.objectId })).nodeId;
+    throw new ProtocolError("No node with given id found");
+  }
+  async function onNode(s, p, fn, args = []) {
+    const objectId = p.objectId ?? (await s.call("DOM.resolveNode", { nodeId: await nodeIdOf(s, p), objectGroup: "redent-dom" })).object?.objectId;
+    const r = await s.call("Runtime.callFunctionOn", {
+      objectId,
+      functionDeclaration: fn,
+      arguments: args.map((value) => ({ value })),
+      returnByValue: true
+    });
+    if (!p.objectId)
+      s.call("Runtime.releaseObjectGroup", { objectGroup: "redent-dom" }).catch(() => {});
+    if (r.wasThrown)
+      throw new ProtocolError(r.result?.description ?? "Could not compute");
+    return r.result?.value;
+  }
+  var FORWARDED = [
+    "setNodeName",
+    "setNodeValue",
+    "removeNode",
+    "setAttributeValue",
+    "setAttributesAsText",
+    "removeAttribute",
+    "setOuterHTML",
+    "moveTo",
+    "undo",
+    "redo",
+    "markUndoableState",
+    "focus",
+    "setInspectedNode",
+    "getAttributes",
+    "querySelector",
+    "querySelectorAll",
+    "getSearchResults",
+    "discardSearchResults",
+    "requestNode",
+    "pushNodeByPathToFrontend"
+  ];
+  function installDOM(s) {
+    s.handle("DOM.enable", () => ({}));
+    s.handle("DOM.disable", () => ({}));
+    s.handle("DOM.getDocument", async () => {
+      s.state.nodes.clear();
+      return { root: domNode(s, (await s.call("DOM.getDocument")).root) };
+    });
+    s.handle("DOM.requestChildNodes", (p) => s.call("DOM.requestChildNodes", { nodeId: p.nodeId, depth: p.depth }));
+    for (const method of FORWARDED) {
+      s.handle(`DOM.${method}`, async (p) => {
+        const params = { ...p };
+        if (params.backendNodeId && !params.nodeId)
+          params.nodeId = params.backendNodeId;
+        delete params.backendNodeId;
+        return s.call(`DOM.${method}`, params);
+      });
+    }
+    s.handle("DOM.getOuterHTML", async (p) => s.call("DOM.getOuterHTML", { nodeId: await nodeIdOf(s, p) }));
+    s.handle("DOM.performSearch", (p) => s.call("DOM.performSearch", { query: p.query }));
+    s.handle("DOM.resolveNode", async (p) => {
+      const r = await s.call("DOM.resolveNode", { nodeId: await nodeIdOf(s, p), objectGroup: p.objectGroup });
+      return { object: remoteObject(r.object) };
+    });
+    s.handle("DOM.describeNode", async (p) => {
+      const id = await nodeIdOf(s, p);
+      const node = s.state.nodes.get(id);
+      if (!node)
+        throw new ProtocolError("No node with given id found");
+      return { node };
+    });
+    s.handle("DOM.pushNodesByBackendIdsToFrontend", (p) => ({
+      nodeIds: (p.backendNodeIds ?? []).map((id) => s.state.nodes.has(id) ? id : 0)
+    }));
+    s.handle("DOM.getTopLayerElements", () => ({ nodeIds: [] }));
+    s.handle("DOM.getQueryingDescendantsForContainer", () => ({ nodeIds: [] }));
+    installGeometry(s);
+    installEvents(s);
+  }
+  var BOX_MODEL = `function () {
+  const r = this.getBoundingClientRect(), st = getComputedStyle(this), px = (v) => parseFloat(v) || 0;
+  const quad = (l, t, rt, b) => [l, t, rt, t, rt, b, l, b];
+  const side = (p) => [px(st[p + "Left"] ?? st[p + "LeftWidth"]), px(st[p + "Top"] ?? st[p + "TopWidth"]),
+    px(st[p + "Right"] ?? st[p + "RightWidth"]), px(st[p + "Bottom"] ?? st[p + "BottomWidth"])];
+  const [ml, mt, mr, mb] = side("margin"), [bl, bt, br, bb] = [px(st.borderLeftWidth), px(st.borderTopWidth), px(st.borderRightWidth), px(st.borderBottomWidth)];
+  const [pl, pt, pr, pb] = side("padding");
+  const border = quad(r.left, r.top, r.right, r.bottom);
+  const padding = quad(r.left + bl, r.top + bt, r.right - br, r.bottom - bb);
+  const content = quad(r.left + bl + pl, r.top + bt + pt, r.right - br - pr, r.bottom - bb - pb);
+  const margin = quad(r.left - ml, r.top - mt, r.right + mr, r.bottom + mb);
+  return { content, padding, border, margin, width: Math.round(r.width), height: Math.round(r.height) };
+}`;
+  function installGeometry(s) {
+    s.handle("DOM.getBoxModel", async (p) => ({ model: await onNode(s, p, BOX_MODEL) }));
+    s.handle("DOM.getContentQuads", async (p) => ({ quads: [(await onNode(s, p, BOX_MODEL)).border] }));
+    s.handle("DOM.scrollIntoViewIfNeeded", async (p) => {
+      await onNode(s, p, "function () { this.scrollIntoViewIfNeeded ? this.scrollIntoViewIfNeeded(true) : this.scrollIntoView({ block: 'center' }); }");
+      return {};
+    });
+    s.handle("DOM.collectClassNamesFromSubtree", async (p) => ({
+      classNames: await onNode(s, p, `function () {
+      const names = new Set();
+      for (const el of [this, ...this.querySelectorAll("[class]")]) for (const c of el.classList ?? []) names.add(c);
+      return [...names];
+    }`)
+    }));
+    s.handle("DOM.getNodeForLocation", async (p) => {
+      const r = await s.call("Runtime.evaluate", {
+        expression: `document.elementFromPoint(${Number(p.x)}, ${Number(p.y)})`,
+        objectGroup: "redent-dom",
+        contextId: s.state.mainContextId || undefined
+      });
+      if (!r.result?.objectId)
+        throw new ProtocolError("No node found at given location");
+      const nodeId = (await s.call("DOM.requestNode", { objectId: r.result.objectId })).nodeId;
+      return { nodeId, backendNodeId: nodeId, frameId: s.state.mainFrameId };
+    });
+    s.handle("DOM.copyTo", async (p) => {
+      const target = await s.call("DOM.resolveNode", { nodeId: p.targetNodeId, objectGroup: "redent-dom" });
+      const before = p.insertBeforeNodeId ? await s.call("DOM.resolveNode", { nodeId: p.insertBeforeNodeId, objectGroup: "redent-dom" }) : null;
+      const source = await s.call("DOM.resolveNode", { nodeId: p.nodeId, objectGroup: "redent-dom" });
+      const r = await s.call("Runtime.callFunctionOn", {
+        objectId: source.object.objectId,
+        functionDeclaration: "function (parent, before) { return parent.insertBefore(this.cloneNode(true), before ?? null); }",
+        arguments: [{ objectId: target.object.objectId }, before ? { objectId: before.object.objectId } : { value: null }]
+      });
+      return { nodeId: (await s.call("DOM.requestNode", { objectId: r.result.objectId })).nodeId };
+    });
+  }
+  function installEvents(s) {
+    s.on("DOM.documentUpdated", () => {
+      s.state.nodes.clear();
+      s.emit("DOM.documentUpdated", {});
+    });
+    s.on("DOM.setChildNodes", (p) => s.emit("DOM.setChildNodes", { parentId: p.parentId, nodes: (p.nodes ?? []).map((n) => domNode(s, n)) }));
+    s.on("DOM.childNodeInserted", (p) => s.emit("DOM.childNodeInserted", { ...p, node: domNode(s, p.node) }));
+    s.on("DOM.shadowRootPushed", (p) => s.emit("DOM.shadowRootPushed", { hostId: p.hostId, root: domNode(s, p.root) }));
+    s.on("DOM.pseudoElementAdded", (p) => s.emit("DOM.pseudoElementAdded", { parentId: p.parentId, pseudoElement: domNode(s, p.pseudoElement) }));
+    s.on("DOM.childNodeRemoved", (p) => {
+      s.state.nodes.delete(p.nodeId);
+      s.emit("DOM.childNodeRemoved", p);
+    });
+    s.on("DOM.attributeModified", (p) => {
+      const node = s.state.nodes.get(p.nodeId);
+      if (node?.attributes)
+        node.attributes = withAttribute(node.attributes, p.name, p.value);
+      s.emit("DOM.attributeModified", p);
+    });
+    s.on("DOM.attributeRemoved", (p) => {
+      const node = s.state.nodes.get(p.nodeId);
+      if (node?.attributes)
+        node.attributes = withAttribute(node.attributes, p.name, null);
+      s.emit("DOM.attributeRemoved", p);
+    });
+    for (const event of ["characterDataModified", "childNodeCountUpdated", "shadowRootPopped", "pseudoElementRemoved", "inlineStyleInvalidated"]) {
+      s.on(`DOM.${event}`, (p) => s.emit(`DOM.${event}`, p));
+    }
+    s.on("DOM.inspect", (p) => s.emit("Overlay.inspectNodeRequested", { backendNodeId: p.nodeId }));
+  }
+  function withAttribute(attributes, name, value) {
+    const out = [];
+    let found = false;
+    for (let i = 0;i < attributes.length; i += 2) {
+      if (attributes[i] !== name) {
+        out.push(attributes[i], attributes[i + 1]);
+      } else {
+        found = true;
+        if (value !== null)
+          out.push(name, value);
+      }
+    }
+    if (!found && value !== null)
+      out.push(name, value);
+    return out;
+  }
+
+  // cdp/css-values.ts
+  function rangeKey(styleSheetId, range) {
+    return `${styleSheetId}|${range?.startLine}|${range?.startColumn}`;
+  }
+  var ORIGINS = { "user-agent": "user-agent", inspector: "inspector", user: "regular", author: "regular" };
+  function origin(o) {
+    return ORIGINS[o ?? ""] ?? "regular";
+  }
+  function style(ids, st) {
+    if (!st)
+      return st;
+    const sheet = st.styleId?.styleSheetId;
+    const out = {
+      cssProperties: (st.cssProperties ?? []).map((p) => ({
+        name: p.name,
+        value: p.value,
+        important: p.priority === "important",
+        implicit: !!p.implicit,
+        ...p.text !== undefined ? { text: p.text } : {},
+        parsedOk: p.parsedOk ?? true,
+        disabled: p.status === "disabled",
+        ...p.range ? { range: p.range } : {}
+      })),
+      shorthandEntries: (st.shorthandEntries ?? []).map((e) => ({ name: e.name, value: e.value, important: e.priority === "important" }))
+    };
+    if (sheet && st.range) {
+      out.styleSheetId = sheet;
+      out.range = st.range;
+      ids.styles.set(rangeKey(sheet, st.range), st.styleId);
+    }
+    if (st.cssText !== undefined)
+      out.cssText = st.cssText;
+    return out;
+  }
+  function rule(ids, r) {
+    const sheet = r.ruleId?.styleSheetId;
+    const out = {
+      selectorList: selectorList(r.selectorList),
+      origin: origin(r.origin),
+      style: style(ids, r.style)
+    };
+    if (sheet) {
+      out.styleSheetId = sheet;
+      if (r.selectorList?.range)
+        ids.rules.set(rangeKey(sheet, r.selectorList.range), r.ruleId);
+    }
+    Object.assign(out, groupings(ids, r.groupings ?? [], sheet));
+    return out;
+  }
+  function ruleMatch(ids, m) {
+    return { rule: rule(ids, m.rule), matchingSelectors: m.matchingSelectors ?? [] };
+  }
+  function selectorList(list) {
+    const selectors = (list?.selectors ?? []).map((sel) => ({
+      text: sel.text,
+      ...Array.isArray(sel.specificity) ? { specificity: { a: sel.specificity[0], b: sel.specificity[1], c: sel.specificity[2] } } : {}
+    }));
+    const range = list?.range;
+    if (range && range.startLine === range.endLine && typeof list.text === "string") {
+      let column = range.startColumn;
+      const parts = list.text.split(",");
+      parts.forEach((part, index) => {
+        const lead = part.length - part.trimStart().length;
+        const text = part.trim();
+        if (selectors[index] && selectors[index].text === text) {
+          selectors[index].range = { startLine: range.startLine, startColumn: column + lead, endLine: range.startLine, endColumn: column + lead + text.length };
+        }
+        column += part.length + 1;
+      });
+    }
+    return { selectors, text: list?.text ?? selectors.map((sel) => sel.text).join(", ") };
+  }
+  var MEDIA_SOURCES = {
+    "media-rule": "mediaRule",
+    "media-import-rule": "importRule",
+    "media-link-node": "linkedSheet",
+    "media-style-node": "inlineSheet"
+  };
+  function groupings(ids, list, sheet) {
+    const out = {};
+    const push = (key, value) => {
+      (out[key] ??= []).push(value);
+    };
+    for (const g of list) {
+      const located = { text: g.text ?? "" };
+      if (g.range && sheet) {
+        located.range = g.range;
+        located.styleSheetId = sheet;
+        if (g.ruleId)
+          ids.groupings.set(rangeKey(sheet, g.range), g.ruleId);
+      }
+      if (MEDIA_SOURCES[g.type])
+        push("media", { ...located, source: MEDIA_SOURCES[g.type], ...g.sourceURL ? { sourceURL: g.sourceURL } : {} });
+      else if (g.type === "supports-rule")
+        push("supports", { ...located, active: true });
+      else if (g.type === "container-rule")
+        push("containerQueries", located);
+      else if (g.type === "layer-rule" || g.type === "layer-import-rule")
+        push("layers", located);
+      else if (g.type === "scope-rule")
+        push("scopes", located);
+      else if (g.type === "starting-style-rule")
+        push("startingStyles", located);
+      else if (g.type === "style-rule")
+        push("nestingSelectors", g.text ?? "");
+    }
+    return out;
+  }
+  function header(h) {
+    return {
+      styleSheetId: h.styleSheetId,
+      frameId: h.frameId,
+      sourceURL: h.sourceURL ?? "",
+      origin: origin(h.origin),
+      title: h.title ?? "",
+      disabled: !!h.disabled,
+      isInline: !!h.isInline,
+      isMutable: h.origin === "inspector",
+      isConstructed: false,
+      startLine: h.startLine ?? 0,
+      startColumn: h.startColumn ?? 0,
+      length: 0,
+      endLine: h.startLine ?? 0,
+      endColumn: h.startColumn ?? 0
+    };
+  }
+
+  // cdp/css.ts
+  function installCSS(s) {
+    const ids = { styles: new Map, rules: new Map, groupings: new Map };
+    s.handle("CSS.enable", () => replay(s, "CSS"));
+    s.handle("CSS.disable", () => ({}));
+    s.handle("CSS.getMatchedStylesForNode", async (p) => {
+      const [matched, inline] = await Promise.all([
+        s.call("CSS.getMatchedStylesForNode", { nodeId: p.nodeId, includePseudo: true, includeInherited: true }),
+        s.call("CSS.getInlineStylesForNode", { nodeId: p.nodeId })
+      ]);
+      return {
+        ...inline.inlineStyle ? { inlineStyle: style(ids, inline.inlineStyle) } : {},
+        ...inline.attributesStyle ? { attributesStyle: style(ids, inline.attributesStyle) } : {},
+        matchedCSSRules: (matched.matchedCSSRules ?? []).map((m) => ruleMatch(ids, m)),
+        pseudoElements: (matched.pseudoElements ?? []).map((e) => ({
+          pseudoType: e.pseudoId,
+          matches: (e.matches ?? []).map((m) => ruleMatch(ids, m))
+        })),
+        inherited: (matched.inherited ?? []).map((e) => ({
+          ...e.inlineStyle ? { inlineStyle: style(ids, e.inlineStyle) } : {},
+          matchedCSSRules: (e.matchedCSSRules ?? []).map((m) => ruleMatch(ids, m))
+        }))
+      };
+    });
+    s.handle("CSS.getInlineStylesForNode", async (p) => {
+      const r = await s.call("CSS.getInlineStylesForNode", { nodeId: p.nodeId });
+      return {
+        ...r.inlineStyle ? { inlineStyle: style(ids, r.inlineStyle) } : {},
+        ...r.attributesStyle ? { attributesStyle: style(ids, r.attributesStyle) } : {}
+      };
+    });
+    s.handle("CSS.getComputedStyleForNode", async (p) => ({
+      computedStyle: ((await s.call("CSS.getComputedStyleForNode", { nodeId: p.nodeId })).computedStyle ?? []).map((c) => ({ name: c.name, value: c.value }))
+    }));
+    s.handle("CSS.getPlatformFontsForNode", async (p) => {
+      const font = (await s.call("CSS.getFontDataForNode", { nodeId: p.nodeId })).primaryFont;
+      return { fonts: font ? [{ familyName: font.displayName ?? font.name ?? "", postScriptName: "", isCustomFont: false, glyphCount: 0 }] : [] };
+    });
+    s.handle("CSS.getBackgroundColors", async (p) => onNode(s, p, `function () {
+    const colors = [];
+    for (let el = this; el && el.nodeType === 1; el = el.parentElement) {
+      const bg = getComputedStyle(el).backgroundColor;
+      if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") { colors.push(bg); break; }
+    }
+    const st = getComputedStyle(this);
+    return { backgroundColors: colors.length ? colors : ["rgb(255, 255, 255)"], computedFontSize: st.fontSize, computedFontWeight: st.fontWeight };
+  }`));
+    s.handle("CSS.trackComputedStyleUpdates", () => ({}));
+    s.handle("CSS.trackComputedStyleUpdatesForNode", () => ({}));
+    s.handle("CSS.takeComputedStyleUpdates", () => ({ nodeIds: [] }));
+    s.handle("CSS.getMediaQueries", () => ({ medias: [] }));
+    s.handle("CSS.getAnimatedStylesForNode", () => ({}));
+    s.handle("CSS.getEnvironmentVariables", () => ({ environmentVariables: {} }));
+    s.handle("CSS.getLayersForNode", () => ({ rootLayer: { name: "implicit outer layer", order: 0, subLayers: [] } }));
+    s.handle("CSS.forcePseudoState", (p) => s.call("CSS.forcePseudoState", { nodeId: p.nodeId, forcedPseudoClasses: p.forcedPseudoClasses ?? [] }));
+    s.handle("CSS.getStyleSheetText", (p) => s.call("CSS.getStyleSheetText", { styleSheetId: p.styleSheetId }));
+    s.handle("CSS.setStyleSheetText", async (p) => {
+      await s.call("CSS.setStyleSheetText", { styleSheetId: p.styleSheetId, text: p.text });
+      return {};
+    });
+    s.handle("CSS.createStyleSheet", (p) => s.call("CSS.createStyleSheet", { frameId: p.frameId }));
+    installEditing(s, ids);
+    installEvents2(s);
+  }
+  function installEditing(s, ids) {
+    const find = (map, sheet, range, what) => {
+      const id = map.get(rangeKey(sheet, range));
+      if (!id)
+        throw new ProtocolError(`This ${what} can no longer be edited; select the element again`);
+      return id;
+    };
+    s.handle("CSS.setStyleTexts", async (p) => {
+      const styles = [];
+      for (const edit of p.edits ?? []) {
+        const styleId = find(ids.styles, edit.styleSheetId, edit.range, "style");
+        const r = await s.call("CSS.setStyleText", { styleId, text: edit.text });
+        styles.push(style(ids, r.style));
+      }
+      return { styles };
+    });
+    s.handle("CSS.setRuleSelector", async (p) => {
+      const r = await s.call("CSS.setRuleSelector", { ruleId: find(ids.rules, p.styleSheetId, p.range, "rule"), selector: p.selector });
+      return { selectorList: selectorList(r.rule?.selectorList) };
+    });
+    for (const [method, key] of [["setMediaText", "media"], ["setContainerQueryText", "containerQuery"], ["setSupportsText", "supports"], ["setScopeText", "scope"]]) {
+      s.handle(`CSS.${method}`, async (p) => {
+        const ruleId = find(ids.groupings, p.styleSheetId, p.range, "rule");
+        const r = await s.call("CSS.setGroupingHeaderText", { ruleId, headerText: p.text });
+        return { [key]: { text: r.grouping?.text ?? p.text, range: r.grouping?.range, styleSheetId: p.styleSheetId } };
+      });
+    }
+    s.handle("CSS.addRule", async (p) => {
+      const selector = String(p.ruleText ?? "").split("{")[0].trim();
+      const r = await s.call("CSS.addRule", { styleSheetId: p.styleSheetId, selector });
+      return { rule: ruleMatch(ids, { rule: r.rule }).rule };
+    });
+  }
+  function installEvents2(s) {
+    s.on("CSS.styleSheetAdded", (p) => s.emit("CSS.styleSheetAdded", { header: header(p.header) }));
+    s.on("CSS.styleSheetRemoved", (p) => s.emit("CSS.styleSheetRemoved", { styleSheetId: p.styleSheetId }));
+    s.on("CSS.styleSheetChanged", (p) => s.emit("CSS.styleSheetChanged", { styleSheetId: p.styleSheetId }));
+    s.on("CSS.mediaQueryResultChanged", () => s.emit("CSS.mediaQueryResultChanged", {}));
   }
 
   // cdp/debugger.ts
@@ -452,6 +1048,7 @@
     s.handle("Debugger.enable", async () => {
       s.state.debuggerEnabled = true;
       await replay(s, "Debugger");
+      await s.call("Debugger.setBreakpointsActive", { active: true });
       return { debuggerId: "redent" };
     });
     s.handle("Debugger.disable", () => ({}));
@@ -480,7 +1077,7 @@
     for (const method of ["removeBreakpoint", "setBreakpointsActive", "continueToLocation", "pause", "resume", "stepOver", "stepInto", "stepOut"]) {
       s.handle(`Debugger.${method}`, (p) => s.call(`Debugger.${method}`, forwarded(method, p)));
     }
-    installEvents(s);
+    installEvents3(s);
   }
   function forwarded(method, p) {
     if (method === "removeBreakpoint")
@@ -491,11 +1088,11 @@
       return { location: p.location };
     return {};
   }
-  function installEvents(s) {
+  function installEvents3(s) {
     s.on("Debugger.scriptParsed", (p) => {
       if (p.isContentScript)
         return;
-      const url = p.url || p.sourceURL || "";
+      const url = p.sourceURL || p.url || "";
       s.state.scripts.set(p.scriptId, url);
       s.emit("Debugger.scriptParsed", {
         scriptId: p.scriptId,
@@ -640,8 +1237,8 @@
     return out;
   }
   function remember(s, f) {
-    const origin = f.securityOrigin ?? "";
-    s.state.setOrigin(f.id, origin);
+    const origin2 = f.securityOrigin ?? "";
+    s.state.setOrigin(f.id, origin2);
     if (!f.parentId) {
       s.state.mainFrameId = f.id;
       s.state.mainFrameURL = f.url;
@@ -650,7 +1247,7 @@
     try {
       host = new URL(f.url).hostname;
     } catch {}
-    const secure = origin.startsWith("https:") || host === "localhost" || host === "127.0.0.1";
+    const secure = origin2.startsWith("https:") || host === "localhost" || host === "127.0.0.1";
     return {
       id: f.id,
       ...f.parentId ? { parentId: f.parentId } : {},
@@ -658,7 +1255,7 @@
       name: f.name,
       url: f.url,
       domainAndRegistry: host.split(".").slice(-2).join("."),
-      securityOrigin: origin,
+      securityOrigin: origin2,
       mimeType: f.mimeType ?? "text/html",
       secureContextType: secure ? "Secure" : "InsecureScheme",
       crossOriginIsolatedContextType: "NotIsolated",
@@ -905,22 +1502,22 @@
   function finish(s, p) {
     const tracked = s.state.requests.get(p.requestId);
     const metrics = p.metrics;
-    const timestamp = Math.max(p.timestamp, tracked?.lastTimestamp ?? 0);
+    const timestamp2 = Math.max(p.timestamp, tracked?.lastTimestamp ?? 0);
     if (metrics && tracked?.response) {
       const newPriority = priority(metrics.priority);
       if (newPriority)
-        s.emit("Network.resourceChangedPriority", { requestId: p.requestId, newPriority, timestamp });
+        s.emit("Network.resourceChangedPriority", { requestId: p.requestId, newPriority, timestamp: timestamp2 });
       s.emit("Network.responseReceived", {
         requestId: p.requestId,
         loaderId: tracked.loaderId ?? "",
-        timestamp,
+        timestamp: timestamp2,
         type: tracked.type,
         response: enrich(tracked.response, metrics),
         hasExtraInfo: false,
         frameId: tracked.frameId
       });
     }
-    s.emit("Network.loadingFinished", { requestId: p.requestId, timestamp, encodedDataLength: encodedLength(metrics) });
+    s.emit("Network.loadingFinished", { requestId: p.requestId, timestamp: timestamp2, encodedDataLength: encodedLength(metrics) });
   }
   function fromMemoryCache(s, p) {
     const resource = p.resource ?? {};
@@ -973,36 +1570,121 @@
     s.on("Network.webSocketClosed", (p) => s.emit("Network.webSocketClosed", p));
   }
 
+  // cdp/overlay.ts
+  function highlight(c = {}) {
+    const out = { showInfo: !!c.showInfo };
+    for (const key of ["contentColor", "paddingColor", "borderColor", "marginColor"]) {
+      if (c[key])
+        out[key] = c[key];
+    }
+    return out;
+  }
+  function grid(c = {}) {
+    return {
+      gridColor: c.gridBorderColor ?? c.cellBorderColor ?? c.rowLineColor ?? { r: 147, g: 112, b: 219, a: 1 },
+      showLineNames: !!c.showLineNames,
+      showLineNumbers: !!(c.showPositiveLineNumbers || c.showNegativeLineNumbers),
+      showExtendedGridLines: !!c.showGridExtensionLines,
+      showTrackSizes: !!c.showTrackSizes,
+      showAreaNames: !!c.showAreaNames
+    };
+  }
+  function flex(c = {}) {
+    return {
+      flexColor: c.containerBorder?.color ?? c.lineSeparator?.color ?? { r: 147, g: 112, b: 219, a: 1 },
+      showOrderNumbers: false
+    };
+  }
+  function installOverlay(s) {
+    s.handle("Overlay.enable", () => ({}));
+    s.handle("Overlay.disable", () => s.call("DOM.hideHighlight").catch(() => ({})));
+    s.handle("Overlay.setInspectMode", (p) => s.call("DOM.setInspectModeEnabled", {
+      enabled: p.mode !== "none" && p.mode !== undefined,
+      highlightConfig: highlight(p.highlightConfig),
+      showRulers: !!p.highlightConfig?.showRulers
+    }));
+    s.handle("Overlay.highlightNode", async (p) => {
+      const config = highlight(p.highlightConfig);
+      if (p.selector)
+        return s.call("DOM.highlightSelector", { selectorString: p.selector, highlightConfig: config });
+      if (p.objectId)
+        return s.call("DOM.highlightNode", { objectId: p.objectId, highlightConfig: config });
+      return s.call("DOM.highlightNode", { nodeId: await nodeIdOf(s, p), highlightConfig: config });
+    });
+    s.handle("Overlay.hideHighlight", () => s.call("DOM.hideHighlight"));
+    s.handle("Overlay.highlightRect", (p) => s.call("DOM.highlightRect", {
+      x: p.x,
+      y: p.y,
+      width: p.width,
+      height: p.height,
+      color: p.color,
+      outlineColor: p.outlineColor
+    }));
+    s.handle("Overlay.highlightQuad", (p) => s.call("DOM.highlightQuad", { quad: p.quad, color: p.color, outlineColor: p.outlineColor }));
+    s.handle("Overlay.highlightFrame", (p) => s.call("DOM.highlightFrame", {
+      frameId: p.frameId,
+      contentColor: p.contentColor,
+      contentOutlineColor: p.contentOutlineColor
+    }));
+    s.handle("Overlay.setShowPaintRects", (p) => s.call("Page.setShowPaintRects", { result: !!p.result }));
+    installLayoutOverlays(s);
+  }
+  function installLayoutOverlays(s) {
+    const shown = { grid: new Set, flex: new Set };
+    const sync = async (kind, configs) => {
+      const wanted = new Map(configs.map((c) => [c.nodeId, c]));
+      const [show, hide] = kind === "grid" ? ["DOM.showGridOverlay", "DOM.hideGridOverlay"] : ["DOM.showFlexOverlay", "DOM.hideFlexOverlay"];
+      for (const id of shown[kind]) {
+        if (!wanted.has(id))
+          await s.call(hide, { nodeId: id }).catch(() => {});
+      }
+      shown[kind] = new Set(wanted.keys());
+      for (const [nodeId, c] of wanted) {
+        const params = kind === "grid" ? { nodeId, gridOverlayConfig: grid(c.gridHighlightConfig) } : { nodeId, flexOverlayConfig: flex(c.flexContainerHighlightConfig) };
+        await s.call(show, params).catch(() => {});
+      }
+      return {};
+    };
+    s.handle("Overlay.setShowGridOverlays", (p) => sync("grid", p.gridNodeHighlightConfigs ?? []));
+    s.handle("Overlay.setShowFlexOverlays", (p) => sync("flex", p.flexNodeHighlightConfigs ?? []));
+  }
+
   // cdp/properties.ts
-  var INTERNAL_NAMES = {
-    status: "[[PromiseState]]",
-    result: "[[PromiseResult]]",
-    targetFunction: "[[TargetFunction]]",
-    boundThis: "[[BoundThis]]",
-    boundArgs: "[[BoundArgs]]",
-    target: "[[Target]]",
-    handler: "[[Handler]]",
-    iteratedObject: "[[IteratorTarget]]",
-    iterationKind: "[[IteratorKind]]"
-  };
   var ENTRIES_PREFIX = "redent-entries:";
+  var SCOPES_PREFIX = "redent-scopes:";
+  var SCOPE_TITLES = {
+    global: "Global",
+    with: "With Block",
+    closure: "Closure",
+    catch: "Catch",
+    functionName: "Closure",
+    globalLexicalEnvironment: "Script",
+    nestedLexical: "Block"
+  };
   function installProperties(s) {
     s.handle("Runtime.getProperties", async (p) => {
       if (typeof p.objectId === "string" && p.objectId.startsWith(ENTRIES_PREFIX)) {
         return entries(s, p.objectId.slice(ENTRIES_PREFIX.length));
       }
-      const [r, preview2] = await Promise.all([
+      if (typeof p.objectId === "string" && p.objectId.startsWith(SCOPES_PREFIX)) {
+        return scopes(s, p.objectId.slice(SCOPES_PREFIX.length));
+      }
+      const internals = !p.accessorPropertiesOnly;
+      const [r, preview2, fn] = await Promise.all([
         s.call("Runtime.getProperties", {
           objectId: p.objectId,
           ownProperties: !!p.ownProperties,
           generatePreview: p.generatePreview
         }),
-        p.ownProperties ? s.call("Runtime.getPreview", { objectId: p.objectId }).catch(() => ({})) : {}
+        internals ? s.call("Runtime.getPreview", { objectId: p.objectId }).catch(() => ({})) : {},
+        internals ? s.call("Debugger.getFunctionDetails", { functionId: p.objectId }).catch(() => ({})) : {}
       ]);
       const out = properties(r, p);
       if (COLLECTIONS.has(preview2.preview?.subtype)) {
         out.internalProperties.push(entriesProperty(p.objectId, preview2.preview?.size));
       }
+      if (fn.details)
+        out.internalProperties.push(...functionInternals(p.objectId, fn.details));
       return out;
     });
   }
@@ -1051,7 +1733,7 @@
     return out;
   }
   function internal(d) {
-    const name = INTERNAL_NAMES[d.name] ?? `[[${d.name.charAt(0).toUpperCase()}${d.name.slice(1)}]]`;
+    const name = internalName(d.name);
     const value = remoteObject(d.value);
     if (d.name === "status" && value?.value === "resolved")
       value.value = "fulfilled";
@@ -1100,6 +1782,352 @@
       }
     };
   }
+  function functionInternals(objectId, details) {
+    const out = [{
+      name: "[[FunctionLocation]]",
+      value: { type: "object", subtype: "internal#location", value: details.location, description: "Object" }
+    }];
+    const count = details.scopeChain?.length ?? 0;
+    if (count) {
+      out.push({
+        name: "[[Scopes]]",
+        value: { type: "object", subtype: "internal#scopeList", className: "Array", description: `Scopes[${count}]`, objectId: SCOPES_PREFIX + objectId }
+      });
+    }
+    return out;
+  }
+  async function scopes(s, functionId) {
+    const details = (await s.call("Debugger.getFunctionDetails", { functionId })).details;
+    const result = (details?.scopeChain ?? []).map((scope, index) => {
+      const title = SCOPE_TITLES[scope.type] ?? "Closure";
+      const name = scope.name ?? (scope.type === "closure" ? details.displayName || details.name : "");
+      return {
+        name: String(index),
+        configurable: false,
+        enumerable: true,
+        isOwn: true,
+        value: {
+          type: "object",
+          subtype: "internal#scope",
+          className: "Object",
+          description: name ? `${title} (${name})` : title,
+          objectId: scope.object?.objectId
+        }
+      };
+    });
+    return { result, internalProperties: [] };
+  }
+
+  // cdp/side-effects.ts
+  var FORBIDDEN_WORDS = new Set([
+    "new",
+    "delete",
+    "await",
+    "yield",
+    "function",
+    "class",
+    "import",
+    "async",
+    "var",
+    "let",
+    "const",
+    "for",
+    "while",
+    "do",
+    "if",
+    "else",
+    "switch",
+    "try",
+    "catch",
+    "throw",
+    "return",
+    "with",
+    "debugger",
+    "super",
+    "eval"
+  ]);
+  var OPERATOR_WORDS = new Set(["typeof", "void", "in", "instanceof", "of", "case"]);
+  function isSideEffectFree(expression) {
+    const tokens = tokenize(expression);
+    if (!tokens)
+      return false;
+    let previous = "";
+    for (const token of tokens) {
+      if (FORBIDDEN_WORDS.has(token))
+        return false;
+      if (token === "=" || token === "++" || token === "--" || token === "=>")
+        return false;
+      if (/^[-+*/%&|^]=$|^(\*\*|<<|>>|>>>|&&|\|\||\?\?)=$/.test(token))
+        return false;
+      if (token === "(" && isCallee(previous))
+        return false;
+      if (token === "`")
+        return false;
+      previous = token;
+    }
+    return true;
+  }
+  function isCallee(previous) {
+    if (!previous)
+      return false;
+    if (previous === ")" || previous === "]" || previous === "}" || previous === '"' || previous === "?.")
+      return true;
+    return /^[\w$]+$/.test(previous) && !OPERATOR_WORDS.has(previous);
+  }
+  function tokenize(source) {
+    const tokens = [];
+    let i = 0;
+    while (i < source.length) {
+      const c = source[i];
+      if (/\s/.test(c)) {
+        i++;
+        continue;
+      }
+      if (c === "/" && (source[i + 1] === "/" || source[i + 1] === "*"))
+        return null;
+      if (c === "'" || c === '"') {
+        const end = closingQuote(source, i);
+        if (end < 0)
+          return null;
+        tokens.push('"');
+        i = end + 1;
+        continue;
+      }
+      if (c === "`") {
+        tokens.push("`");
+        i++;
+        continue;
+      }
+      const word = /^[\w$]+/.exec(source.slice(i));
+      if (word) {
+        tokens.push(word[0]);
+        i += word[0].length;
+        continue;
+      }
+      const operator = /^(>>>=|\*\*=|<<=|>>=|&&=|\|\|=|\?\?=|===|!==|>>>|\.\.\.|=>|==|!=|<=|>=|&&|\|\||\?\?|\?\.|\+\+|--|\*\*|<<|>>|[-+*/%&|^]=)/.exec(source.slice(i));
+      if (operator) {
+        tokens.push(operator[0]);
+        i += operator[0].length;
+        continue;
+      }
+      tokens.push(c);
+      i++;
+    }
+    return tokens;
+  }
+  function closingQuote(source, start) {
+    const quote = source[start];
+    for (let i = start + 1;i < source.length; i++) {
+      if (source[i] === "\\") {
+        i++;
+        continue;
+      }
+      if (source[i] === quote)
+        return i;
+      if (source[i] === `
+`)
+        return -1;
+    }
+    return -1;
+  }
+
+  // cdp/console-api.ts
+  var MONITOR_PRELUDE = `(() => {
+  if (typeof globalThis.monitor === "function") return;
+  const queue = [];
+  const define = (name, value) => Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
+  define("__redentMonitorQueue", queue);
+  define("monitor", (fn) => { if (typeof fn === "function") queue.push([true, fn]); });
+  define("unmonitor", (fn) => { if (typeof fn === "function") queue.push([false, fn]); });
+})()`;
+  var USES_MONITOR = /\b(un)?monitor\s*\(/;
+  var RESERVED = new Set([
+    "await",
+    "yield",
+    "let",
+    "static",
+    "enum",
+    "implements",
+    "interface",
+    "package",
+    "private",
+    "protected",
+    "public",
+    "break",
+    "case",
+    "catch",
+    "class",
+    "const",
+    "continue",
+    "debugger",
+    "default",
+    "delete",
+    "do",
+    "else",
+    "export",
+    "extends",
+    "false",
+    "finally",
+    "for",
+    "function",
+    "if",
+    "import",
+    "in",
+    "instanceof",
+    "new",
+    "null",
+    "return",
+    "super",
+    "switch",
+    "this",
+    "throw",
+    "true",
+    "try",
+    "typeof",
+    "var",
+    "void",
+    "while",
+    "with"
+  ]);
+  var LEXICAL = /(?:^|[;\n{}]\s*)(?:let|const|class)\s+([A-Za-z_$][\w$]*)/g;
+
+  class ConsoleHelpers {
+    s;
+    monitors = new Map;
+    typedNames = new Set;
+    constructor(s) {
+      this.s = s;
+    }
+    async prepare(expression, contextId) {
+      for (const match of expression.matchAll(LEXICAL))
+        this.typedNames.add(match[1]);
+      if (!USES_MONITOR.test(expression))
+        return;
+      await this.s.call("Runtime.evaluate", { expression: MONITOR_PRELUDE, contextId, doNotPauseOnExceptionsAndMuteConsole: true });
+    }
+    async finish(result, contextId) {
+      await this.s.call("Runtime.callFunctionOn", {
+        objectId: await this.globalObject(contextId),
+        functionDeclaration: "function (value) { Object.defineProperty(this, '$_', { value, configurable: true, writable: true }); }",
+        arguments: [result?.objectId ? { objectId: result.objectId } : { value: result?.value }]
+      }).catch(() => {});
+      await this.applyMonitors(contextId).catch(() => {});
+      this.release();
+    }
+    async globalObject(contextId) {
+      const r = await this.s.call("Runtime.evaluate", { expression: "globalThis", contextId, objectGroup: "redent-console" });
+      return r.result?.objectId;
+    }
+    release() {
+      this.s.call("Runtime.releaseObjectGroup", { objectGroup: "redent-console" }).catch(() => {});
+    }
+    async applyMonitors(contextId) {
+      const r = await this.s.call("Runtime.evaluate", {
+        expression: "globalThis.__redentMonitorQueue ? globalThis.__redentMonitorQueue.splice(0) : []",
+        contextId,
+        objectGroup: "redent-console"
+      });
+      const list = await this.s.call("Runtime.getProperties", { objectId: r.result?.objectId, ownProperties: true });
+      for (const entry of list.properties ?? []) {
+        if (!/^\d+$/.test(entry.name) || !entry.value?.objectId)
+          continue;
+        const pair = await this.s.call("Runtime.getProperties", { objectId: entry.value.objectId, ownProperties: true });
+        const on = pair.properties?.find((p) => p.name === "0")?.value?.value;
+        const fn = pair.properties?.find((p) => p.name === "1")?.value;
+        if (fn?.objectId)
+          await this.monitor(fn.objectId, !!on);
+      }
+    }
+    async monitor(functionId, on) {
+      const details = (await this.s.call("Debugger.getFunctionDetails", { functionId })).details;
+      const key = `${details.location.scriptId}:${details.location.lineNumber}:${details.location.columnNumber}`;
+      const existing = this.monitors.get(key);
+      if (existing) {
+        await this.s.call("Debugger.removeBreakpoint", { breakpointId: existing });
+        this.monitors.delete(key);
+      }
+      if (!on)
+        return;
+      const name = details.displayName || details.name || "(anonymous)";
+      const shape = await this.shape(details.location);
+      const values = shape.params.length ? ` + " with arguments: " + [${shape.params.join(", ")}].join(", ")` : "";
+      const log = `console.log(${JSON.stringify(`function ${name} called`)}${values})`;
+      const r = await this.s.call("Debugger.setBreakpoint", {
+        location: shape.body,
+        options: { autoContinue: true, actions: [{ type: "evaluate", data: log }] }
+      });
+      this.monitors.set(key, r.breakpointId);
+    }
+    async shape(location) {
+      const fetch = (id) => this.s.call("Debugger.getScriptSource", { scriptId: id });
+      const source = await this.s.state.scriptSource(location.scriptId, fetch);
+      const lines = source.split(`
+`);
+      const from = lines.slice(0, location.lineNumber).reduce((n, line) => n + line.length + 1, 0) + (location.columnNumber ?? 0);
+      const shape = functionShape(source, from);
+      if (!shape)
+        return { body: location, params: [] };
+      const before = source.slice(0, shape.body).split(`
+`);
+      return {
+        body: { scriptId: location.scriptId, lineNumber: before.length - 1, columnNumber: before[before.length - 1].length },
+        params: shape.params
+      };
+    }
+    async lexicalNames(contextId) {
+      const candidates = new Set(this.typedNames);
+      for (const scriptId of this.s.state.scripts.keys()) {
+        const source = await this.s.state.scriptSource(scriptId, (id) => this.s.call("Debugger.getScriptSource", { scriptId: id }));
+        for (const match of source.matchAll(LEXICAL))
+          candidates.add(match[1]);
+      }
+      const names = [...candidates].filter((n) => !RESERVED.has(n));
+      if (!names.length)
+        return [];
+      const checks = names.map((n) => `(() => { try { ${n}; return ${JSON.stringify(n)}; } catch { return null; } })()`);
+      const r = await this.s.call("Runtime.evaluate", {
+        expression: `[${checks.join(",")}].filter((n) => n && !(n in globalThis))`,
+        contextId,
+        returnByValue: true,
+        doNotPauseOnExceptionsAndMuteConsole: true
+      });
+      return Array.isArray(r.result?.value) ? r.result.value : [];
+    }
+  }
+  function functionShape(source, from) {
+    const arrow = source.indexOf("=>", from);
+    const paren = source.indexOf("(", from);
+    if (paren < 0 && arrow < 0)
+      return null;
+    let i;
+    let list;
+    if (paren >= 0 && (arrow < 0 || paren < arrow)) {
+      let depth = 0;
+      for (i = paren;i < source.length; i++) {
+        if (source[i] === "(")
+          depth++;
+        else if (source[i] === ")" && --depth === 0)
+          break;
+      }
+      list = source.slice(paren + 1, i);
+      i++;
+    } else {
+      list = source.slice(from, arrow);
+      i = arrow;
+    }
+    while (/\s/.test(source[i] ?? ""))
+      i++;
+    if (source.startsWith("=>", i)) {
+      i += 2;
+      while (/\s/.test(source[i] ?? ""))
+        i++;
+    }
+    if (i >= source.length)
+      return null;
+    const names = list.split(",").map((p) => p.trim().replace(/^\.\.\./, "").split("=")[0].trim());
+    const params = names.every((n) => /^[A-Za-z_$][\w$]*$/.test(n)) ? names : [];
+    return { body: source[i] === "{" ? i + 1 : i, params };
+  }
 
   // cdp/runtime.ts
   var SIDE_EFFECT = {
@@ -1107,11 +2135,12 @@
     exceptionDetails: { exceptionId: 1, text: "Uncaught", lineNumber: 0, columnNumber: 0 }
   };
   function installRuntime(s) {
+    const helpers = new ConsoleHelpers(s);
     s.handle("Runtime.enable", async () => {
       await replay(s, "Runtime");
       await replay(s, "Console");
     });
-    s.handle("Runtime.evaluate", (p) => evaluate(s, p));
+    s.handle("Runtime.evaluate", (p) => consoleEvaluate(s, helpers, p));
     s.handle("Runtime.awaitPromise", async (p) => evaluation(await s.call("Runtime.awaitPromise", {
       promiseObjectId: p.promiseObjectId,
       returnByValue: p.returnByValue,
@@ -1121,27 +2150,38 @@
     s.handle("Runtime.releaseObject", (p) => s.call("Runtime.releaseObject", { objectId: p.objectId }));
     s.handle("Runtime.releaseObjectGroup", (p) => s.call("Runtime.releaseObjectGroup", { objectGroup: p.objectGroup }));
     s.handle("Runtime.compileScript", (p) => compile(s, p.expression));
-    s.handle("Runtime.globalLexicalScopeNames", () => ({ names: [] }));
+    s.handle("Runtime.globalLexicalScopeNames", async (p) => ({ names: await helpers.lexicalNames(p.executionContextId) }));
     s.handle("Runtime.getIsolateId", () => ({ id: "redent" }));
     s.handle("Runtime.getHeapUsage", () => ({ usedSize: 0, totalSize: 0 }));
     s.handle("Runtime.discardConsoleEntries", () => s.call("Console.clearMessages"));
     s.handle("Runtime.setAsyncCallStackDepth", (p) => s.call("Debugger.setAsyncStackTraceDepth", { depth: p.maxDepth ?? 0 }));
     installProperties(s);
+    installErrors(s);
     installContexts(s);
   }
-  function contextId(p) {
+  function contextIdOf(p) {
     if (p.uniqueContextId)
       return Number(p.uniqueContextId);
     return p.contextId ?? p.executionContextId;
   }
+  async function consoleEvaluate(s, helpers, p) {
+    if (!p.replMode || p.throwOnSideEffect)
+      return evaluate(s, p);
+    const contextId = contextIdOf(p);
+    await helpers.prepare(p.expression ?? "", contextId).catch(() => {});
+    const r = await evaluate(s, p);
+    if (!r.exceptionDetails)
+      await helpers.finish(r.result, contextId);
+    return r;
+  }
   async function evaluate(s, p) {
-    if (p.throwOnSideEffect)
+    if (p.throwOnSideEffect && !isSideEffectFree(p.expression ?? ""))
       return SIDE_EFFECT;
     const params = {
       objectGroup: p.objectGroup,
       includeCommandLineAPI: p.includeCommandLineAPI,
-      doNotPauseOnExceptionsAndMuteConsole: p.silent,
-      contextId: contextId(p),
+      doNotPauseOnExceptionsAndMuteConsole: p.silent || p.throwOnSideEffect,
+      contextId: contextIdOf(p),
       returnByValue: p.returnByValue,
       generatePreview: p.generatePreview,
       emulateUserGesture: p.userGesture
@@ -1158,23 +2198,28 @@
           break;
       }
     }
-    if (!awaits || r.wasThrown || r.result?.className !== "Promise" || !r.result.objectId)
-      return evaluation(r);
-    return evaluation(await s.call("Runtime.awaitPromise", {
-      promiseObjectId: r.result.objectId,
-      returnByValue: p.returnByValue,
-      generatePreview: p.generatePreview
-    }));
+    if (awaits && !r.wasThrown && r.result?.className === "Promise" && r.result.objectId) {
+      r = await s.call("Runtime.awaitPromise", {
+        promiseObjectId: r.result.objectId,
+        returnByValue: p.returnByValue,
+        generatePreview: p.generatePreview
+      });
+    }
+    return withThrownStack(s, evaluation(r));
+  }
+  async function withThrownStack(s, r) {
+    if (!r.exceptionDetails)
+      return r;
+    const exception2 = await withStack(s, r.exceptionDetails.exception);
+    return { result: exception2, exceptionDetails: { ...r.exceptionDetails, exception: exception2 } };
   }
   async function callFunctionOn(s, p) {
-    if (p.throwOnSideEffect)
-      return SIDE_EFFECT;
     const args = (p.arguments ?? []).map((a) => a.objectId ? { objectId: a.objectId } : { value: a.value });
     if (!p.objectId) {
       const values = args.map((a) => JSON.stringify(a.value ?? null)).join(", ");
-      return evaluate(s, { ...p, expression: `(${p.functionDeclaration})(${values})`, contextId: p.executionContextId });
+      return evaluate(s, { ...p, throwOnSideEffect: false, expression: `(${p.functionDeclaration})(${values})`, contextId: p.executionContextId });
     }
-    return evaluation(await s.call("Runtime.callFunctionOn", {
+    return withThrownStack(s, evaluation(await s.call("Runtime.callFunctionOn", {
       objectId: p.objectId,
       functionDeclaration: p.functionDeclaration,
       arguments: args,
@@ -1183,7 +2228,7 @@
       generatePreview: p.generatePreview,
       emulateUserGesture: p.userGesture,
       awaitPromise: p.awaitPromise
-    }));
+    })));
   }
   async function compile(s, source) {
     const r = await s.call("Runtime.parse", { source });
@@ -1246,8 +2291,11 @@
     if (!inner)
       return true;
     active.fromBackend(inner);
+    if (WITHHELD.has(inner.method ?? ""))
+      return false;
     return !isSessionID(inner.id);
   }
+  var WITHHELD = new Set(["Debugger.paused", "Debugger.resumed", "DOM.inspect", "Inspector.inspect"]);
   function tap(name) {
     const original = InspectorFrontendAPI[name];
     if (typeof original !== "function")
@@ -1258,7 +2306,28 @@
       return original.call(this, message);
     };
   }
+  var bringToFront = null;
+  function holdWindowBack() {
+    const host = InspectorFrontendHost;
+    if (bringToFront || typeof host.bringToFront !== "function")
+      return;
+    bringToFront = host.bringToFront;
+    try {
+      host.bringToFront = () => {};
+    } catch {
+      bringToFront = null;
+    }
+  }
+  function releaseWindow() {
+    if (!bringToFront)
+      return;
+    try {
+      InspectorFrontendHost.bringToFront = bringToFront;
+    } catch {}
+    bringToFront = null;
+  }
   function attach() {
+    holdWindowBack();
     const transport = {
       toBackend: (raw) => InspectorFrontendHost.sendMessageToBackend(raw),
       toTools: toNative
@@ -1270,6 +2339,9 @@
     installNetwork(session);
     installDebugger(session);
     installEmulation(session);
+    installDOM(session);
+    installOverlay(session);
+    installCSS(session);
     installFallback(session);
   }
   if (!window.__redentDevTools) {
@@ -1278,6 +2350,7 @@
       attach,
       detach: () => {
         session = null;
+        releaseWindow();
       },
       fromTools: (raw) => session?.fromTools(raw)
     };

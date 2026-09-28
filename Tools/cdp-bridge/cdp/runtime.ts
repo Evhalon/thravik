@@ -5,9 +5,12 @@ import type { Session } from "./session";
 import { evaluation } from "./values";
 import { installProperties } from "./properties";
 import { replay } from "./replay";
+import { installErrors, withStack } from "./errors";
+import { isSideEffectFree } from "./side-effects";
+import { ConsoleHelpers } from "./console-api";
 
 // Chrome's eager evaluation asks for side-effect-free runs while the user
-// types. WebKit cannot promise that, so the answer is the error V8 gives for
+// types. What `isSideEffectFree` cannot vouch for gets the error V8 gives for
 // an expression with side effects, and nothing runs.
 const SIDE_EFFECT = {
   result: { type: "object", subtype: "error", className: "EvalError", description: "EvalError: Possible side-effect in debug-evaluate" },
@@ -15,11 +18,12 @@ const SIDE_EFFECT = {
 };
 
 export function installRuntime(s: Session) {
+  const helpers = new ConsoleHelpers(s);
   s.handle("Runtime.enable", async () => {
     await replay(s, "Runtime");
     await replay(s, "Console");
   });
-  s.handle("Runtime.evaluate", (p) => evaluate(s, p));
+  s.handle("Runtime.evaluate", (p) => consoleEvaluate(s, helpers, p));
   s.handle("Runtime.awaitPromise", async (p) => evaluation(await s.call("Runtime.awaitPromise", {
     promiseObjectId: p.promiseObjectId, returnByValue: p.returnByValue, generatePreview: p.generatePreview,
   })));
@@ -27,27 +31,39 @@ export function installRuntime(s: Session) {
   s.handle("Runtime.releaseObject", (p) => s.call("Runtime.releaseObject", { objectId: p.objectId }));
   s.handle("Runtime.releaseObjectGroup", (p) => s.call("Runtime.releaseObjectGroup", { objectGroup: p.objectGroup }));
   s.handle("Runtime.compileScript", (p) => compile(s, p.expression));
-  s.handle("Runtime.globalLexicalScopeNames", () => ({ names: [] }));
+  s.handle("Runtime.globalLexicalScopeNames", async (p) => ({ names: await helpers.lexicalNames(p.executionContextId) }));
   s.handle("Runtime.getIsolateId", () => ({ id: "redent" }));
   s.handle("Runtime.getHeapUsage", () => ({ usedSize: 0, totalSize: 0 }));
   s.handle("Runtime.discardConsoleEntries", () => s.call("Console.clearMessages"));
   s.handle("Runtime.setAsyncCallStackDepth", (p) => s.call("Debugger.setAsyncStackTraceDepth", { depth: p.maxDepth ?? 0 }));
   installProperties(s);
+  installErrors(s);
   installContexts(s);
 }
 
-function contextId(p: any): number | undefined {
+function contextIdOf(p: any): number | undefined {
   if (p.uniqueContextId) return Number(p.uniqueContextId);
   return p.contextId ?? p.executionContextId;
 }
 
-async function evaluate(s: Session, p: any) {
-  if (p.throwOnSideEffect) return SIDE_EFFECT;
+/** A command typed into the Console gets the helpers WebKit lacks, and its
+ *  value becomes `$_`. */
+async function consoleEvaluate(s: Session, helpers: ConsoleHelpers, p: any) {
+  if (!p.replMode || p.throwOnSideEffect) return evaluate(s, p);
+  const contextId = contextIdOf(p);
+  await helpers.prepare(p.expression ?? "", contextId).catch(() => {});
+  const r = await evaluate(s, p);
+  if (!r.exceptionDetails) await helpers.finish(r.result, contextId);
+  return r;
+}
+
+async function evaluate(s: Session, p: any): Promise<any> {
+  if (p.throwOnSideEffect && !isSideEffectFree(p.expression ?? "")) return SIDE_EFFECT;
   const params = {
     objectGroup: p.objectGroup,
     includeCommandLineAPI: p.includeCommandLineAPI,
-    doNotPauseOnExceptionsAndMuteConsole: p.silent,
-    contextId: contextId(p),
+    doNotPauseOnExceptionsAndMuteConsole: p.silent || p.throwOnSideEffect,
+    contextId: contextIdOf(p),
     returnByValue: p.returnByValue,
     generatePreview: p.generatePreview,
     emulateUserGesture: p.userGesture,
@@ -64,20 +80,29 @@ async function evaluate(s: Session, p: any) {
       if (!(r.wasThrown && r.result?.className === "SyntaxError")) break;
     }
   }
-  if (!awaits || r.wasThrown || r.result?.className !== "Promise" || !r.result.objectId) return evaluation(r);
-  return evaluation(await s.call("Runtime.awaitPromise", {
-    promiseObjectId: r.result.objectId, returnByValue: p.returnByValue, generatePreview: p.generatePreview,
-  }));
+  if (awaits && !r.wasThrown && r.result?.className === "Promise" && r.result.objectId) {
+    r = await s.call("Runtime.awaitPromise", {
+      promiseObjectId: r.result.objectId, returnByValue: p.returnByValue, generatePreview: p.generatePreview,
+    });
+  }
+  return withThrownStack(s, evaluation(r));
 }
 
+async function withThrownStack(s: Session, r: any): Promise<any> {
+  if (!r.exceptionDetails) return r;
+  const exception = await withStack(s, r.exceptionDetails.exception);
+  return { result: exception, exceptionDetails: { ...r.exceptionDetails, exception } };
+}
+
+// The function is always one of the frontend's own — the preview of a
+// getter, the list of completions — so it runs whatever it was flagged.
 async function callFunctionOn(s: Session, p: any) {
-  if (p.throwOnSideEffect) return SIDE_EFFECT;
   const args = (p.arguments ?? []).map((a: any) => (a.objectId ? { objectId: a.objectId } : { value: a.value }));
   if (!p.objectId) {
     const values = args.map((a: any) => JSON.stringify(a.value ?? null)).join(", ");
-    return evaluate(s, { ...p, expression: `(${p.functionDeclaration})(${values})`, contextId: p.executionContextId });
+    return evaluate(s, { ...p, throwOnSideEffect: false, expression: `(${p.functionDeclaration})(${values})`, contextId: p.executionContextId });
   }
-  return evaluation(await s.call("Runtime.callFunctionOn", {
+  return withThrownStack(s, evaluation(await s.call("Runtime.callFunctionOn", {
     objectId: p.objectId,
     functionDeclaration: p.functionDeclaration,
     arguments: args,
@@ -86,7 +111,7 @@ async function callFunctionOn(s: Session, p: any) {
     generatePreview: p.generatePreview,
     emulateUserGesture: p.userGesture,
     awaitPromise: p.awaitPromise,
-  }));
+  })));
 }
 
 // Chrome's console asks whether the input is complete before running it on

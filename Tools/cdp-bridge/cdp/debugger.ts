@@ -18,6 +18,9 @@ export function installDebugger(s: Session) {
   s.handle("Debugger.enable", async () => {
     s.state.debuggerEnabled = true;
     await replay(s, "Debugger");
+    // WebKit starts with breakpoints switched off until its own frontend
+    // turns them on; Chrome assumes they are on and says so only to toggle.
+    await s.call("Debugger.setBreakpointsActive", { active: true });
     return { debuggerId: "redent" };
   });
   s.handle("Debugger.disable", () => ({}));
@@ -53,7 +56,8 @@ function installEvents(s: Session) {
   s.on("Debugger.scriptParsed", (p) => {
     // Redent's own scripts run in isolated worlds; they are not the page's.
     if (p.isContentScript) return;
-    const url = p.url || p.sourceURL || "";
+    // A `//# sourceURL=` names the script, as it does in Chrome.
+    const url = p.sourceURL || p.url || "";
     s.state.scripts.set(p.scriptId, url);
     s.emit("Debugger.scriptParsed", {
       scriptId: p.scriptId, url, startLine: p.startLine, startColumn: p.startColumn,

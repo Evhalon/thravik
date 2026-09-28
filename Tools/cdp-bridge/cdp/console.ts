@@ -5,6 +5,7 @@
 import type { Session } from "./session";
 import { replay } from "./replay";
 import { remoteObject, stackTrace, zeroBased } from "./values";
+import { withStack } from "./errors";
 
 const API_TYPES: Record<string, string> = {
   dir: "dir", dirxml: "dirxml", table: "table", trace: "trace", clear: "clear",
@@ -28,10 +29,19 @@ export function installConsole(s: Session) {
   let queue = Promise.resolve();
   s.on("Console.messageAdded", ({ message }) => {
     queue = queue.then(async () => {
-      last = translate(s, await withPreviews(s, message));
+      last = await withErrorStacks(s, translate(s, await withPreviews(s, message)));
       if (last) s.emit(last.method, last.params);
     });
   });
+  // The command line's `clear()`; `console.clear()` arrives as a message.
+  s.on("Console.messagesCleared", ({ reason }) => {
+    if (reason !== "console-api") return;
+    s.emit("Runtime.consoleAPICalled", {
+      type: "clear", args: [{ type: "string", value: "console.clear" }],
+      executionContextId: s.state.mainContextId || 1, timestamp: Date.now(),
+    });
+  });
+  s.on("Inspector.inspect", ({ object, hints }) => inspectRequested(s, object, hints ?? {}));
   // Chrome has no repeat count; it folds identical messages on its own.
   s.on("Console.messageRepeatCountUpdated", () => {
     if (last) s.emit(last.method, { ...last.params, timestamp: Date.now() });
@@ -47,14 +57,36 @@ function translate(s: Session, m: any): { method: string; params: any } | null {
   return { method: "Log.entryAdded", params: { entry: logEntry(s, m) } };
 }
 
+// WebKit reports `console.count` as a debug message with no arguments,
+// where `console.debug` always has at least one.
+function apiType(m: any): string {
+  if (m.type === "log" || !m.type) return m.level === "debug" && !m.parameters?.length ? "count" : level(m.level);
+  return API_TYPES[m.type] ?? "log";
+}
+
+/** WebKit stamps messages in seconds; one without a stamp is new. */
+function timestamp(m: any): number {
+  return typeof m.timestamp === "number" && m.timestamp > 1e9 ? m.timestamp * 1000 : Date.now();
+}
+
+async function withErrorStacks(s: Session, t: { method: string; params: any } | null) {
+  if (!t) return t;
+  if (t.method === "Runtime.consoleAPICalled") {
+    t.params.args = await Promise.all(t.params.args.map((a: any) => withStack(s, a)));
+  } else if (t.method === "Runtime.exceptionThrown") {
+    t.params.exceptionDetails.exception = await withStack(s, t.params.exceptionDetails.exception);
+  }
+  return t;
+}
+
 function apiCall(s: Session, m: any) {
-  const type = m.type === "log" || !m.type ? level(m.level) : API_TYPES[m.type] ?? "log";
+  const type = apiType(m);
   const args = m.parameters?.length ? m.parameters.map(remoteObject) : [{ type: "string", value: m.text ?? "" }];
   return {
     type,
     args,
     executionContextId: s.state.mainContextId || 1,
-    timestamp: Date.now(),
+    timestamp: timestamp(m),
     stackTrace: stackTrace(m.stackTrace, s.state.isAnnounced),
   };
 }
@@ -85,7 +117,7 @@ function exception(s: Session, m: any) {
     ? remoteObject(m.parameters[0])
     : { type: "object", subtype: "error", className: text.split(":")[0] || "Error", description: text };
   return {
-    timestamp: Date.now(),
+    timestamp: timestamp(m),
     exceptionDetails: {
       exceptionId: 1,
       text: inPromise ? "Uncaught (in promise)" : "Uncaught",
@@ -105,10 +137,33 @@ function logEntry(s: Session, m: any) {
     source: LOG_SOURCES.has(m.source) ? m.source : m.source === "css" ? "rendering" : "other",
     level: m.level === "debug" ? "verbose" : m.level === "log" ? "info" : m.level,
     text: m.text ?? "",
-    timestamp: Date.now(),
+    timestamp: timestamp(m),
     url: m.url,
     lineNumber: m.line ? zeroBased(m.line) : undefined,
     stackTrace: stackTrace(m.stackTrace, s.state.isAnnounced),
     networkRequestId: m.networkRequestId,
   };
 }
+
+// `copy()` and `inspect()` ask the frontend to act on a value. WebKit's own
+// hidden Web Inspector hears the same request and releases the value once it
+// is done with it, before Chrome has read it — so the value is taken into a
+// group of the bridge's own first. The first call goes out before the hidden
+// Web Inspector sees the event, and so reaches the page in time.
+async function inspectRequested(s: Session, object: any, hints: any) {
+  let held = object;
+  if (object?.objectId) {
+    const stash = s.call("Runtime.callFunctionOn", {
+      objectId: object.objectId, functionDeclaration: `function () { globalThis[${JSON.stringify(HELD)}] = this; }`,
+    });
+    await stash.catch(() => {});
+    const r = await s.call("Runtime.evaluate", {
+      expression: `(() => { const v = globalThis[${JSON.stringify(HELD)}]; delete globalThis[${JSON.stringify(HELD)}]; return v; })()`,
+      objectGroup: "redent-inspected", generatePreview: true, contextId: s.state.mainContextId || undefined,
+    }).catch(() => null);
+    if (r?.result?.objectId) held = r.result;
+  }
+  s.emit("Runtime.inspectRequested", { object: remoteObject(held), hints, executionContextId: s.state.mainContextId || 1 });
+}
+
+const HELD = "__redentInspected";
