@@ -6,20 +6,8 @@ extension WebTab {
     /// Releases the web view so its content process can exit, keeping
     /// `snapshot` intact. Idempotent.
     public func hibernate() {
-        guard let view = webView else { return }
-        let host = view.superview as? WebViewHost
-        teardownObservers()
-        view.configuration.userContentController.removeScriptMessageHandler(
-            forName: PageScripts.messageHandlerName, contentWorld: PageScripts.contentWorld
-        )
-        signalRouter = nil
-        view.stopLoading()
-        view.navigationDelegate = nil
-        view.uiDelegate = nil
-        view.removeFromSuperview()
-        host?.removeFromSuperview()
-        navigationDelegate = nil
-        webView = nil
+        guard let view = detachLiveView() else { return }
+        release([view] + displacedPages.removeAll())
         isHibernated = true
         // The items belong to the list that just went away; keeping them would
         // pin the whole back/forward chain and let the panel promise a restore
@@ -68,7 +56,7 @@ extension TabController {
                 tab.snapshot.lastActiveAt = now
                 continue
             }
-            guard !tab.isPinned, !tab.isHibernated, !tab.isPlayingAudio else { continue }
+            guard !tab.isPinned, !tab.isHibernated, !tab.isPlayingAudio, tab.devToolsPanel == nil else { continue }
             if now.timeIntervalSince(tab.snapshot.lastActiveAt) >= threshold {
                 tab.hibernate()
             }

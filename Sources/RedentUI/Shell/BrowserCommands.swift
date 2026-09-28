@@ -24,6 +24,8 @@ public struct BrowserCommands: Commands {
             Button("Undo Browser Action") { model?.tabs.undo() }
                 .keyboardShortcut("z", modifiers: [.command, .option])
                 .disabled(!(model?.tabs.canUndo ?? false))
+            Divider()
+            BrowserDevToolsItems(model: model)
         }
         CommandGroup(replacing: .saveItem) {
             Button(sidebarTitle) { model?.toggleSidebar() }

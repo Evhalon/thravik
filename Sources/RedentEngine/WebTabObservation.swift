@@ -19,11 +19,11 @@ extension WebTab {
             webView.observe(\.isLoading, options: [.new]) { [weak self] view, _ in
                 Task { @MainActor in self?.isLoading = view.isLoading }
             },
-            webView.observe(\.canGoBack, options: [.new]) { [weak self] view, _ in
-                Task { @MainActor in self?.canGoBack = view.canGoBack }
+            webView.observe(\.canGoBack, options: [.new]) { [weak self] _, _ in
+                Task { @MainActor in self?.refreshHistoryAvailability() }
             },
-            webView.observe(\.canGoForward, options: [.new]) { [weak self] view, _ in
-                Task { @MainActor in self?.canGoForward = view.canGoForward }
+            webView.observe(\.canGoForward, options: [.new]) { [weak self] _, _ in
+                Task { @MainActor in self?.refreshHistoryAvailability() }
             },
             webView.observe(\.themeColor, options: [.new]) { [weak self] view, _ in
                 Task { @MainActor in self?.applyThemeColor(view.themeColor) }

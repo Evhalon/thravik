@@ -7,14 +7,28 @@ extension BrowserModel {
         let context = SuggestionContext(
             searchEngine: settings.searchEngine, spaceID: currentSpaceID, openTabs: switchableTabs
         )
-        suggestions.update(query: text, from: source, context: context)
+        suggestions.update(query: text, from: source, context: context) { [weak self] result in
+            self?.suggestionsSettled(result)
+        }
         // Whatever return would open right now — the search engine for a
         // query, the site for an address — gets its handshake started early.
         let likely = AddressResolver.resolve(text, using: settings.searchEngine)
         if let likely { tabs.preconnect(to: likely) }
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // The field echoing a completion back is the site it completed to.
+        if let completion = suggestions.completion, completion.text == query {
+            return prerenderSchedule.schedule(completion.url, on: tabs)
+        }
         let search = settings.searchEngine.searchURL(for: query)
         prerenderSchedule.queryChanged(query, search: likely == search ? likely : nil, on: tabs)
+    }
+
+    /// A completion drawn from history is where return goes, and a site the
+    /// user has been to before — safe to start loading, unlike the letters.
+    private func suggestionsSettled(_ result: SuggestionResult) {
+        guard let completion = result.completion else { return }
+        tabs.preconnect(to: completion.url)
+        prerenderSchedule.schedule(completion.url, on: tabs)
     }
 
     /// Return in the address bar. ⌘-return keeps the current page and opens
@@ -59,7 +73,20 @@ extension BrowserModel {
     public func moveSuggestionHighlight(by offset: Int, from source: AddressSuggestionsModel.Source) -> Bool {
         guard suggestions.isOpen(for: source) else { return false }
         suggestions.moveHighlight(by: offset)
+        if let row = suggestions.highlightedRow, loadsAhead(row) {
+            prerenderSchedule.prerenderNow(row.url, on: tabs)
+        }
         return true
+    }
+
+    /// A search, or a page already saved or visited. A typed address is not:
+    /// until return it may be a typo for someone else's site.
+    private func loadsAhead(_ row: AddressSuggestion) -> Bool {
+        switch row.kind {
+        case .search, .history, .bookmark: true
+        case .directURL: row.url == suggestions.completion?.url
+        case .openTab: false
+        }
     }
 
     /// Switching away from a blank new tab closes it: it was only ever the

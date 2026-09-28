@@ -57,7 +57,11 @@ public final class AddressSuggestionsModel {
 
     public func isOpen(for source: Source) -> Bool { openSource == source }
 
-    public func update(query: String, from source: Source, context: SuggestionContext) {
+    /// - Parameter settled: told the result once its rows are showing.
+    public func update(
+        query: String, from source: Source, context: SuggestionContext,
+        settled: (@MainActor (SuggestionResult) -> Void)? = nil
+    ) {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         // The field echoes a completion back as if it were typed.
         if openSource == source, let completion, completion.text == trimmed { return }
@@ -80,6 +84,7 @@ public final class AddressSuggestionsModel {
             openSource = found.rows.isEmpty ? nil : source
             highlighted = nil
             pendingSource = nil
+            settled?(found)
         }
     }
 

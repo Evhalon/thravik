@@ -55,7 +55,7 @@ enum WebViewFactory {
     }
 
     static func makeWebView(configuration: WKWebViewConfiguration) -> WKWebView {
-        let view = WKWebView(frame: .zero, configuration: configuration)
+        let view = BrowserWebView(frame: .zero, configuration: configuration)
         view.allowsBackForwardNavigationGestures = true
         view.isInspectable = true
         view.allowsMagnification = true

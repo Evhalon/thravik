@@ -19,6 +19,11 @@ extension TabController {
             ?? WebViewFactory.makeWebView(configuration: WebViewFactory.makeConfiguration(
                 store: store, options: options, contentBlocker: contentBlocker
             ))
+        // Laid out at the size it will be shown, the page is ready to paint
+        // the moment it is attached instead of reflowing from zero width.
+        if let shown = webTabs.first(where: { $0.id == selectedID })?.webView {
+            view.frame = shown.bounds
+        }
         warmer.prerenderer.prerender(url, in: view, store: store, options: options)
         warmer.prepare(store: store, options: options, contentBlocker: contentBlocker)
     }

@@ -58,7 +58,7 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
         }
         tab?.beginNavigation(to: navigationAction.request.url)
         BrowserUserAgent.applyBeforeNavigation(navigationAction, on: webView)
-        tab?.timelineRecorder.willNavigate(navigationAction.navigationType)
+        tab?.willNavigate(navigationAction.navigationType)
         return .allow
     }
 

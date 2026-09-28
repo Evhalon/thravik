@@ -49,12 +49,18 @@ public final class WebTab: Identifiable, BrowserTab {
     /// Bounded by the timeline's own cap, and released with the web view: these
     /// keep a whole back/forward list alive otherwise.
     @ObservationIgnored var liveItems: [UUID: WKBackForwardListItem] = [:]
-    @ObservationIgnored var webView: WKWebView?
+    /// Observed: a prerendered search can replace the view of a tab that is
+    /// already awake, and the host has to show the new one.
+    var webView: WKWebView?
+    @ObservationIgnored var displacedPages = DisplacedPages()
     @ObservationIgnored var navigationDelegate: WebTabNavigationDelegate?
     @ObservationIgnored var signalRouter: PageSignalRouter?
     @ObservationIgnored var observationTokens: [NSKeyValueObservation] = []
     @ObservationIgnored var audibleFrames: Set<String> = []
     @ObservationIgnored var findRequestID: UInt = 0
+    /// Chrome's DevTools docked under the page, while open. It keeps the tab
+    /// awake, and closes with the web view it inspects.
+    var devToolsPanel: DevToolsPanel?
 
     init(snapshot: TabSnapshot, controller: TabController?) {
         var snapshot = snapshot
@@ -75,34 +81,8 @@ public final class WebTab: Identifiable, BrowserTab {
 
     public func load(_ url: URL) {
         beginNavigation(to: url)
-        if webView == nil {
-            wake(loading: url)
-        } else if let webView {
-            navigate(url, in: webView)
-        }
-    }
-
-    public var timeline: [NavigationEntry] { snapshot.timeline.entries }
-
-    /// Returns to an earlier point in this tab's path, using the live list when
-    /// the item is still valid and reloading the URL when it is not.
-    public func travel(to entry: NavigationEntry) {
-        guard let webView, let item = liveItems[entry.id], isReachable(item, in: webView) else {
-            load(entry.url)
-            return
-        }
-        webView.go(to: item)
-    }
-
-    /// WebKit prunes forward items on a new navigation, so a stored item can
-    /// outlive its place in the list.
-    private func isReachable(_ item: WKBackForwardListItem, in webView: WKWebView) -> Bool {
-        let list = webView.backForwardList
-        return list.backList.contains(item) || list.forwardList.contains(item) || list.currentItem == item
-    }
-
-    public func forgetTimeline(domain: String) {
-        snapshot.timeline.forget(domain: domain)
+        if adoptPrerendered(url) { return }
+        if let webView { navigate(url, in: webView) } else { wake(loading: url) }
     }
 
     /// Applied to the live view and stored on the snapshot, so a hibernated tab
@@ -112,16 +92,18 @@ public final class WebTab: Identifiable, BrowserTab {
         guard clamped != zoom else { return }
         zoom = clamped
         snapshot.zoom = clamped
-        webView?.pageZoom = clamped
+        applyPageZoom()
     }
 
     public func goBack() {
         beginNavigation()
+        if goBackToDisplacedPage() { return }
         webView?.goBack()
     }
 
     public func goForward() {
         beginNavigation()
+        if goForwardToDisplacedPage() { return }
         webView?.goForward()
     }
     public func reload() {

@@ -16,7 +16,10 @@ let package = Package(
         .target(name: "RedentOTPAuth", dependencies: ["RedentKit", "RedentCrypto"], swiftSettings: strict),
         .target(name: "RedentVault", dependencies: ["RedentKit"], swiftSettings: strict),
         .target(name: "RedentImport", dependencies: ["RedentKit"], swiftSettings: strict),
-        .target(name: "RedentEngine", dependencies: ["RedentKit"], resources: [.process("Resources")], swiftSettings: strict),
+        .target(
+            name: "RedentEngine", dependencies: ["RedentKit"],
+            resources: [.process("Resources"), .copy("DevToolsFrontend")], swiftSettings: strict
+        ),
         .target(name: "RedentUpdate", dependencies: ["RedentKit"], swiftSettings: strict),
         .target(name: "RedentDesign", swiftSettings: strict),
         .target(
