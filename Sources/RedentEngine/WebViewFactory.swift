@@ -29,11 +29,11 @@ enum WebViewFactory {
         // `isInspectable` permits Safari to attach, while this WebKit switch
         // also exposes Inspect Element in the page's contextual menu.
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
-        // A tab that is not on screen is detached from the window, and WebKit
-        // will then stop running its JavaScript and layout altogether. Playing
-        // media and in-flight loads are exempt, so a background video or a page
-        // still loading keeps going.
-        config.preferences.inactiveSchedulingPolicy = .suspend
+        // Throttle, not suspend: a ⌘-clicked tab has never been in a window,
+        // and `.suspend` froze its process mid-load, so the page only loaded
+        // once the user opened it. Idle background tabs are reclaimed by
+        // hibernation instead.
+        config.preferences.inactiveSchedulingPolicy = .throttle
         installContent(into: config, options: options, contentBlocker: contentBlocker)
         return config
     }

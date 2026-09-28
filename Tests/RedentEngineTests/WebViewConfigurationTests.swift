@@ -36,12 +36,12 @@ struct WebViewConfigurationTests {
         #expect(hasRequest == true)
     }
 
-    @Test("An off-screen tab is suspended rather than left running")
-    func idleTabsSuspend() {
+    @Test("An off-screen tab is throttled, so a ⌘-clicked link finishes loading behind the page")
+    func offScreenTabsThrottle() {
         let configuration = WebViewFactory.makeConfiguration(
             store: .nonPersistent(), options: PageContentOptions(blocksTrackers: false), contentBlocker: nil
         )
-        #expect(configuration.preferences.inactiveSchedulingPolicy == .suspend)
+        #expect(configuration.preferences.inactiveSchedulingPolicy == .throttle)
     }
 
     @Test("The page context menu exposes Web Inspector")
