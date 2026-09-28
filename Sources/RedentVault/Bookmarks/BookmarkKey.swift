@@ -1,16 +1,20 @@
 import Foundation
+import RedentKit
 
-/// A dedupe key for bookmarks: scheme + host + path, trailing slash ignored.
-/// Query string and fragment are deliberately excluded — two links to the
-/// same page with different tracking parameters are the same bookmark.
+/// A dedupe key for bookmarks: scheme + host + path + query, trailing slash
+/// and fragment ignored. The query stays in — on many sites it is what names
+/// the page (`watch?v=…`, `item?id=…`) — minus tracking parameters, so two
+/// links to one page from different campaigns are still one bookmark.
 enum BookmarkKey {
     static func normalized(_ url: URL) -> String {
-        let scheme = (url.scheme ?? "").lowercased()
-        let host = (url.host() ?? "").lowercased()
-        var path = url.path
+        let clean = TrackingParameters.stripped(url) ?? url
+        let scheme = (clean.scheme ?? "").lowercased()
+        let host = (clean.host() ?? "").lowercased()
+        var path = clean.path
         if path.count > 1, path.hasSuffix("/") {
             path.removeLast()
         }
-        return "\(scheme)://\(host)\(path)"
+        let query = clean.query(percentEncoded: true).map { "?\($0)" } ?? ""
+        return "\(scheme)://\(host)\(path)\(query)"
     }
 }

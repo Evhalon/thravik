@@ -24,6 +24,16 @@ struct BookmarkStoreTests {
         #expect(await store.all(in: nil).count == 1)
     }
 
+    @Test("Two pages told apart only by their query are two bookmarks")
+    func queryNamesThePage() async throws {
+        let store = makeStore()
+        let first = Bookmark(url: try url("https://video.example/watch?v=one"))
+        await store.save(first)
+        #expect(await store.bookmark(for: try url("https://video.example/watch?v=two"), in: nil) == nil)
+        let tracked = try url("https://video.example/watch?v=one&utm_source=mail#t=3")
+        #expect(await store.bookmark(for: tracked, in: nil)?.id == first.id)
+    }
+
     @Test("Merging the same set twice adds nothing the second time")
     func idempotentMerge() async throws {
         let store = makeStore()

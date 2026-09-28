@@ -70,7 +70,7 @@ public final class NewTabModel {
     }
 
     public var rootFavoriteTiles: [NewTabTile] {
-        favoriteTiles(from: favorites.filter(\.folderPath.isEmpty), limit: Self.tileLimit, uniquingHosts: true)
+        favoriteTiles(from: favorites.filter(\.folderPath.isEmpty), limit: Self.tileLimit)
     }
 
     func updateFavoriteIcons(_ icons: [String: Data]) {
@@ -91,7 +91,7 @@ public final class NewTabModel {
     }
 
     public func favoriteTiles(in folder: FavoriteFolder) -> [NewTabTile] {
-        favoriteTiles(from: favorites.filter { $0.folderPath == folder.path }, limit: nil, uniquingHosts: false)
+        favoriteTiles(from: favorites.filter { $0.folderPath == folder.path }, limit: nil)
     }
 
     /// Most-visited sites counted within the Space being viewed, so a work
@@ -113,14 +113,12 @@ public final class NewTabModel {
         return favorites + frequentTiles(excluding: hosts, limit: Self.tileLimit - favorites.count)
     }
 
-    private func favoriteTiles(
-        from bookmarks: [Bookmark], limit: Int?, uniquingHosts: Bool
-    ) -> [NewTabTile] {
-        var seen = Set<String>()
+    /// Every favorite gets its own tile, even beside another on the same site:
+    /// keeping one per host hid the older page behind the newer one.
+    private func favoriteTiles(from bookmarks: [Bookmark], limit: Int?) -> [NewTabTile] {
         var tiles: [NewTabTile] = []
         for bookmark in bookmarks.sorted(by: { $0.addedAt > $1.addedAt }) {
             guard let host = bookmark.origin?.displayHost else { continue }
-            if uniquingHosts && !seen.insert(host).inserted { continue }
             tiles.append(NewTabTile(
                 url: bookmark.url,
                 title: bookmark.displayTitle,
