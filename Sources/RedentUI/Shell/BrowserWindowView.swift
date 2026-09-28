@@ -21,6 +21,9 @@ public struct BrowserWindowView<Sheets: View>: View {
     public var body: some View {
         ZStack {
             WindowBackdrop(tint: ambientTint).equatable()
+            SpaceWash(space: model.currentSpace)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .animation(.easeInOut(duration: 0.34), value: model.currentSpaceID)
             WindowConfigurator().frame(width: 0, height: 0)
 
             HStack(spacing: 0) {

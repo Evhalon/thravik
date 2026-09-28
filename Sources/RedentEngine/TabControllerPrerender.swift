@@ -19,13 +19,17 @@ extension TabController {
             ?? WebViewFactory.makeWebView(configuration: WebViewFactory.makeConfiguration(
                 store: store, options: options, contentBlocker: contentBlocker
             ))
-        // Laid out at the size it will be shown, the page is ready to paint
-        // the moment it is attached instead of reflowing from zero width.
-        if let shown = webTabs.first(where: { $0.id == selectedID })?.webView {
-            view.frame = shown.bounds
-        }
+        sizeLikeShownPage(view)
         warmer.prerenderer.prerender(url, in: view, store: store, options: options)
         warmer.prepare(store: store, options: options, contentBlocker: contentBlocker)
+    }
+
+    /// Laid out at the size it will be shown, an off-screen page is ready to
+    /// paint the moment it is attached. From zero width it lays out as a phone
+    /// first, and a site's sidebar then animates open in front of the user.
+    func sizeLikeShownPage(_ view: WKWebView) {
+        guard let shown = webTabs.first(where: { $0.id == selectedID })?.webView, shown !== view else { return }
+        view.frame = shown.bounds
     }
 
     /// Where a tab opened in the selected Space browses.

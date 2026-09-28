@@ -2,7 +2,9 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// The draggable seam between the tab rail and the page.
+/// The draggable seam between the tab rail and the page. Invisible until
+/// hovered: the rail and the toolbar share one surface, and a resting line
+/// would cut it in two.
 ///
 /// Uses `@GestureState` rather than `@State` for the drag origin: `@State`
 /// survives across gestures and is reset when the view's identity changes, so a
@@ -17,7 +19,7 @@ struct SidebarResizeHandle: View {
 
     var body: some View {
         Rectangle()
-            .fill(isHovering ? Palette.accent.opacity(0.55) : Color.white.opacity(0.06))
+            .fill(isHovering ? Palette.accent.opacity(0.55) : Color.clear)
             .frame(width: 1)
             // A 1pt line is impossible to grab; the hit area is widened well
             // past what is drawn.

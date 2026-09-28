@@ -13,6 +13,7 @@ extension WebTab {
         }
         if let url, adoptPrerendered(url) { return }
         let view = makeWebView()
+        controller?.sizeLikeShownPage(view)
         install(view)
         if let target = url ?? snapshot.url {
             navigate(target, in: view)

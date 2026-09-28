@@ -83,6 +83,16 @@ struct TabOpeningTests {
         #expect(browser.webTabs.contains { $0.id == opened.id })
     }
 
+    @Test("A background tab lays out at the size of the page on screen")
+    func commandClickSizesLikeShownPage() throws {
+        let browser = controller()
+        let parent = try #require(browser.newTab(url: URL(string: "https://example.com")) as? WebTab)
+        parent.webView?.frame = NSRect(x: 0, y: 0, width: 1280, height: 800)
+        let next = try #require(URL(string: "https://example.com/next"))
+        let opened = try #require(browser.openCommandClickedLink(url: next, from: parent.snapshot) as? WebTab)
+        #expect(opened.webView?.frame.size == NSSize(width: 1280, height: 800))
+    }
+
     @Test("Command-shift-click switches to the new tab")
     func commandShiftClickSelects() throws {
         let browser = controller()
