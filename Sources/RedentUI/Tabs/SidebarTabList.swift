@@ -3,7 +3,8 @@ import RedentKit
 import SwiftUI
 
 /// Vertical tab list with Dia-style related clusters, for one Space: the
-/// pager also draws the neighbouring Spaces' lists as they slide in.
+/// pager also draws the neighbouring Spaces' lists as they slide in. Pinned
+/// tabs are `PinnedTileGrid`'s, above it.
 struct SidebarTabList: View {
     @Bindable var model: BrowserModel
     var namespace: Namespace.ID
@@ -19,7 +20,7 @@ struct SidebarTabList: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 2) {
-                ForEach(outline.nodes) { node in
+                ForEach(outline.listNodes(keeping: model.split.tabIDs)) { node in
                     switch node {
                     case .tab(let id):
                         if let tab = tab(id) { row(tab, indent: 0) }

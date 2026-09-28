@@ -8,6 +8,9 @@ public enum WorkspaceAction: Sendable, Hashable, Codable {
     case selectTab(id: UUID)
     case moveTab(id: UUID, toSpaceID: UUID, index: Int?)
     case setPinned(id: UUID, isPinned: Bool)
+    /// Nil or blank restores the page's own title.
+    case renameTab(id: UUID, title: String?)
+    case setPinnedURL(id: UUID, url: URL?)
     case createGroup(spaceID: UUID, name: String)
     case createGroupWithTabs(spaceID: UUID, name: String, tabIDs: [UUID])
     case renameGroup(id: UUID, name: String)

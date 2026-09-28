@@ -38,15 +38,14 @@ struct SidebarTabStrip: View {
         .animation(.spring(duration: 0.34, bounce: 0.08), value: model.tabs.session.selectedSpaceID)
     }
 
-    /// Each Space carries its own wash, so its colour slides in with it.
     private func spacePage(_ space: BrowserSpace) -> some View {
         VStack(alignment: .leading, spacing: Metric.tightGutter + 2) {
+            PinnedTileGrid(model: model, spaceID: space.id)
             SpaceSwitcher(model: model, current: space)
             SidebarTabList(model: model, namespace: selection, spaceID: space.id)
         }
         .padding(.horizontal, Metric.gutter - 2)
         // Clears the window buttons, which now sit over the top of this rail.
         .padding(.top, Metric.toolbarHeight)
-        .background(alignment: .top) { SpaceWash(space: space) }
     }
 }

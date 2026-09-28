@@ -24,6 +24,7 @@ public struct WorkspaceState: Codable, Sendable, Equatable {
         case let .selectTab(id): try selectTab(id: id)
         case let .moveTab(id, toSpaceID, index): try moveTab(id: id, to: toSpaceID, index: index)
         case let .setPinned(id, isPinned): try setPinned(id: id, isPinned: isPinned)
+        case .renameTab, .setPinnedURL: try applyTabLabel(action)
         case .createGroup, .createGroupWithTabs, .renameGroup,
              .deleteGroup, .moveTabToGroup, .groupTabs:
             try applyGroup(action)
@@ -91,6 +92,7 @@ public struct WorkspaceState: Codable, Sendable, Equatable {
     private mutating func setPinned(id: UUID, isPinned: Bool) throws {
         guard let index = session.tabs.firstIndex(where: { $0.id == id }) else { throw WorkspaceActionError.missingTab(id) }
         session.tabs[index].isPinned = isPinned
+        session.tabs[index].pinnedURL = isPinned ? session.tabs[index].url : nil
         guard isPinned else { return }
         session.tabs[index].groupID = nil
         session.tabs[index].parentTabID = nil

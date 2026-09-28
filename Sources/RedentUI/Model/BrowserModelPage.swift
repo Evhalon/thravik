@@ -34,6 +34,10 @@ extension BrowserModel {
     /// recipient's browser would otherwise report back to the tracker.
     public func copyAddress() {
         guard let url = selectedTab?.url else { return }
+        copyLink(url)
+    }
+
+    public func copyLink(_ url: URL) {
         let shared = settings.stripsTrackingParameters ? TrackingParameters.stripped(url) ?? url : url
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()

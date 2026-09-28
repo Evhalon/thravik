@@ -7,8 +7,21 @@ public struct SidebarOutline: Equatable, Sendable {
     /// Top-to-bottom tab ids as the sidebar draws them.
     public var tabIDs: [UUID] { nodes.flatMap(\.tabIDs) }
 
+    /// The pinned tabs, which the sidebar draws as tiles above its list.
+    public let pinnedIDs: [UUID]
+
     public init(tabs: [TabSnapshot], groups: [BrowserGroup], spaceID: UUID?) {
         nodes = Self.build(tabs: tabs, groups: groups, spaceID: spaceID)
+        pinnedIDs = tabs.filter { $0.spaceID == spaceID && $0.isPinned }.map(\.id)
+    }
+
+    /// The rows under the tiles. A pinned tab in `drawnAsRows` — one a split
+    /// is showing as its row — keeps its place in the list.
+    public func listNodes(keeping drawnAsRows: [UUID]) -> [SidebarNode] {
+        nodes.filter { node in
+            guard case .tab(let id) = node, pinnedIDs.contains(id) else { return true }
+            return drawnAsRows.contains(id)
+        }
     }
 
     private static func build(tabs: [TabSnapshot], groups: [BrowserGroup], spaceID: UUID?) -> [SidebarNode] {

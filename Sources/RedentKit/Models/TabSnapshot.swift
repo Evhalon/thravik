@@ -10,6 +10,11 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
     public var title: String
     public var faviconData: Data?
     public var isPinned: Bool
+    /// Where a pinned tab belongs: the page it showed when pinned. Browsing
+    /// away keeps the pin; "Return to" comes back here.
+    public var pinnedURL: URL?
+    /// The user's own name for the tab, shown instead of the page title.
+    public var customTitle: String?
     public var lastActiveAt: Date
     public var spaceID: UUID?
     public var containerID: UUID?
@@ -24,7 +29,7 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
     public var zoom: Double = PageZoom.identity
 
     private enum CodingKeys: String, CodingKey {
-        case id, url, title, faviconData, isPinned, lastActiveAt
+        case id, url, title, faviconData, isPinned, pinnedURL, customTitle, lastActiveAt
         case spaceID, containerID, groupID, parentTabID, expiresAt, lifespan, timeline, zoom
     }
 
@@ -55,12 +60,19 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
 
     /// What the tab strip shows: page title, else host, else a placeholder.
     public var displayTitle: String {
+        if let customTitle { return customTitle }
         if !title.isEmpty { return title }
         if let host = url.flatMap(Origin.init(url:))?.displayHost { return host }
         return "New Tab"
     }
 
     public var origin: Origin? { url.flatMap(Origin.init(url:)) }
+
+    /// The pinned page, when the tab has browsed away from it.
+    public var pinnedPageElsewhere: URL? {
+        guard isPinned, let pinnedURL, url != pinnedURL else { return nil }
+        return pinnedURL
+    }
 
     /// A temporary tab that cleans up after itself owns an ephemeral store;
     /// every other tab browses in its Container, defaulting to Default.
@@ -92,6 +104,8 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
         self.timeline = try values.decodeIfPresent(TabTimeline.self, forKey: .timeline) ?? TabTimeline()
         self.zoom = PageZoom.clamped(try values.decodeIfPresent(Double.self, forKey: .zoom) ?? PageZoom.identity)
         self.parentTabID = try values.decodeIfPresent(UUID.self, forKey: .parentTabID)
+        self.pinnedURL = try values.decodeIfPresent(URL.self, forKey: .pinnedURL)
+        self.customTitle = try values.decodeIfPresent(String.self, forKey: .customTitle)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -101,6 +115,8 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
         try values.encode(title, forKey: .title)
         try values.encodeIfPresent(faviconData, forKey: .faviconData)
         try values.encode(isPinned, forKey: .isPinned)
+        try values.encodeIfPresent(pinnedURL, forKey: .pinnedURL)
+        try values.encodeIfPresent(customTitle, forKey: .customTitle)
         try values.encode(lastActiveAt, forKey: .lastActiveAt)
         try values.encodeIfPresent(spaceID, forKey: .spaceID)
         try values.encodeIfPresent(containerID, forKey: .containerID)
