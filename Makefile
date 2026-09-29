@@ -2,11 +2,12 @@ APP        := Thravik
 EXECUTABLE := Redent
 BUNDLE_ID  := app.redent.browser
 CONFIG     ?= release
+TEST_FLAGS ?=
 BUILD_DIR  := .build/$(CONFIG)
 APP_DIR    := dist/$(APP).app
 MAX_LINES  := 150
 
-.PHONY: all build test run app clean verify release check-lines check-arch check-force-unwrap
+.PHONY: all build test run app clean verify release check-lines check-layout check-arch check-force-unwrap
 
 all: app
 
@@ -14,7 +15,7 @@ build:
 	swift build -c $(CONFIG)
 
 test:
-	swift test
+	swift test $(TEST_FLAGS)
 
 ## Bundle the SPM executable into a signed .app.
 ## Keep the .app directory so Launch Services / TCC see the same app. Local
@@ -70,10 +71,13 @@ check-arch:
 		echo "FAIL: Keychain access belongs in RedentVault"; fail=1; fi; \
 	[ $$fail -eq 0 ] && echo "OK: dependency rule holds"
 
+check-layout:
+	@sh scripts/check-source-layout.sh
+
 check-force-unwrap:
 	@if grep -rnE '(try!|as!)' Sources --include='*.swift'; then \
 		echo "FAIL: force try/cast in Sources"; exit 1; fi; \
 	echo "OK: no force try/cast"
 
-verify: check-lines check-arch check-force-unwrap build test
+verify: check-lines check-layout check-arch check-force-unwrap build test
 	@echo "-- verify passed --"

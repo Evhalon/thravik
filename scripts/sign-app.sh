@@ -12,6 +12,9 @@ APP_DIR="$1"
 BUNDLE_ID="$2"
 ENTITLEMENTS="$3"
 HELPERS_DIR="$APP_DIR/Contents/Helpers"
+PROFILE_PATH="$APP_DIR/Contents/embedded.provisionprofile"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+managed_passkeys=0
 
 adhoc_sign() {
 	for helper in "$HELPERS_DIR"/*; do
@@ -24,10 +27,7 @@ adhoc_sign() {
 		--entitlements "$ENTITLEMENTS" \
 		--options runtime \
 		"$APP_DIR" \
-	|| codesign --force --sign - \
-		--identifier "$BUNDLE_ID" \
-		--requirements "$req" \
-		"$APP_DIR"
+	|| return 1
 }
 
 identity_sign() {
@@ -49,6 +49,28 @@ local_identity() {
 
 identity="${CODESIGN_IDENTITY:-$(local_identity)}"
 identity="${identity:--}"
+if [ -n "${PROVISIONING_PROFILE:-}" ]; then
+	if [ "$identity" = "-" ]; then
+		echo "error: browser passkeys require an Apple signing identity and approved profile" >&2
+		exit 1
+	fi
+	signing_work=$(mktemp -d)
+	trap 'rm -rf "$signing_work"' EXIT
+	security cms -D -i "$PROVISIONING_PROFILE" > "$signing_work/profile.plist"
+	python3 "$SCRIPT_DIR/prepare-passkey-entitlements.py" \
+		"$ENTITLEMENTS" "$signing_work/profile.plist" "$BUNDLE_ID" "$signing_work/entitlements.plist"
+	ENTITLEMENTS="$signing_work/entitlements.plist"
+	cp "$PROVISIONING_PROFILE" "$PROFILE_PATH"
+	managed_passkeys=1
+else
+	if [ "${REQUIRE_PASSKEYS:-0}" = "1" ]; then
+		echo "error: REQUIRE_PASSKEYS=1 needs PROVISIONING_PROFILE with Apple's browser passkey approval" >&2
+		exit 1
+	fi
+	# A local rebuild must not carry a previous release's restricted profile.
+	rm -f "$PROFILE_PATH"
+	echo "saved passkeys unavailable: no approved browser provisioning profile supplied"
+fi
 if [ "$identity" = "-" ]; then
 	if [ "${REQUIRE_SIGNING:-0}" = "1" ]; then
 		echo "error: REQUIRE_SIGNING=1 but no signing identity is available"
@@ -65,11 +87,15 @@ if [ "${REQUIRE_SIGNING:-0}" = "1" ]; then
 	timestamp="--timestamp"
 fi
 if identity_sign; then
+	if [ "$managed_passkeys" = "1" ]; then
+		codesign --verify --strict "$APP_DIR" || { rm -f "$PROFILE_PATH"; exit 1; }
+	fi
 	exit 0
 fi
 
-if [ "${REQUIRE_SIGNING:-0}" = "1" ]; then
-	echo "error: release signing failed"
+if [ "$managed_passkeys" = "1" ] || [ "${REQUIRE_SIGNING:-0}" = "1" ]; then
+	rm -f "$PROFILE_PATH"
+	echo "error: signing failed; the required capabilities cannot be preserved" >&2
 	exit 1
 fi
 
