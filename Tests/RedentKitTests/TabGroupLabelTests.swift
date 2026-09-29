@@ -20,7 +20,15 @@ struct TabGroupLabelTests {
     func promptIsBounded() {
         let pages = (1...10).map { TabGroupPage(title: "Page \($0)", host: "example.com") }
         let prompt = TabGroupLabel.prompt(for: pages, limit: 3)
-        #expect(prompt == "- Page 1 (example.com)\n- Page 2 (example.com)\n- Page 3 (example.com)")
+        let lines = prompt.split(separator: "\n")
+        #expect(lines.first.map(String.init) == TabGroupLabel.promptLeadIn)
+        #expect(lines.dropFirst() == ["- Page 1 (example.com)", "- Page 2 (example.com)", "- Page 3 (example.com)"])
+    }
+
+    @Test("Short titles in another language still read as a language")
+    func promptLeadsWithASentence() {
+        let pages = [TabGroupPage(title: "Voli per Lisbona", host: "google.com")]
+        #expect(TabGroupLabel.prompt(for: pages).hasPrefix(TabGroupLabel.promptLeadIn + "\n"))
     }
 
     @Test("Groups saved before automatic names existed still load")

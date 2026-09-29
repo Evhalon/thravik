@@ -15,10 +15,14 @@ public enum TabGroupLabel: Sendable {
     }
 
     /// The pages a namer is shown: enough to read the topic, bounded so a
-    /// crowded group costs the same as a small one.
+    /// crowded group costs the same as a small one. The lead-in is not
+    /// decoration: the on-device model guesses the prompt's language before
+    /// answering, and a bare list of short titles ("Voli per Lisbona", "Hotel
+    /// a Lisbona") reads as no language at all and is refused as unsupported.
     public static func prompt(for pages: [TabGroupPage], limit: Int = 8) -> String {
-        pages.prefix(limit)
-            .map { "- \($0.title.prefix(80)) (\($0.host))" }
-            .joined(separator: "\n")
+        let lines = pages.prefix(limit).map { "- \($0.title.prefix(80)) (\($0.host))" }
+        return ([promptLeadIn] + lines).joined(separator: "\n")
     }
+
+    static let promptLeadIn = "Name the topic shared by these open browser tabs, listed as title followed by site:"
 }
