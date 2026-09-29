@@ -26,6 +26,7 @@ final class DevToolsPanel {
     @ObservationIgnored private let host = DevToolsHostChannel()
     @ObservationIgnored private lazy var saver = DevToolsFileSaver(frontend: frontend)
     @ObservationIgnored private var waiting: [String] = []
+    @ObservationIgnored private var waitingInspect: [Int]?
     @ObservationIgnored private var isReady = false
     @ObservationIgnored private var isClosed = false
 
@@ -84,6 +85,14 @@ final class DevToolsPanel {
         isReady = true
         waiting.forEach(tap.send)
         waiting.removeAll()
+        if let path = waitingInspect { tap.inspect(path: path) }
+        waitingInspect = nil
+    }
+
+    /// Selects a page node in Elements; `path` is what `WebTab` found under
+    /// the pointer.
+    func inspect(path: [Int]) {
+        if isReady { tap.inspect(path: path) } else { waitingInspect = path }
     }
 
     private func toBackend(_ message: String) {

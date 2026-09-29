@@ -85,7 +85,7 @@ extension WebTab {
         signalRouter = router
 
         view.pageZoom = zoom
-        (view as? BrowserWebView)?.onInspectElement = { [weak self] in self?.showDevTools() }
+        (view as? BrowserWebView)?.onInspectElement = { [weak self] in self?.inspectElement(at: $0) }
         webView = view
         isHibernated = false
         setupObservers(on: view)

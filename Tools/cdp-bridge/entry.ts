@@ -13,6 +13,7 @@ import { installCSS } from "./cdp/css";
 import { installDebugger } from "./cdp/debugger";
 import { installDOM } from "./cdp/dom";
 import { installEmulation } from "./cdp/emulation";
+import { inspectPath } from "./cdp/inspect-path";
 import { installFallback } from "./cdp/fallback";
 import { installNetwork } from "./cdp/network";
 import { installOverlay } from "./cdp/overlay";
@@ -123,5 +124,6 @@ if (!(window as any).__redentDevTools) {
       releaseWindow();
     },
     fromTools: (raw: string) => session?.fromTools(raw),
+    inspectPath: (path: number[]) => session && inspectPath(session, path),
   };
 }

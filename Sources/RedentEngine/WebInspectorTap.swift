@@ -57,6 +57,12 @@ final class WebInspectorTap {
         )
     }
 
+    func inspect(path: [Int]) {
+        frontend?.callAsyncJavaScript(
+            "window.__redentDevTools.inspectPath(path)", arguments: ["path": path], in: nil, in: .page
+        )
+    }
+
     func detach() {
         keepAwake?.cancel()
         keepAwake = nil

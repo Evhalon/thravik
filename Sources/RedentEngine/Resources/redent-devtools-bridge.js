@@ -74,6 +74,7 @@
     pending = new Map;
     lastId = 0;
     enabledDomains = new Set;
+    enableWaiters = new Map;
     innerTargetId;
     queued = [];
     pageTargetIds = new Set;
@@ -102,6 +103,11 @@
         return;
       this.transport.toTools(JSON.stringify({ method, params }));
     }
+    afterEnabled(domain, then) {
+      if (this.enabledDomains.has(domain))
+        return then();
+      this.enableWaiters.set(domain, [...this.enableWaiters.get(domain) ?? [], then]);
+    }
     isPageTarget(id) {
       return typeof id === "string" && this.pageTargetIds.has(id);
     }
@@ -121,6 +127,8 @@
         if (method.endsWith(".disable"))
           this.enabledDomains.delete(domainOf(method));
         this.reply({ id: msg.id, result: result ?? {} });
+        if (method.endsWith(".enable"))
+          this.releaseWaiters(domainOf(method));
       } catch (e) {
         this.reply({ id: msg.id, error: { code: -32000, message: e?.message ?? String(e) } });
       }
@@ -135,6 +143,11 @@
         return this.onTargetDomain(msg);
       if (this.wrappedIds.delete(msg.id) && msg.error)
         this.settle(msg);
+    }
+    releaseWaiters(domain) {
+      const waiters = this.enableWaiters.get(domain) ?? [];
+      this.enableWaiters.delete(domain);
+      waiters.forEach((then) => then());
     }
     settle(msg) {
       const id = msg.id ?? 0;
@@ -1155,6 +1168,35 @@
         const mapped = value ? preference.values[value] : undefined;
         await s.call("Page.overrideUserPreference", mapped ? { name: preference.name, value: mapped } : { name: preference.name });
       }
+    });
+  }
+
+  // cdp/inspect-path.ts
+  var RESOLVE = `function (path) {
+  let node = document.documentElement;
+  for (const step of path) {
+    node = step < 0 ? node.shadowRoot : node.children[step];
+    if (!node) return null;
+  }
+  return node;
+}`;
+  function inspectPath(s, path) {
+    if (!Array.isArray(path) || !path.every(Number.isInteger))
+      return;
+    s.afterEnabled("Runtime", async () => {
+      const r = await s.call("Runtime.evaluate", {
+        expression: `(${RESOLVE})(${JSON.stringify(path)})`,
+        objectGroup: "redent-inspected",
+        generatePreview: true,
+        contextId: s.state.mainContextId || undefined
+      }).catch(() => null);
+      if (!r?.result?.objectId)
+        return;
+      s.emit("Runtime.inspectRequested", {
+        object: remoteObject(r.result),
+        hints: {},
+        executionContextId: s.state.mainContextId || 1
+      });
     });
   }
 
@@ -2352,7 +2394,8 @@
         session = null;
         releaseWindow();
       },
-      fromTools: (raw) => session?.fromTools(raw)
+      fromTools: (raw) => session?.fromTools(raw),
+      inspectPath: (path) => session && inspectPath(session, path)
     };
   }
 })();

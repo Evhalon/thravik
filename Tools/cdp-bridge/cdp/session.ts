@@ -33,6 +33,7 @@ export class Session {
   private pending = new Map<number, Pending>();
   private lastId = 0;
   private enabledDomains = new Set<string>();
+  private enableWaiters = new Map<string, (() => void)[]>();
   private innerTargetId: string | null;
   private queued: Message[] = [];
   // Every page backend this tab has, including a provisional one still
@@ -72,6 +73,12 @@ export class Session {
     this.transport.toTools(JSON.stringify({ method, params }));
   }
 
+  /** Runs `then` once Chrome has turned `domain` on and heard the reply. */
+  afterEnabled(domain: string, then: () => void) {
+    if (this.enabledDomains.has(domain)) return then();
+    this.enableWaiters.set(domain, [...(this.enableWaiters.get(domain) ?? []), then]);
+  }
+
   isPageTarget(id: unknown): boolean {
     return typeof id === "string" && this.pageTargetIds.has(id);
   }
@@ -90,6 +97,7 @@ export class Session {
       const result = handler ? await handler(msg.params ?? {}, method) : {};
       if (method.endsWith(".disable")) this.enabledDomains.delete(domainOf(method));
       this.reply({ id: msg.id, result: result ?? {} });
+      if (method.endsWith(".enable")) this.releaseWaiters(domainOf(method));
     } catch (e: any) {
       this.reply({ id: msg.id, error: { code: -32000, message: e?.message ?? String(e) } });
     }
@@ -108,6 +116,12 @@ export class Session {
   fromOuter(msg: Message) {
     if (typeof msg.id !== "number") return this.onTargetDomain(msg);
     if (this.wrappedIds.delete(msg.id) && msg.error) this.settle(msg);
+  }
+
+  private releaseWaiters(domain: string) {
+    const waiters = this.enableWaiters.get(domain) ?? [];
+    this.enableWaiters.delete(domain);
+    waiters.forEach((then) => then());
   }
 
   private settle(msg: Message) {
