@@ -27,7 +27,13 @@ jobs:
       - name: Build signed release
         env:
           REQUIRE_SIGNING: '1'
+          MACOS_BROWSER_PROFILE_BASE64: ${{ secrets.MACOS_BROWSER_PROFILE_BASE64 }}
         run: |
+          if [ -n "$MACOS_BROWSER_PROFILE_BASE64" ]; then
+            profile="$RUNNER_TEMP/browser.provisionprofile"
+            printf %s "$MACOS_BROWSER_PROFILE_BASE64" | base64 --decode > "$profile"
+            export PROVISIONING_PROFILE="$profile" REQUIRE_PASSKEYS=1
+          fi
           version="0.1.${GITHUB_RUN_NUMBER}"
           sh scripts/set-version.sh "$version" "$GITHUB_RUN_NUMBER"
           make app

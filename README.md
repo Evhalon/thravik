@@ -30,9 +30,26 @@ is a few megabytes, and a background tab costs nothing once it hibernates.
   the sidebar open, and `⌘L` brings its address field back.
 - **Tab hibernation** — idle background tabs release their web view and their
   content process. Configurable: never / 15 min / 3 min.
+- **Floating video** — click Float video over the video, use its navigation
+  button (including sidebar navigation), or press `⌃⌘V` for a
+  main-page HTML5 video. The original player stays alive above other windows.
+  Drag it, or swipe with two fingers with amplified movement and flick to throw
+  it into a smooth decelerating glide across connected displays.
+  Click-and-drag keeps the pointer visible.
+  Two-finger dragging hides and carries the pointer, with a haptic pickup and a
+  small lift while held. Drag the corner grip to resize without stretching.
+  The player animates out from its position on the page and back when returned.
+  Hover for Liquid Glass controls, including a timeline, volume, mute, pause,
+  close, and return. Embedded iframe players keep
+  their site's native picture-in-picture controls.
 - **Passwords in the Keychain** — offered on submit, filled on request, matched
   by registrable domain so a lookalike host never sees your credentials.
   Autofill never submits the form.
+- **Native passkeys** — WebKit uses the macOS passkey picker for website sign-in
+  and registration. Settings → Privacy → Passkeys shows access and lets you
+  grant permission. Requires an Apple-approved browser provisioning profile;
+  ordinary local builds show that saved passkeys are unavailable. See
+  [passkey setup](docs/PASSKEYS.md).
 - **Google Authenticator import** — scan the export QR with the camera, drop a
   screenshot of it, or paste the payload. Multi-QR batched exports accumulate.
 - **Floating code button** — when a page shows a one-time-code field, a glass
@@ -73,6 +90,9 @@ The strategic core is Command Bar + Spaces + Tabs + Smart History.
 Dependencies point inward. See [AGENTS.md](AGENTS.md) for the rules every change
 must satisfy, and [docs/CONTRACTS.md](docs/CONTRACTS.md) for the boundaries
 between targets.
+
+Code is grouped by feature inside each target, with shared helpers and application
+wiring kept together. See [Source organization](docs/CODE_STRUCTURE.md).
 
 ```
 Redent          composition root — the only place concrete types are named
