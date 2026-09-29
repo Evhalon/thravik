@@ -63,6 +63,35 @@ import WebKit
         #expect(inspected != nil)
     }
 
+    @Test func safarisInspectorIsPutAwayWhenWebKitDocksIt() async throws {
+        let tab = try await FindTestPage.saying("<p>page</p>")
+        let page = try #require(tab.webView)
+        let host = WebViewHost(webView: page)
+        host.frame = NSRect(x: 0, y: 0, width: 1000, height: 600)
+        let window = NSWindow(
+            contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.contentView = host
+        window.orderFrontRegardless()
+        Self.windows.append(window)
+        let inspector = try #require(page.value(forKey: "_inspector") as? NSObject)
+        defer { inspector.perform(NSSelectorFromString("close")) }
+
+        inspector.perform(NSSelectorFromString("show"))
+        inspector.perform(NSSelectorFromString("attach"))
+        let deadline = ContinuousClock.now + .seconds(10)
+        var isVisible = true
+        repeat {
+            try await Task.sleep(for: .milliseconds(200))
+            isVisible = (inspector.value(forKey: "isVisible") as? NSNumber)?.boolValue ?? false
+        } while (isVisible || host.subviews.count > 1) && ContinuousClock.now < deadline
+        host.layoutSubtreeIfNeeded()
+        #expect(!isVisible)
+        #expect(host.subviews == [page])
+        #expect(page.frame == host.bounds)
+    }
+
     private static func show(_ view: WKWebView) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1000, height: 600),

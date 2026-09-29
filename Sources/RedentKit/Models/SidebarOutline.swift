@@ -64,7 +64,7 @@ public struct SidebarOutline: Equatable, Sendable {
     ) {
         guard let id = members.first?.id else { return }
         members.forEach { emitted.insert($0.id) }
-        emit(.init(id: id, name: host, headerTabID: nil, memberIDs: members.map(\.id)), into: &nodes)
+        emit(.init(id: id, name: host, memberIDs: members.map(\.id), isNameAutomatic: true), into: &nodes)
     }
 
     private static func appendGroup(
@@ -78,8 +78,12 @@ public struct SidebarOutline: Equatable, Sendable {
         let members = tabs.filter { $0.groupID == groupID }
         members.forEach { emitted.insert($0.id) }
         emitted.insert(groupID)
-        let name = groups.first { $0.id == groupID }?.name ?? members.first?.displayTitle ?? "Group"
-        emit(cluster(id: groupID, name: name, members: members), into: &nodes)
+        let group = groups.first { $0.id == groupID }
+        let name = group?.name ?? members.first?.displayTitle ?? "Group"
+        let cluster = SidebarNode.Cluster(
+            id: groupID, name: name, memberIDs: members.map(\.id), isNameAutomatic: group?.isNameAutomatic ?? true
+        )
+        emit(cluster, into: &nodes)
     }
 
     private static func appendRelatedOrTab(
@@ -91,38 +95,18 @@ public struct SidebarOutline: Equatable, Sendable {
         let children = tabs.filter { $0.parentTabID == tab.id && $0.groupID == nil }
         emitted.insert(tab.id)
         children.forEach { emitted.insert($0.id) }
-        guard !children.isEmpty else {
-            nodes.append(.tab(tab.id))
-            return
-        }
-        emit(
-            .init(id: tab.id, name: tab.displayTitle, headerTabID: tab.id, memberIDs: children.map(\.id)),
-            into: &nodes
-        )
+        let name = tab.origin?.displayHost ?? tab.displayTitle
+        let members = [tab.id] + children.map(\.id)
+        emit(.init(id: tab.id, name: name, memberIDs: members, isNameAutomatic: true), into: &nodes)
     }
 
     /// A cluster holding a single tab is that tab with extra chrome, so it is
     /// drawn flat — a header above one row reads as a duplicate.
     private static func emit(_ cluster: SidebarNode.Cluster, into nodes: inout [SidebarNode]) {
-        let rows = (cluster.headerTabID == nil ? 0 : 1) + cluster.memberIDs.count
-        guard rows >= 2 else {
-            if let header = cluster.headerTabID { nodes.append(.tab(header)) }
+        guard cluster.memberIDs.count >= 2 else {
             cluster.memberIDs.forEach { nodes.append(.tab($0)) }
             return
         }
         nodes.append(.cluster(cluster))
-    }
-
-    private static func cluster(id: UUID, name: String, members: [TabSnapshot]) -> SidebarNode.Cluster {
-        let parent = members.first { candidate in members.contains { $0.parentTabID == candidate.id } }
-        guard let parent else {
-            return .init(id: id, name: name, headerTabID: nil, memberIDs: members.map(\.id))
-        }
-        return .init(
-            id: id,
-            name: name,
-            headerTabID: parent.id,
-            memberIDs: members.filter { $0.id != parent.id }.map(\.id)
-        )
     }
 }

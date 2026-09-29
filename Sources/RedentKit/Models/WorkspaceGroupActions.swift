@@ -38,6 +38,7 @@ extension WorkspaceState {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         session.groups[index].name = trimmed
+        session.groups[index].isNameAutomatic = false
     }
 
     private mutating func moveTabToGroup(tabID: UUID, groupID: UUID?) throws {

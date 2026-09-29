@@ -43,6 +43,25 @@ final class WebViewHost: NSView {
         webView.frame = bounds
     }
 
+    /// Chrome's DevTools stand in for Safari's Web Inspector, yet WebKit still
+    /// docks its own here when a path of its reaches it: both then show, and
+    /// Safari's squeezes the page and Chrome's. It is hidden, not closed, so
+    /// the connection DevTools shares stays up.
+    override func didAddSubview(_ subview: NSView) {
+        super.didAddSubview(subview)
+        guard subview !== webView else { return }
+        Task { [weak self] in self?.hideWebInspector() }
+    }
+
+    private func hideWebInspector() {
+        guard webView.responds(to: NSSelectorFromString("_inspector")),
+              let inspector = webView.value(forKey: "_inspector") as? NSObject,
+              inspector.responds(to: NSSelectorFromString("hide"))
+        else { return }
+        inspector.perform(NSSelectorFromString("hide"))
+        needsLayout = true
+    }
+
     static func containing(_ webView: WKWebView) -> WebViewHost? {
         webView.superview as? WebViewHost
     }

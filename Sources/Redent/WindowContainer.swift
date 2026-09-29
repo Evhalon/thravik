@@ -1,5 +1,6 @@
 import Foundation
 import RedentEngine
+import RedentIntelligence
 import RedentKit
 import RedentUI
 import SwiftUI
@@ -44,6 +45,7 @@ final class WindowContainer {
         )
         services.webApps = app.webApps
         services.webAppInstaller = app.webAppInstaller
+        services.groupNaming = OnDeviceGroupNamer()
         let features = BrowserFeatures(
             autofill: AutofillCoordinator(
                 store: app.credentials, logger: app.logger, isEnabled: settings.offersPasswordSave

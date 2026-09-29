@@ -11,7 +11,11 @@ extension TabController {
         guard let spaceID = child.snapshot.spaceID else { return false }
         var state = WorkspaceState(session: session)
         try? state.apply(.createGroupWithTabs(spaceID: spaceID, name: name, tabIDs: tabIDs))
-        reconcile(state.session)
+        var grouped = state.session
+        if grouped.groups.count > session.groups.count, let index = grouped.groups.indices.last {
+            grouped.groups[index].isNameAutomatic = true
+        }
+        reconcile(grouped)
         return true
     }
 

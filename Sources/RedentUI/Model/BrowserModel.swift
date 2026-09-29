@@ -26,6 +26,7 @@ public final class BrowserModel {
     /// Find bar, bookmark star, and caret requests — everything the chrome
     /// shows about the page in front of the user.
     public let chrome = PageChromeModel()
+    let groupNames: GroupNameModel
     /// Chrome hidden entirely — "widen the screen and hide the tabs".
     public var isFocusMode: Bool = false
     /// Which tabs this window shows side by side, and which pane has the chrome.
@@ -74,6 +75,7 @@ public final class BrowserModel {
         self.downloads = services.downloads
         self.webAppStore = services.webApps
         self.webAppInstaller = services.webAppInstaller
+        self.groupNames = GroupNameModel(naming: services.groupNaming)
         self.visits = VisitRecorder(history: services.history)
         self.settings = settings
         self.settingsStore = services.settings

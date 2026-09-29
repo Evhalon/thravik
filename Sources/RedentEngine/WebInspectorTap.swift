@@ -18,8 +18,6 @@ final class WebInspectorTap {
     private var frontend: WKWebView?
     private var relay: ScriptMessageRelay?
     private var keepAwake: Task<Void, Never>?
-    /// Only a Web Inspector this tap opened is closed again when it is done.
-    private var openedHere = false
 
     private static let handlerName = "redentDevTools"
     private static let bridgeSource = EngineResources.url(forResource: "redent-devtools-bridge", withExtension: "js")
@@ -40,7 +38,6 @@ final class WebInspectorTap {
         if Self.flag(inspector, "isConnected") == false {
             connectedAt = Date().timeIntervalSince1970 * 1000
             guard Self.call(inspector, "connect") else { throw .unavailable }
-            openedHere = true
         }
         let frontend = try await readyFrontend(inspector, loadedAfter: connectedAt)
         let relay = ScriptMessageRelay { [weak self] in self?.onMessage?($0) }
@@ -70,7 +67,9 @@ final class WebInspectorTap {
         if relay != nil {
             frontend?.configuration.userContentController.removeScriptMessageHandler(forName: Self.handlerName)
         }
-        if openedHere, let inspector, Self.flag(inspector, "isVisible") == false {
+        // Closed even when WebKit opened it: `WebViewHost` hides every one
+        // WebKit docks, and a hidden inspector would outlive the panel.
+        if let inspector, Self.flag(inspector, "isVisible") == false {
             _ = Self.call(inspector, "close")
         }
         relay = nil

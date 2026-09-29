@@ -18,7 +18,7 @@ struct HostTabGroupingTests {
             return
         }
         #expect(cluster.name == "tickets.example.com")
-        #expect(cluster.headerTabID == nil)
+        #expect(cluster.isNameAutomatic)
         #expect(cluster.memberIDs == [first.id, second.id])
     }
 

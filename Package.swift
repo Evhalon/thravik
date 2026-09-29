@@ -21,6 +21,7 @@ let package = Package(
             resources: [.process("Resources"), .copy("DevToolsFrontend")], swiftSettings: strict
         ),
         .target(name: "RedentUpdate", dependencies: ["RedentKit"], swiftSettings: strict),
+        .target(name: "RedentIntelligence", dependencies: ["RedentKit"], swiftSettings: strict),
         .target(name: "RedentDesign", swiftSettings: strict),
         .target(
             name: "RedentUI",
@@ -32,7 +33,7 @@ let package = Package(
             name: "Redent",
             dependencies: [
                 "RedentKit", "RedentUI", "RedentEngine", "RedentVault",
-                "RedentOTPAuth", "RedentDesign", "RedentImport", "RedentUpdate"
+                "RedentOTPAuth", "RedentDesign", "RedentImport", "RedentUpdate", "RedentIntelligence"
             ],
             swiftSettings: strict
         ),

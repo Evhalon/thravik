@@ -4,6 +4,7 @@ private enum BrowserSettingsCodingKey: String, CodingKey {
     case tabLayout, isTabStripVisible, hidesNavigationBar, sidebarWidth, hibernation
     case customHibernationMinutes, blocksTrackers, stripsTrackingParameters, quietsPages
     case offersPasswordSave, showsTOTPButton, searchEngine, homepage, reopensTabsOnLaunch
+    case namesGroupsOnDevice
 }
 
 /// Decoding is explicit so adding a preference never resets saved settings.
@@ -27,5 +28,6 @@ extension BrowserSettings {
             reopensTabsOnLaunch: try values.decodeIfPresent(Bool.self, forKey: .reopensTabsOnLaunch) ?? defaults.reopensTabsOnLaunch
         )
         hidesNavigationBar = try values.decodeIfPresent(Bool.self, forKey: .hidesNavigationBar) ?? false
+        namesGroupsOnDevice = try values.decodeIfPresent(Bool.self, forKey: .namesGroupsOnDevice) ?? true
     }
 }

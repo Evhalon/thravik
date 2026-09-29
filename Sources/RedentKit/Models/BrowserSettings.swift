@@ -84,6 +84,8 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
     public var homepage: String
     /// Restores the primary workspace when the app opens.
     public var reopensTabsOnLaunch: Bool
+    /// Lets Apple Intelligence, on this Mac, name tab groups by topic.
+    public var namesGroupsOnDevice = true
 
     public static let sidebarWidthRange: ClosedRange<Double> = 180...380
 

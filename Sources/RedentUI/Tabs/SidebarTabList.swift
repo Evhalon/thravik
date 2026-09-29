@@ -49,21 +49,23 @@ struct SidebarTabList: View {
     @ViewBuilder
     private func clusterBlock(_ cluster: SidebarNode.Cluster) -> some View {
         let folded = collapsed.contains(cluster.id)
+        let naming = model.settings.namesGroupsOnDevice
         SidebarGroupHeader(
-            cluster: cluster,
-            iconTab: tab(cluster.headerTabID ?? cluster.memberIDs.first),
-            isSelected: cluster.headerTabID == model.tabs.selectedID,
+            title: model.groupNames.displayName(for: cluster, isEnabled: naming),
+            iconTab: tab(cluster.memberIDs.first),
             isCollapsed: folded,
             actions: .init(
-                onSelect: { selectHeader(cluster) },
                 onToggle: { toggle(cluster.id) },
-                onClose: { model.tabs.closeTabs(Set(clusterTabIDs(cluster))) }
+                onClose: { model.tabs.closeTabs(Set(cluster.memberIDs)) }
             )
         )
+        .task(id: naming ? Set(cluster.memberIDs) : []) {
+            await model.groupNames.resolve(cluster, isEnabled: naming) { pages(of: cluster) }
+        }
         // A header the drag does not know about is a dead band the pointer has
         // to cross blind, so it joins the geometry like any other row.
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.dragSpace)) } action: {
-            drag.track(cluster.id, drawing: headerTabs(cluster, folded: folded), frame: $0)
+            drag.track(cluster.id, drawing: folded ? cluster.memberIDs : [], frame: $0)
         }
         .onDisappear { drag.forget(cluster.id) }
         if !folded {
@@ -73,13 +75,10 @@ struct SidebarTabList: View {
         }
     }
 
-    private func headerTabs(_ cluster: SidebarNode.Cluster, folded: Bool) -> [UUID] {
-        let header = cluster.headerTabID.map { [$0] } ?? []
-        return folded ? header + cluster.memberIDs : header
-    }
-
-    private func clusterTabIDs(_ cluster: SidebarNode.Cluster) -> [UUID] {
-        (cluster.headerTabID.map { [$0] } ?? []) + cluster.memberIDs
+    private func pages(of cluster: SidebarNode.Cluster) -> [TabGroupPage] {
+        cluster.memberIDs.compactMap { tab($0) }.map {
+            TabGroupPage(title: $0.snapshot.displayTitle, host: $0.origin?.displayHost ?? "")
+        }
     }
 
     /// A split is one entry, drawn where its first tab sits; its other tabs
@@ -132,18 +131,16 @@ struct SidebarTabList: View {
         return model.tabs.tabs.first { $0.id == id && $0.snapshot.spaceID == spaceID }
     }
 
-    private func selectHeader(_ cluster: SidebarNode.Cluster) {
-        if let id = cluster.headerTabID { model.tabs.select(id) }
-        else { toggle(cluster.id) }
-    }
-
     private func toggle(_ id: UUID) {
         if collapsed.contains(id) { collapsed.remove(id) } else { collapsed.insert(id) }
     }
 
+    /// Selecting a tab hidden in a folded group opens the group, so the
+    /// selection is never out of sight.
     private func expand(containing id: UUID?) {
-        guard let id, let tab = tab(id) else { return }
-        if let groupID = tab.snapshot.groupID { collapsed.remove(groupID) }
-        if let parent = tab.snapshot.parentTabID { collapsed.remove(parent) }
+        guard let id else { return }
+        for case .cluster(let cluster) in outline.nodes where cluster.memberIDs.contains(id) {
+            collapsed.remove(cluster.id)
+        }
     }
 }

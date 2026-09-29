@@ -13,6 +13,8 @@ public struct BrowserServices {
     public var webApps: (any WebAppStoring)?
     /// Gives each web app an app of its own in Applications. Nil in tests.
     public var webAppInstaller: (any WebAppInstalling)?
+    /// Names automatic tab groups on the device. Nil keeps site names.
+    public var groupNaming: (any TabGroupNaming)?
 
     public init(history: any HistoryStoring, bookmarks: any BookmarkStoring,
                 settings: any SettingsStoring, session: any SessionStoring,

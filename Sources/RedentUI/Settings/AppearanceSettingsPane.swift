@@ -2,7 +2,7 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// Tab layout, tab-strip visibility, and the sidebar width slider.
+/// Tab layout, tab-strip visibility, the sidebar width slider, and group naming.
 struct AppearanceSettingsPane: View {
     @Binding var settings: BrowserSettings
 
@@ -28,6 +28,13 @@ struct AppearanceSettingsPane: View {
                 )
                 SettingsToggleRow("Show tab strip", caption: "Toggle with ⌘\\.", isOn: $settings.isTabStripVisible)
                 sidebarWidthSlider
+            }
+            SettingsSection("TAB GROUPS") {
+                SettingsToggleRow(
+                    "Name groups with Apple Intelligence",
+                    caption: "Runs on this Mac, using only tab titles and sites. Groups show the site name when off.",
+                    isOn: $settings.namesGroupsOnDevice
+                )
             }
         }
     }

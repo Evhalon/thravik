@@ -32,7 +32,9 @@ final class AppContainer {
     /// The once-per-release offer to take over web links.
     let defaultBrowser: DefaultBrowserModel
     /// One per process, so two windows in the same Container share its cookies.
-    let contexts = BrowsingContextRegistry(sessionCookies: KeychainSessionCookieStore())
+    let contexts = BrowsingContextRegistry(sessionCookies: KeychainSessionCookieStore(
+        service: KeychainNamespace.service("app.redent.session-cookies")
+    ))
     var siteData: any SiteDataManaging { contexts }
 
     let settingsStore: any SettingsStoring
@@ -70,9 +72,11 @@ final class AppContainer {
         }
 
         self.webAppInstaller = WebAppBundleInstaller(host: .current(), logger: logger)
-        let credentials = KeychainCredentialStore()
+        let credentials = KeychainCredentialStore(
+            service: KeychainNamespace.service("app.redent.browser.credentials")
+        )
         self.credentials = credentials
-        self.authenticator = KeychainTOTPStore()
+        self.authenticator = KeychainTOTPStore(service: KeychainNamespace.service("app.redent.browser.totp"))
         self.generator = SystemTOTPGenerator()
         self.importer = OTPAuthImporter()
         self.history = SQLiteHistoryStore()

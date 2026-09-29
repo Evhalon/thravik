@@ -12,6 +12,15 @@ struct RelatedTabTests {
         #expect(outcome == .create(name: "MiFID Correttiva", tabIDs: [parent.id, child.id]))
     }
 
+    @Test("A popup's group is named after the opener's site")
+    func groupNamedAfterSite() throws {
+        let url = try #require(URL(string: "https://tickets.example.com/mifid"))
+        let parent = TabSnapshot(url: url, title: "MiFID Correttiva", spaceID: BrowserSpace.workID)
+        let child = TabSnapshot(title: "Child", spaceID: BrowserSpace.workID)
+        let outcome = RelatedTabGrouping.outcome(parent: parent, child: child)
+        #expect(outcome == .create(name: "tickets.example.com", tabIDs: [parent.id, child.id]))
+    }
+
     @Test("A later popup joins the opener's group")
     func laterChildJoins() {
         var parent = TabSnapshot(title: "Parent", spaceID: BrowserSpace.workID)
@@ -28,7 +37,7 @@ struct RelatedTabTests {
         #expect(RelatedTabGrouping.outcome(parent: parent, child: child) == .skip)
     }
 
-    @Test("A lone related child nests under the opener")
+    @Test("An opener and its lone popup are both rows under a label")
     func singleChildNests() {
         var parent = TabSnapshot(title: "MiFID Correttiva", spaceID: BrowserSpace.workID)
         var child = TabSnapshot(title: "Correttiva #300192", spaceID: BrowserSpace.workID)
@@ -42,12 +51,11 @@ struct RelatedTabTests {
             Issue.record("expected a cluster")
             return
         }
-        #expect(cluster.headerTabID == parent.id)
-        #expect(cluster.memberIDs == [child.id])
+        #expect(cluster.memberIDs == [parent.id, child.id])
         #expect(outline.tabIDs == [parent.id, child.id])
     }
 
-    @Test("Two related children nest under the opener")
+    @Test("Two popups sit beside their opener under one label")
     func twoChildrenNest() {
         var parent = TabSnapshot(title: "MiFID Correttiva", spaceID: BrowserSpace.workID)
         var first = TabSnapshot(title: "Ticket", spaceID: BrowserSpace.workID)
@@ -67,8 +75,7 @@ struct RelatedTabTests {
             Issue.record("expected a cluster")
             return
         }
-        #expect(cluster.headerTabID == parent.id)
-        #expect(cluster.memberIDs == [first.id, second.id])
+        #expect(cluster.memberIDs == [parent.id, first.id, second.id])
         #expect(outline.tabIDs == [parent.id, first.id, second.id])
     }
 
@@ -95,8 +102,8 @@ struct RelatedTabTests {
             Issue.record("expected a cluster")
             return
         }
-        #expect(cluster.headerTabID == nil)
         #expect(cluster.memberIDs == [first.id, second.id])
+        #expect(!cluster.isNameAutomatic)
     }
 
     @Test("Unrelated tabs stay flat")

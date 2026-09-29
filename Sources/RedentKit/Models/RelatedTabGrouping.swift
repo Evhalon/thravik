@@ -5,7 +5,7 @@ public enum RelatedTabGrouping: Sendable {
     public enum Outcome: Equatable, Sendable {
         /// Parent already belongs to a group; the child copies that membership.
         case joinExisting
-        /// First related child: name a group after the parent and put both in it.
+        /// First related child: name a group after the parent's site and put both in it.
         case create(name: String, tabIDs: [UUID])
         /// Temporary pages stay out of persisted groups.
         case skip
@@ -14,6 +14,7 @@ public enum RelatedTabGrouping: Sendable {
     public static func outcome(parent: TabSnapshot, child: TabSnapshot) -> Outcome {
         if parent.isTemporary || child.isTemporary { return .skip }
         if parent.groupID != nil { return .joinExisting }
-        return .create(name: parent.displayTitle, tabIDs: [parent.id, child.id])
+        let name = parent.origin?.displayHost ?? parent.displayTitle
+        return .create(name: name, tabIDs: [parent.id, child.id])
     }
 }
