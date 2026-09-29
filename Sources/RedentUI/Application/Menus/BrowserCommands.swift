@@ -28,6 +28,9 @@ public struct BrowserCommands: Commands {
             BrowserDevToolsItems(model: model)
         }
         CommandGroup(replacing: .saveItem) {
+            Button("Toggle Tab Layout") { model?.toggleTabLayout() }
+                .keyboardShortcut("s", modifiers: .command)
+                .disabled(model == nil)
             Button(sidebarTitle) { model?.toggleSidebar() }
                 .keyboardShortcut("b")
                 .disabled(model == nil)
