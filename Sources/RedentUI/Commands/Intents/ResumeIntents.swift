@@ -11,11 +11,16 @@ enum ResumeIntents {
 
     static func parse(_ phrase: CommandPhrase, in context: CommandBarContext) -> [CommandBarResult] {
         guard let target = phrase.remainder(after: verbs), !target.isEmpty else { return [] }
-        return (spaces(context) + groups(context) + apps(context) + windows(context))
-            .map { (row: $0.row, score: FuzzyMatch.score(query: target, fields: [$0.name])) }
-            .filter { $0.score > 0 }
-            .sorted { $0.score > $1.score }
-            .map(\.row)
+        var candidates = spaces(context)
+        candidates.append(contentsOf: groups(context))
+        candidates.append(contentsOf: apps(context))
+        candidates.append(contentsOf: windows(context))
+        let scored: [(row: CommandBarResult, score: Int)] = candidates.map { candidate in
+            (row: candidate.row, score: FuzzyMatch.score(query: target, fields: [candidate.name]))
+        }
+        let matches = scored.filter { $0.score > 0 }
+        let ranked = matches.sorted { $0.score > $1.score }
+        return ranked.map(\.row)
     }
 
     private typealias Candidate = (name: String, row: CommandBarResult)

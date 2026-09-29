@@ -67,6 +67,7 @@ public enum HibernationPolicy: String, Codable, Sendable, CaseIterable, Identifi
 public struct BrowserSettings: Codable, Sendable, Equatable {
     public var tabLayout: TabLayout
     public var isTabStripVisible: Bool
+    public var hidesNavigationBar = false
     public var sidebarWidth: Double
     public var hibernation: HibernationPolicy
     public var customHibernationMinutes: Int?

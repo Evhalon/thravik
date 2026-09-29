@@ -12,7 +12,8 @@ struct ChromeBar: View {
     var body: some View {
         HStack(spacing: Metric.tightGutter) {
             if !model.isSidebarVisible {
-                SpaceSwitcher(model: model, current: model.currentSpace).frame(minWidth: 96, maxWidth: 168)
+                SpaceSwitcher(model: model, current: model.currentSpace)
+                    .frame(minWidth: 96, maxWidth: 168, alignment: .leading)
             }
             NavigationControls(model: model)
                 .frame(width: 132)
@@ -22,34 +23,11 @@ struct ChromeBar: View {
             if model.isPrivate { ChromeBadge("PRIVATE", tint: Palette.accent) }
             if model.showsVolumeControl { TabVolumeButton(model: model) }
             DownloadsButton(model: model)
-            overflowMenu
+            BrowserMenu(model: model)
         }
         .padding(.horizontal, Metric.tightGutter + 2)
         .padding(.vertical, Metric.tightGutter)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background { TitlebarDragRegion() }
-    }
-
-    private var overflowMenu: some View {
-        Menu {
-            Button("New Window", action: model.newWindow)
-            Button("New Private Window", action: model.newPrivateWindow)
-            Divider()
-            Button("Downloads…") { model.sheet = .downloads }
-            Button("Bookmarks…") { model.sheet = .bookmarks }
-            Button("History…") { model.sheet = .history }
-            Divider()
-            Button("Passwords…") { model.sheet = .passwords }
-            Button("Authenticator…") { model.sheet = .authenticator }
-            Divider()
-            Button("Settings…") { model.sheet = .settings }
-        } label: {
-            Image(systemName: "ellipsis.circle")
-                .font(.system(size: 13, weight: .medium))
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .foregroundStyle(Palette.chromeSecondaryText)
     }
 }

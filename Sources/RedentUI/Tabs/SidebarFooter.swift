@@ -9,9 +9,13 @@ struct SidebarFooter: View {
     var body: some View {
         HStack(spacing: Metric.tightGutter) {
             newTabButton
+            ChromeButton(systemImage: "sidebar.left", help: "\(sidebarAction) (⌘B)", action: model.toggleSidebar)
+                .accessibilityLabel(sidebarAction)
             menu
         }
     }
+
+    private var sidebarAction: String { model.isSidebarVisible ? "Hide sidebar" : "Keep sidebar open" }
 
     private var newTabButton: some View {
         Button(action: model.openNewTab) {

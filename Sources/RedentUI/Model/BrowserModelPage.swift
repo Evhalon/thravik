@@ -50,6 +50,8 @@ extension BrowserModel {
     public func focusAddressBar() {
         isFocusMode = false
         if hasPage {
+            if usesSidebarNavigation { settings.isTabStripVisible = true }
+            address.beginEditing(with: selectedTab)
             chrome.focusAddress()
         } else {
             requestCenterSearchFocus()

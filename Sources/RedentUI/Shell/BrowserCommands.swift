@@ -29,7 +29,7 @@ public struct BrowserCommands: Commands {
         }
         CommandGroup(replacing: .saveItem) {
             Button(sidebarTitle) { model?.toggleSidebar() }
-                .keyboardShortcut("s")
+                .keyboardShortcut("b")
                 .disabled(model == nil)
         }
         BrowserEditCommands(model: model)

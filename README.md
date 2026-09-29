@@ -21,8 +21,13 @@ is a few megabytes, and a background tab costs nothing once it hibernates.
 
 - **Liquid Glass chrome** — real `glassEffect`, not a blur image.
 - **Tabs where you want them** — a vertical rail like Dia, or a horizontal strip
-  like Chrome. `⌘\` hides the rail and gives the page the full window; `⌘⇧F`
+  like Chrome. `⌘B` collapses and restores the sidebar; `⌘⇧F`
   removes the chrome entirely. Drag the seam to resize.
+- **A clean top edge** — Settings → Appearance → Hide top navigation bar moves
+  navigation and the address field into the sidebar. Collapse it with `⌘B` for
+  a full-height page; hover the left edge for the sidebar or the top edge for
+  navigation. Both slide over the page and hide when you move away. `⌘B` keeps
+  the sidebar open, and `⌘L` brings its address field back.
 - **Tab hibernation** — idle background tabs release their web view and their
   content process. Configurable: never / 15 min / 3 min.
 - **Passwords in the Keychain** — offered on submit, filled on request, matched

@@ -20,37 +20,13 @@ public struct BrowserWindowView<Sheets: View>: View {
 
     public var body: some View {
         ZStack {
-            WindowBackdrop(tint: ambientTint).equatable()
-            SpaceWash(space: model.currentSpace)
-                .frame(maxHeight: .infinity, alignment: .top)
-                .animation(.easeInOut(duration: 0.34), value: model.currentSpaceID)
-            WindowConfigurator().frame(width: 0, height: 0)
-
-            HStack(spacing: 0) {
-                if usesSidebar {
-                    SidebarTabStrip(model: model)
-                        .frame(width: model.settings.sidebarWidth)
-                        // The width follows the pointer directly: animating it
-                        // makes the seam lag behind the cursor during a drag.
-                        .animation(nil, value: model.settings.sidebarWidth)
-                        .transition(.move(edge: .leading).combined(with: .opacity))
-                        .zIndex(2)
-                    SidebarResizeHandle(width: $model.settings.sidebarWidth)
-                        .zIndex(1)
-                }
-                pageColumn
-                    // Floor is zero so the pane shrinks to whatever the rail
-                    // leaves, instead of keeping the last full-window width.
-                    .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
-                    .layoutPriority(1)
-                    .zIndex(0)
-            }
+            windowBackdrop
+            BrowserWorkspace(model: model, backdrop: windowBackdrop)
         }
         .coordinateSpace(WindowBackdrop.space)
         .clipped()
         .environment(\.ambientTint, ambientTint)
-        .animation(.spring(duration: 0.34), value: usesSidebar)
-        .animation(.spring(duration: 0.34), value: model.settings.tabLayout)
+        .modifier(AddressSuggestionsPresenter(model: model))
         .overlay(alignment: .top) { commandBar }
         .overlay(alignment: .bottom) { expiryBar }
         .onChange(of: model.selectedTab?.url) { _, _ in
@@ -98,8 +74,12 @@ public struct BrowserWindowView<Sheets: View>: View {
         }
     }
 
-    private var pageColumn: some View {
-        PageColumn(model: model, usesTopStrip: usesTopStrip)
+    private var windowBackdrop: some View {
+        ZStack(alignment: .top) {
+            WindowBackdrop(tint: ambientTint).equatable()
+            SpaceWash(space: model.currentSpace)
+                .animation(.easeInOut(duration: 0.34), value: model.currentSpaceID)
+        }
     }
 
     /// The chrome takes its color from the site's favicon, which is reliably
@@ -111,14 +91,6 @@ public struct BrowserWindowView<Sheets: View>: View {
         guard let tab = model.selectedTab else { return Palette.defaultAmbient }
         return DominantColor.extract(from: tab.snapshot.faviconData)
             ?? Palette.defaultAmbient
-    }
-
-    private var usesSidebar: Bool {
-        model.showsTabStrip && model.settings.tabLayout == .sidebar
-    }
-
-    private var usesTopStrip: Bool {
-        model.showsTabStrip && model.settings.tabLayout == .top
     }
 
     /// One clock for the window: TOTP countdowns, address sync, and the

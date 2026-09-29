@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// Frame of the address pill, in the page column's space.
+/// Frame of either address pill, in the window's space.
 ///
-/// The suggestion list has to be an overlay of the column — not of the field —
-/// or the page card and its web view paint over it.
+/// The window draws suggestions above both the rail and the web content.
 enum AddressFieldFrameKey: PreferenceKey {
-    static let space = "pageColumn"
+    static let space = "browserAddress"
     static var defaultValue: CGRect { .zero }
 
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) {

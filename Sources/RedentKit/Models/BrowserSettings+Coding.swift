@@ -1,7 +1,7 @@
 import Foundation
 
 private enum BrowserSettingsCodingKey: String, CodingKey {
-    case tabLayout, isTabStripVisible, sidebarWidth, hibernation
+    case tabLayout, isTabStripVisible, hidesNavigationBar, sidebarWidth, hibernation
     case customHibernationMinutes, blocksTrackers, stripsTrackingParameters, quietsPages
     case offersPasswordSave, showsTOTPButton, searchEngine, homepage, reopensTabsOnLaunch
 }
@@ -26,5 +26,6 @@ extension BrowserSettings {
             homepage: try values.decodeIfPresent(String.self, forKey: .homepage) ?? defaults.homepage,
             reopensTabsOnLaunch: try values.decodeIfPresent(Bool.self, forKey: .reopensTabsOnLaunch) ?? defaults.reopensTabsOnLaunch
         )
+        hidesNavigationBar = try values.decodeIfPresent(Bool.self, forKey: .hidesNavigationBar) ?? false
     }
 }

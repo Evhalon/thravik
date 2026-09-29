@@ -4,42 +4,15 @@ import SwiftUI
 /// The address bar: a glass pill that lights up when focused.
 struct AddressField: View {
     @Bindable var model: BrowserModel
-    @FocusState private var isFocused: Bool
-    @State private var blurCommit: Task<Void, Never>?
+    @State private var isFocused = false
 
     var body: some View {
-        @Bindable var address = model.address
-        return HStack(spacing: Metric.tightGutter + 1) {
+        HStack(spacing: Metric.tightGutter + 1) {
             Image(systemName: securitySymbol)
                 .font(.system(size: 9.5, weight: .bold))
                 .foregroundStyle(securityTint)
 
-            TextField("Search or enter address", text: $address.text)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12.5))
-                .foregroundStyle(Palette.chromeText)
-                .focused($isFocused)
-                .onSubmit { model.submitAddress() }
-                .onExitCommand(perform: endEditing)
-                .onChange(of: isFocused) { _, focused in
-                    handleFocus(focused)
-                }
-                .onChange(of: address.text) { _, text in
-                    guard isFocused, model.address.isUserChange(text) else { return }
-                    model.queryChanged(text, from: .addressBar)
-                }
-                .onChange(of: model.centerSearchFocusEpoch) { _, _ in
-                    isFocused = false
-                }
-                .onChange(of: model.chrome.addressFocusEpoch) { _, _ in
-                    isFocused = true
-                }
-                .suggestionFieldBehavior(model, source: .addressBar, isFocused: isFocused)
-                .onKeyPress(.return, phases: .down) { press in
-                    guard press.modifiers.contains(.command) else { return .ignored }
-                    model.submitAddress(inNewTab: true)
-                    return .handled
-                }
+            AddressEntryField(model: model, isFocused: $isFocused)
 
             if model.selectedTab?.url != nil {
                 ReaderToggleButton(model: model)
@@ -55,38 +28,6 @@ struct AddressField: View {
         .background { reportFrame }
         .overlay(alignment: .bottomLeading) { progressBar }
         .animation(.easeOut(duration: 0.18), value: isFocused)
-    }
-
-    /// A suggestion tap lives outside this field, so blur would close the list
-    /// before the click landed. Escape and a later blur still end the edit.
-    private func handleFocus(_ focused: Bool) {
-        blurCommit?.cancel()
-        guard focused else {
-            blurCommit = Task { await commitBlur() }
-            return
-        }
-        model.address.beginEditing(with: model.selectedTab)
-        // After the field has taken the full URL, or the select lands on the
-        // shorter display text it is about to replace.
-        Task { @MainActor in
-            await Task.yield()
-            if isFocused { FieldEditor.selectAll() }
-        }
-    }
-
-    private func commitBlur() async {
-        try? await Task.sleep(for: .milliseconds(150))
-        guard !Task.isCancelled else { return }
-        endEditing()
-    }
-
-    /// Losing focus ends the edit, whatever took it away — a click on the page,
-    /// another field, another window. Closing the dropdown alone left the field
-    /// "being typed", so the compact host never came back.
-    private func endEditing() {
-        blurCommit?.cancel()
-        model.suggestions.close(from: .addressBar)
-        model.address.cancelEditing(restoringFrom: model.selectedTab)
     }
 
     private var reportFrame: some View {

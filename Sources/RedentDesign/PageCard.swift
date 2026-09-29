@@ -5,9 +5,9 @@ import SwiftUI
 /// This is the single change that separates a browser window from an app that
 /// happens to show a web page: the page has an edge, a shadow, and daylight
 /// around it, so the chrome reads as holding it rather than abutting it.
-private struct PageCard: ViewModifier {
+private struct PageCard<Backdrop: View>: ViewModifier {
     let isInset: Bool
-    @Environment(\.ambientTint) private var tint
+    let backdrop: Backdrop
 
     func body(content: Content) -> some View {
         content
@@ -19,9 +19,8 @@ private struct PageCard: ViewModifier {
     /// Paints the four spandrels so the card still reads round. `clipShape`
     /// would mask the WKWebView underneath; hardware video then goes black.
     ///
-    /// They are painted with the window's own backdrop, laid at the same window
-    /// position, so the corner shows exactly the glass behind it. Any flat fill
-    /// stood out as a square notch against the tinted, wallpaper-lit slab.
+    /// Reuse every layer of the window backdrop, including its current Space
+    /// wash. Reconstructing only part of it leaves dark notches in tinted glass.
     ///
     /// The card's shadow falls on that glass too, so the cover casts it again.
     /// Without it the corners read as a pale halo against the darkened slab.
@@ -30,11 +29,9 @@ private struct PageCard: ViewModifier {
         if isInset {
             GeometryReader { proxy in
                 if let window = proxy.bounds(of: WindowBackdrop.space) {
-                    WindowBackdrop(tint: tint).equatable()
+                    backdrop
                         .frame(width: window.width, height: window.height)
                         .offset(x: window.minX, y: window.minY)
-                } else {
-                    Palette.canvas
                 }
             }
             .overlay { castShadow }
@@ -84,7 +81,10 @@ private struct CardSpandrels: Shape {
 
 public extension View {
     /// - Parameter isInset: `false` gives the page the whole pane, for focus mode.
-    func pageCard(isInset: Bool = true) -> some View {
-        modifier(PageCard(isInset: isInset))
+    /// - Parameter backdrop: The complete backdrop drawn in `WindowBackdrop.space`.
+    func pageCard<Backdrop: View>(
+        isInset: Bool = true, @ViewBuilder backdrop: () -> Backdrop
+    ) -> some View {
+        modifier(PageCard(isInset: isInset, backdrop: backdrop()))
     }
 }

@@ -21,10 +21,19 @@ struct AppearanceSettingsPane: View {
                 }
             }
             SettingsSection("CHROME") {
-                SettingsToggleRow("Show tab strip", isOn: $settings.isTabStripVisible)
+                SettingsToggleRow(
+                    "Hide top navigation bar",
+                    caption: "Collapse with ⌘B for a full-height page. Hover the left or top edge to reveal controls.",
+                    isOn: hiddenNavigationSelection
+                )
+                SettingsToggleRow("Show tab strip", caption: "Toggle with ⌘\\.", isOn: $settings.isTabStripVisible)
                 sidebarWidthSlider
             }
         }
+    }
+
+    private var hiddenNavigationSelection: Binding<Bool> {
+        Binding(get: { settings.hidesNavigationBar }, set: { settings.setNavigationBarHidden($0) })
     }
 
     private var sidebarWidthSlider: some View {

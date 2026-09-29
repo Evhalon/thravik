@@ -7,6 +7,8 @@ import SwiftUI
 /// opaque sheet behind the content and the behind-window blur has nothing to
 /// sample — the glass comes out as flat grey.
 struct WindowConfigurator: NSViewRepresentable {
+    var showsWindowButtons = true
+
     func makeNSView(context: Context) -> NSView {
         let probe = NSView()
         DispatchQueue.main.async { configure(probe.window) }
@@ -36,6 +38,10 @@ struct WindowConfigurator: NSViewRepresentable {
         if !window.styleMask.contains(.resizable) { window.styleMask.insert(.resizable) }
         if !window.collectionBehavior.contains(.fullScreenPrimary) {
             window.collectionBehavior.insert(.fullScreenPrimary)
+        }
+        for kind in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            guard let button = window.standardWindowButton(kind) else { continue }
+            if button.isHidden == showsWindowButtons { button.isHidden = !showsWindowButtons }
         }
     }
 }

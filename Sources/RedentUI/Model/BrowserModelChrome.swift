@@ -9,7 +9,21 @@ extension BrowserModel {
 
     public var isSidebarVisible: Bool { showsTabStrip && settings.tabLayout == .sidebar }
 
+    public var usesSidebarNavigation: Bool {
+        settings.hidesNavigationBar && settings.tabLayout == .sidebar && !isFocusMode
+    }
+
+    public var showsNavigationBar: Bool { !isFocusMode && !usesSidebarNavigation }
+
+    public var usesEdgeReveal: Bool { usesSidebarNavigation && !isSidebarVisible }
+
     public func toggleTabStrip() {
+        endAddressEditing()
+        if isFocusMode {
+            isFocusMode = false
+            settings.isTabStripVisible = true
+            return
+        }
         settings.isTabStripVisible.toggle()
     }
 
@@ -23,12 +37,17 @@ extension BrowserModel {
 
     public func toggleSidebar() {
         if isSidebarVisible {
-            settings.tabLayout = .top
+            toggleTabStrip()
             return
         }
         isFocusMode = false
         settings.isTabStripVisible = true
         settings.tabLayout = .sidebar
+    }
+
+    private func endAddressEditing() {
+        suggestions.close(from: .addressBar)
+        address.cancelEditing(restoringFrom: selectedTab)
     }
 
     /// A private window: ephemeral storage, no history, no session restore.
