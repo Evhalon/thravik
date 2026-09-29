@@ -36,12 +36,7 @@ final class WebViewContainer: NSView {
     func attach(_ webView: WKWebView?) {
         guard hostedView?.webView !== webView else { fillHostedView(); return }
         if let webView {
-            // WebKit lifts the view into its own window for element fullscreen
-            // and returns it on exit; re-adopting it while it is up there would
-            // drag the video straight back out. The test is the window, not the
-            // superview: a view sitting in another of *our* containers is just
-            // a tab changing panes, and this container has to take it.
-            if let hostWindow = webView.window, let ownWindow = window, hostWindow !== ownWindow { return }
+            guard mayAdopt(webView) else { return }
             parkHostedView()
             let host = WebViewHost.containing(webView) ?? WebViewHost(webView: webView)
             host.isHidden = false
@@ -50,6 +45,22 @@ final class WebViewContainer: NSView {
             return
         }
         parkHostedView()
+    }
+
+    /// WebKit lifts the view into its own window for element fullscreen and
+    /// returns it on exit; re-adopting it while it is up there would drag the
+    /// video straight back out.
+    ///
+    /// A tab changing panes is taken by the container SwiftUI builds for the
+    /// new pane, before that container is in a window. SwiftUI then updates the
+    /// outgoing container, still on screen, one last time before removing it:
+    /// were it to take the view back, its removal would park the page and
+    /// leave the new pane black. So a container already on screen never takes
+    /// a view out of another container.
+    private func mayAdopt(_ webView: WKWebView) -> Bool {
+        if let hostWindow = webView.window, let ownWindow = window, hostWindow !== ownWindow { return false }
+        guard window != nil, let holder = WebViewHost.containing(webView)?.superview else { return true }
+        return !(holder is WebViewContainer)
     }
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
