@@ -84,7 +84,7 @@ extension BrowserModel {
 
     /// A search, or a page already saved or visited. A typed address is not:
     /// until return it may be a typo for someone else's site.
-    private func loadsAhead(_ row: AddressSuggestion) -> Bool {
+    func loadsAhead(_ row: AddressSuggestion) -> Bool {
         switch row.kind {
         case .search, .history, .bookmark: true
         case .directURL: row.url == suggestions.completion?.url

@@ -97,6 +97,7 @@ struct FloatingNewTabView: View {
     private func moveSelection(_ offset: Int) -> KeyPress.Result {
         guard !items.isEmpty else { return .ignored }
         selectedIndex = (selectedIndex + offset + items.count) % items.count
+        model.loadAhead(items[selectedIndex])
         return .handled
     }
 
@@ -109,7 +110,7 @@ struct FloatingNewTabView: View {
     }
 
     private func dismissAnimated() {
-        animateClose { model.dismissFloatingNewTab() }
+        animateClose { model.cancelFloatingNewTab() }
     }
 
     private func animateClose(_ action: @escaping @MainActor () -> Void) {
