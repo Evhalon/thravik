@@ -46,4 +46,19 @@ import Testing
         drag.refreshSlot(pointer: CGPoint(x: 10, y: 5))
         #expect(drag.drop() == [loose, first, second])
     }
+
+    /// Joining a group redraws the tab in a new row; the old row vanishing
+    /// afterwards must not erase the new one, or the tab can never lift again.
+    @Test func tabRedrawnInAGroupStillLiftsAfterTheOldRowGoes() {
+        let drag = TabDragCoordinator(axis: .vertical)
+        let oldRow = UUID()
+        let newRow = UUID()
+        drag.track(.tab(loose), owner: oldRow, drawing: [loose], frame: frame(0))
+        drag.track(.tab(first), drawing: [first], frame: frame(1))
+        drag.track(.tab(loose), owner: newRow, drawing: [loose], frame: frame(2))
+        drag.forget(.tab(loose), owner: oldRow)
+
+        drag.follow(loose, translation: CGSize(width: 0, height: -60))
+        #expect(drag.isDragging)
+    }
 }

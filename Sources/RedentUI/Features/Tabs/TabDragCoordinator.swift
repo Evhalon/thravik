@@ -28,22 +28,28 @@ final class TabDragCoordinator {
     private var shifts: [Row: CGFloat] = [:]
     @ObservationIgnored private var frames: [Row: CGRect] = [:]
     @ObservationIgnored private var drawn: [Row: [UUID]] = [:]
+    @ObservationIgnored private var owners: [Row: UUID] = [:]
     @ObservationIgnored private var frozen: [(Row, CGRect)] = []
 
     init(axis: Axis) { self.axis = axis }
 
     /// - Parameter tabs: the tabs this row stands for. A cluster header speaks
     ///   for its whole cluster while collapsed, so hidden members travel with it.
-    func track(_ row: Row, drawing tabs: [UUID], frame: CGRect) {
+    /// - Parameter owner: the view reporting. A tab that joins a group is
+    ///   redrawn by a new view, and the old one's `onDisappear` can land after
+    ///   the new one reported — only the latest reporter may forget the row.
+    func track(_ row: Row, owner: UUID? = nil, drawing tabs: [UUID], frame: CGRect) {
         guard liftedID == nil else { return }
         frames[row] = frame
         drawn[row] = tabs
+        owners[row] = owner
     }
 
-    func forget(_ row: Row) {
-        guard liftedID == nil else { return }
+    func forget(_ row: Row, owner: UUID? = nil) {
+        guard liftedID == nil, owners[row] == owner else { return }
         frames.removeValue(forKey: row)
         drawn.removeValue(forKey: row)
+        owners.removeValue(forKey: row)
     }
 
     var isDragging: Bool { liftedID != nil }

@@ -13,15 +13,16 @@ private struct TabDragging: ViewModifier {
     let actions: TabRowActions
     let drag: TabDragCoordinator
     let space: String
+    @State private var owner = UUID()
 
     private var lifted: Bool { drag.isLifted(tab.id) }
 
     func body(content: Content) -> some View {
         content
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(space)) } action: {
-                drag.track(.tab(tab.id), drawing: [tab.id], frame: $0)
+                drag.track(.tab(tab.id), owner: owner, drawing: [tab.id], frame: $0)
             }
-            .onDisappear { drag.forget(.tab(tab.id)) }
+            .onDisappear { drag.forget(.tab(tab.id), owner: owner) }
             .background { liftedFill }
             .scaleEffect(lifted ? 1.02 : 1)
             .shadow(color: .black.opacity(lifted ? 0.42 : 0), radius: 12, y: 4)
