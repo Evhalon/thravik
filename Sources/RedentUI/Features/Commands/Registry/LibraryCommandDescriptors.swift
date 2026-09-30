@@ -15,7 +15,7 @@ enum LibraryCommandDescriptors {
 
     private static let spaces: [CommandDescriptor] = [
         CommandDescriptor(id: "create-space", title: "Create Space", keywords: ["new"], symbol: "plus.square") { _, query in
-            CommandArguments.after("create space", in: query).map(BrowserAction.createSpace)
+            CommandArguments.after("create space", in: query).map { .createSpace(name: $0, look: nil) }
         },
         CommandDescriptor(id: "rename-space", title: "Rename Space", keywords: ["edit"], symbol: "pencil") { context, query in
             guard let id = context.selectedSpaceID,

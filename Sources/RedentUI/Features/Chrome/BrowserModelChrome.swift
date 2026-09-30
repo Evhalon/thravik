@@ -101,9 +101,12 @@ extension BrowserModel {
             tabs: tabs.session.tabs,
             groups: tabs.session.groups
         )
+        let apartness = TabDropSiteGrouping.apartness(moved: id, order: order, tabs: tabs.session.tabs)
         tabs.applyOrder(order)
         switch outcome {
-        case .keep: return
+        case .keep:
+            guard let apartness else { return }
+            try? tabs.perform(.setApartFromSite(tabID: id, isApart: apartness))
         case .leave: try? tabs.perform(.moveTabToGroup(tabID: id, groupID: nil))
         case .join(let groupID): try? tabs.perform(.moveTabToGroup(tabID: id, groupID: groupID))
         }

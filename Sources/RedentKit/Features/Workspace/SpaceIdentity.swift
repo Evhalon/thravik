@@ -5,7 +5,7 @@ import Foundation
 /// Tokens are strings so RedentKit stays UI-free. `square`/`blue` is the
 /// historical default written into early sessions; treat it as unset.
 public enum SpaceIdentity: Sendable {
-    public struct Look: Equatable, Sendable {
+    public struct Look: Hashable, Codable, Sendable {
         public let icon: String
         public let colorToken: String
         public init(icon: String, colorToken: String) {
@@ -28,10 +28,21 @@ public enum SpaceIdentity: Sendable {
         "flame.fill", "drop.fill", "star.fill", "bolt.fill"
     ]
 
+    /// The palette the Space composer offers. A superset of `icons`, which
+    /// stays fixed because derived looks index into it.
+    public static let pickerIcons = icons + [
+        "briefcase.fill", "heart.fill", "book.fill", "airplane",
+        "house.fill", "graduationcap.fill", "cart.fill", "gamecontroller.fill",
+        "music.note", "paintbrush.fill", "hammer.fill", "chevron.left.forwardslash.chevron.right",
+        "camera.fill", "globe", "dollarsign.circle.fill", "figure.run"
+    ]
+
+    /// A starter Space only wears its preset until the user picks a look.
     public static func look(id: UUID, icon: String, colorToken: String) -> Look {
-        if let preset = preset(for: id) { return preset }
-        if icon == unsetIcon, colorToken == unsetToken { return derived(from: id) }
-        return Look(icon: icon, colorToken: colorToken)
+        guard icon == unsetIcon, colorToken == unsetToken else {
+            return Look(icon: icon, colorToken: colorToken)
+        }
+        return preset(for: id) ?? derived(from: id)
     }
 
     public static func preset(for id: UUID) -> Look? {

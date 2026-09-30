@@ -17,8 +17,7 @@ public struct WorkspaceState: Codable, Sendable, Equatable {
 
     public mutating func apply(_ action: WorkspaceAction) throws {
         switch action {
-        case let .createSpace(name): createSpace(name: name)
-        case let .renameSpace(id, name): try renameSpace(id: id, name: name)
+        case .createSpace, .renameSpace, .setSpaceLook, .moveSpace: try applySpaceStyle(action)
         case let .deleteSpace(id): try deleteSpace(id: id)
         case let .selectSpace(id): try selectSpace(id: id)
         case let .selectTab(id): try selectTab(id: id)
@@ -26,25 +25,12 @@ public struct WorkspaceState: Codable, Sendable, Equatable {
         case let .setPinned(id, isPinned): try setPinned(id: id, isPinned: isPinned)
         case .renameTab, .setPinnedURL: try applyTabLabel(action)
         case .createGroup, .createGroupWithTabs, .renameGroup,
-             .deleteGroup, .moveTabToGroup, .groupTabs:
+             .deleteGroup, .moveTabToGroup, .groupTabs, .setApartFromSite:
             try applyGroup(action)
         }
         rebuildMembership()
         normalizeContainers()
         normalizeSelection()
-    }
-
-    private mutating func createSpace(name: String) {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        session.spaces.append(BrowserSpace(name: trimmed))
-    }
-
-    private mutating func renameSpace(id: UUID, name: String) throws {
-        guard let index = session.spaces.firstIndex(where: { $0.id == id }) else { throw WorkspaceActionError.missingSpace(id) }
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        session.spaces[index].name = trimmed
     }
 
     private mutating func deleteSpace(id: UUID) throws {

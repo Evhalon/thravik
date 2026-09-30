@@ -1,8 +1,12 @@
 import Foundation
 
 public enum WorkspaceAction: Sendable, Hashable, Codable {
-    case createSpace(name: String)
+    /// Nil look derives one from the new Space's id.
+    case createSpace(name: String, look: SpaceIdentity.Look?)
     case renameSpace(id: UUID, name: String)
+    case setSpaceLook(id: UUID, look: SpaceIdentity.Look)
+    /// `index` is the Space's position once the move is done.
+    case moveSpace(id: UUID, toIndex: Int)
     case deleteSpace(id: UUID)
     case selectSpace(id: UUID)
     case selectTab(id: UUID)
@@ -17,6 +21,8 @@ public enum WorkspaceAction: Sendable, Hashable, Codable {
     case deleteGroup(id: UUID)
     case moveTabToGroup(tabID: UUID, groupID: UUID?)
     case groupTabs(groupID: UUID, tabIDs: [UUID])
+    /// Keeps a tab out of, or returns it to, its site's automatic cluster.
+    case setApartFromSite(tabID: UUID, isApart: Bool)
 }
 
 public enum WorkspaceActionError: Error, Equatable, Sendable {

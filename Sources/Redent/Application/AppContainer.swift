@@ -22,6 +22,7 @@ final class AppContainer {
     let history: any HistoryStoring
     let bookmarks: any BookmarkStoring
     let webApps: any WebAppStoring = JSONWebAppStore()
+    let formHistory: any FormHistoryStoring = JSONFormHistoryStore()
     let webAppInstaller: any WebAppInstalling
     let browserImporter: any BrowserImporting
     let permissions: SitePermissionLedger

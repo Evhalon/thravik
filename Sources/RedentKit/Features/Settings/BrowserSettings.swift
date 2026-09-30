@@ -86,6 +86,8 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
     public var reopensTabsOnLaunch: Bool
     /// Lets Apple Intelligence, on this Mac, name tab groups by topic.
     public var namesGroupsOnDevice = true
+    /// Offers values sent in earlier forms under the field being typed in.
+    public var remembersFormEntries = true
 
     public static let sidebarWidthRange: ClosedRange<Double> = 180...380
 

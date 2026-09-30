@@ -66,9 +66,10 @@ struct SidebarTabList: View {
         // A header the drag does not know about is a dead band the pointer has
         // to cross blind, so it joins the geometry like any other row.
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.dragSpace)) } action: {
-            drag.track(cluster.id, drawing: folded ? cluster.memberIDs : [], frame: $0)
+            drag.track(.header(cluster.id), drawing: folded ? cluster.memberIDs : [], frame: $0)
         }
-        .onDisappear { drag.forget(cluster.id) }
+        .onDisappear { drag.forget(.header(cluster.id)) }
+        .offset(drag.offset(for: .header(cluster.id)))
         if !folded {
             ForEach(cluster.memberIDs, id: \.self) { id in
                 if let tab = tab(id) { row(tab, indent: Metric.gutter) }

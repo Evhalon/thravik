@@ -19,6 +19,12 @@ final class PageSignalRouter: NSObject, WKScriptMessageHandler {
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         if routeVideo(message) { return }
         if routeMedia(message.body) || routeQuiet(message.body) { return }
+        if let form = FormSignalParser.parse(message.body) {
+            // Positions are only meaningful in the main frame's own viewport.
+            guard message.frameInfo.isMainFrame, let tab, let signal = form.resolve(in: tab) else { return }
+            tab.receive(signal)
+            return
+        }
         guard let signal = Self.parse(message.body) else { return }
         tab?.receive(signal)
     }

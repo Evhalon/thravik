@@ -30,7 +30,8 @@ func makeTestBrowserModel(
         ),
         suggestions: AddressSuggestionsModel(
             engine: SuggestionEngine(history: history, bookmarks: bookmarks)
-        )
+        ),
+        formHistory: FormHistoryCoordinator(store: FakeFormHistoryStore())
     )
     return BrowserModel(
         tabs: tabs,

@@ -22,8 +22,11 @@ public enum BrowserAction: Hashable, Sendable {
     case reopenLastClosed
     case pinTab(UUID, isPinned: Bool)
     case focusSpace(UUID)
-    case createSpace(name: String)
+    /// Nil look derives one from the new Space's id.
+    case createSpace(name: String, look: SpaceIdentity.Look?)
     case renameSpace(id: UUID, name: String)
+    case setSpaceLook(id: UUID, look: SpaceIdentity.Look)
+    case moveSpace(id: UUID, toIndex: Int)
     case deleteSpace(UUID)
     case moveTab(tabID: UUID, spaceID: UUID)
     case goBack

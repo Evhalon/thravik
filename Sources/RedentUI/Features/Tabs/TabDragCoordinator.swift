@@ -12,63 +12,70 @@ import SwiftUI
 final class TabDragCoordinator {
     enum Axis { case vertical, horizontal }
 
+    /// A cluster header can share its id with its first member — automatic
+    /// clusters are named after a tab — so headers and tabs are keyed apart.
+    enum Row: Hashable {
+        case tab(UUID)
+        case header(UUID)
+    }
+
     private let axis: Axis
     private var liftedID: UUID?
     private var travel: CGFloat = 0
     @ObservationIgnored private var slot = 0
     @ObservationIgnored private var originIndex = 0
     @ObservationIgnored private var span: CGFloat = 0
-    private var shifts: [UUID: CGFloat] = [:]
-    @ObservationIgnored private var frames: [UUID: CGRect] = [:]
-    @ObservationIgnored private var drawn: [UUID: [UUID]] = [:]
-    @ObservationIgnored private var frozen: [(UUID, CGRect)] = []
+    private var shifts: [Row: CGFloat] = [:]
+    @ObservationIgnored private var frames: [Row: CGRect] = [:]
+    @ObservationIgnored private var drawn: [Row: [UUID]] = [:]
+    @ObservationIgnored private var frozen: [(Row, CGRect)] = []
 
     init(axis: Axis) { self.axis = axis }
 
     /// - Parameter tabs: the tabs this row stands for. A cluster header speaks
     ///   for its whole cluster while collapsed, so hidden members travel with it.
-    func track(_ id: UUID, drawing tabs: [UUID], frame: CGRect) {
+    func track(_ row: Row, drawing tabs: [UUID], frame: CGRect) {
         guard liftedID == nil else { return }
-        frames[id] = frame
-        drawn[id] = tabs
+        frames[row] = frame
+        drawn[row] = tabs
     }
 
-    func forget(_ id: UUID) {
+    func forget(_ row: Row) {
         guard liftedID == nil else { return }
-        frames.removeValue(forKey: id)
-        drawn.removeValue(forKey: id)
+        frames.removeValue(forKey: row)
+        drawn.removeValue(forKey: row)
     }
 
     var isDragging: Bool { liftedID != nil }
 
     func isLifted(_ id: UUID) -> Bool { id == liftedID }
 
-    func offset(for id: UUID) -> CGSize {
-        if id == liftedID { return vec(travel) }
-        return vec(shifts[id] ?? 0)
+    func offset(for row: Row) -> CGSize {
+        if let liftedID, row == .tab(liftedID) { return vec(travel) }
+        return vec(shifts[row] ?? 0)
     }
 
-    func follow(_ id: UUID, to value: DragGesture.Value) {
+    func follow(_ id: UUID, translation: CGSize) {
         if liftedID != id { begin(id) }
-        travel = axis == .vertical ? value.translation.height : value.translation.width
+        travel = axis == .vertical ? translation.height : translation.width
     }
 
-    func refreshSlot(_ value: DragGesture.Value) {
+    func refreshSlot(pointer location: CGPoint) {
         guard let liftedID else { return }
-        let pointer = axis == .vertical ? value.location.y : value.location.x
+        let pointer = axis == .vertical ? location.y : location.x
         let mids = frozen.map { ($0.0, axis == .vertical ? $0.1.midY : $0.1.midX) }
-        let next = TabDragGeometry.slot(pointer: pointer, mids: mids, lifted: liftedID)
+        let next = TabDragGeometry.slot(pointer: pointer, mids: mids, lifted: Row.tab(liftedID))
         guard next != slot else { return }
         slot = next
         shifts = TabDragGeometry.shifts(
-            ids: frozen.map(\.0), lifted: liftedID, from: originIndex, slot: slot, span: span
+            ids: frozen.map(\.0), lifted: .tab(liftedID), from: originIndex, slot: slot, span: span
         )
     }
 
     func drop() -> [UUID]? {
         defer { reset() }
         guard let liftedID else { return nil }
-        let rows = frozen.map { drawn[$0.0] ?? [$0.0] }
+        let rows = frozen.map { drawn[$0.0] ?? [] }
         return TabDropPlacement.reordered(liftedID, afterCount: slot, in: rows)
     }
 
@@ -76,7 +83,7 @@ final class TabDragCoordinator {
         frozen = frames.sorted { lhs, rhs in
             axis == .vertical ? lhs.value.minY < rhs.value.minY : lhs.value.minX < rhs.value.minX
         }.map { ($0.key, $0.value) }
-        guard let index = frozen.firstIndex(where: { $0.0 == id }) else { return }
+        guard let index = frozen.firstIndex(where: { $0.0 == .tab(id) }) else { return }
         liftedID = id
         originIndex = index
         span = axis == .vertical ? frozen[index].1.height : frozen[index].1.width

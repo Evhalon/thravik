@@ -6,16 +6,19 @@ public struct BrowserFeatures {
     public let otp: OTPCoordinator
     public let twoFactor: TwoFactorSetupCoordinator
     public let suggestions: AddressSuggestionsModel
+    public let formHistory: FormHistoryCoordinator
 
     public init(
         autofill: AutofillCoordinator,
         otp: OTPCoordinator,
         twoFactor: TwoFactorSetupCoordinator,
-        suggestions: AddressSuggestionsModel
+        suggestions: AddressSuggestionsModel,
+        formHistory: FormHistoryCoordinator
     ) {
         self.autofill = autofill
         self.otp = otp
         self.twoFactor = twoFactor
         self.suggestions = suggestions
+        self.formHistory = formHistory
     }
 }

@@ -61,7 +61,7 @@ struct ContainerTests {
     @Test("A new Space browses in a Container of its own")
     func newSpaceIsIsolated() throws {
         var state = WorkspaceState(session: session())
-        try state.apply(.createSpace(name: "Client"))
+        try state.apply(.createSpace(name: "Client", look: nil))
         let created = try #require(state.session.spaces.last)
         let others = state.session.spaces.dropLast().map(\.containerID)
         #expect(others.contains(created.containerID) == false)

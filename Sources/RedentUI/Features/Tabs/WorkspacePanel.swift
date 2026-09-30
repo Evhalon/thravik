@@ -5,45 +5,55 @@ import SwiftUI
 public struct WorkspacePanel: View {
     private let model: BrowserModel
     @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
-    @State private var editingID: UUID?
+    @State private var draft: SpaceDraft?
 
     public init(model: BrowserModel) { self.model = model }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SheetHeading(
-                title: "Spaces",
-                subtitle: "Each Space is its own profile: its own tabs, cookies, logins and bookmarks."
-            )
-            spaceList
-            ChromeComposer(
-                placeholder: editingID == nil ? "New Space" : "Rename Space",
-                actionTitle: editingID == nil ? "Create" : "Rename",
-                text: $name,
-                action: save
-            )
-            footer
+            SheetHeading(title: title, subtitle: subtitle)
+            if let draft {
+                SpaceComposer(draft: draft, onCancel: closeComposer, onCommit: commit)
+                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            } else {
+                WorkspaceSpaceList(
+                    model: model,
+                    onSelect: { model.execute(.focusSpace($0.id)); dismiss() },
+                    onCustomize: { open(.editing($0)) }
+                )
+                newSpaceButton
+                footer
+            }
         }
         .padding(20)
         .sheetCanvas(width: 420, height: 460)
         .presentationBackground(.ultraThinMaterial)
     }
 
-    private var spaceList: some View {
-        ScrollView {
-            LazyVStack(spacing: 4) {
-                ForEach(model.tabs.session.spaces) { space in
-                    WorkspaceSpaceRow(
-                        space: space,
-                        tabCount: tabCount(space.id),
-                        isSelected: space.id == model.tabs.session.selectedSpaceID,
-                        actions: rowActions(space)
-                    )
+    private var title: String {
+        guard let draft else { return "Spaces" }
+        return draft.isEditing ? "Customize Space" : "New Space"
+    }
+
+    private var subtitle: String {
+        guard draft == nil else { return "Name it, give it a color, pick an icon." }
+        return "Each Space is its own profile: its own tabs, cookies, logins and bookmarks. Drag to reorder."
+    }
+
+    private var newSpaceButton: some View {
+        Button { open(.new()) } label: {
+            Label("New Space", systemImage: "plus")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Palette.chromeText)
+                .frame(maxWidth: .infinity)
+                .frame(height: Metric.controlHeight + 4)
+                .background {
+                    RoundedRectangle(cornerRadius: Metric.mediumRadius, style: .continuous)
+                        .strokeBorder(Palette.chromeSecondaryText.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                 }
-            }
+                .contentShape(.rect)
         }
-        .scrollIndicators(.never)
+        .buttonStyle(PressScaleStyle())
     }
 
     private var footer: some View {
@@ -61,23 +71,16 @@ public struct WorkspacePanel: View {
         }
     }
 
-    private func rowActions(_ space: BrowserSpace) -> WorkspaceSpaceRow.Actions {
-        WorkspaceSpaceRow.Actions(
-            canDelete: model.tabs.session.spaces.count > 1,
-            onSelect: { model.execute(.focusSpace(space.id)); dismiss() },
-            onRename: { editingID = space.id; name = space.name },
-            onDelete: { model.execute(.deleteSpace(space.id)) }
-        )
+    private func open(_ next: SpaceDraft) {
+        withAnimation(.spring(duration: 0.3)) { draft = next }
     }
 
-    private func tabCount(_ id: UUID) -> Int {
-        model.tabs.tabs.filter { $0.snapshot.spaceID == id }.count
+    private func closeComposer() {
+        withAnimation(.spring(duration: 0.3)) { draft = nil }
     }
 
-    private func save() {
-        if let editingID { model.execute(.renameSpace(id: editingID, name: name)) }
-        else { model.execute(.createSpace(name: name)) }
-        name = ""
-        editingID = nil
+    private func commit(_ finished: SpaceDraft) {
+        for action in finished.actions { model.execute(action) }
+        closeComposer()
     }
 }

@@ -21,7 +21,7 @@ enum CommandValidity {
             hasTab(id, context)
         case .closeTabs(let ids):
             !ids.isEmpty && ids.allSatisfy { hasTab($0, context) }
-        case .focusSpace(let id), .deleteSpace(let id):
+        case .focusSpace(let id), .deleteSpace(let id), .setSpaceLook(let id, _), .moveSpace(let id, _):
             hasSpace(id, context)
         case .renameSpace(let id, let name):
             !name.isEmpty && hasSpace(id, context)
@@ -29,7 +29,7 @@ enum CommandValidity {
             hasTab(tabID, context) && hasSpace(spaceID, context)
         case .moveTabToGroup(let tabID, let groupID):
             hasTab(tabID, context) && context.groups.contains { $0.id == groupID }
-        case .createSpace(let name):
+        case .createSpace(let name, _):
             !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .focusWindow(let id):
             context.windows.contains { $0.id == id && !$0.isCurrent }

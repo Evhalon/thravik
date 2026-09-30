@@ -16,7 +16,8 @@ enum PageScripts {
     private static let quietRelayToken = UUID().uuidString
 
     /// Adds the user scripts to a fresh configuration's content controller: the
-    /// credential bridge, find-in-page, tab audio, media rescue, Reader, and Quiet mode when on.
+    /// credential bridge, find-in-page, tab audio, media rescue, Reader, form
+    /// history, and Quiet mode when on.
     /// A missing resource is a no-op, never a crash — a bundle resource must
     /// never be force-unwrapped.
     static func install(into controller: WKUserContentController, quiets: Bool) {
@@ -29,7 +30,7 @@ enum PageScripts {
         add(media, at: .atDocumentStart, to: controller)
         add(loadSource(named: "redent-media-rescue"), at: .atDocumentStart, to: controller)
         add(loadSource(named: "redent-reader"), at: .atDocumentEnd, mainFrameOnly: true, to: controller)
-        for name in ["redent-video-affordance", "redent-floating-video"] {
+        for name in ["redent-video-affordance", "redent-floating-video", "redent-form-history"] {
             add(loadSource(named: name), at: .atDocumentEnd, mainFrameOnly: true, to: controller)
         }
         if quiets { add(quietSource, at: .atDocumentStart, to: controller) }

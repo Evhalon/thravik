@@ -38,7 +38,7 @@ public struct SidebarOutline: Equatable, Sendable {
                 continue
             }
             if let parentID = tab.parentTabID, present.contains(parentID) { continue }
-            if let host = tab.origin?.displayHost, let members = hostGroups[host] {
+            if !tab.standsApartFromSite, let host = tab.origin?.displayHost, let members = hostGroups[host] {
                 appendHostGroup(host, members: members, into: &nodes, emitted: &emitted)
                 continue
             }
@@ -48,7 +48,7 @@ public struct SidebarOutline: Equatable, Sendable {
     }
 
     private static func automaticHostGroups(in tabs: [TabSnapshot]) -> [String: [TabSnapshot]] {
-        let candidates = tabs.filter { $0.groupID == nil && $0.parentTabID == nil }
+        let candidates = tabs.filter { $0.groupID == nil && $0.parentTabID == nil && !$0.standsApartFromSite }
         let grouped = Dictionary(grouping: candidates) { $0.origin?.displayHost }
         return grouped.reduce(into: [:]) { result, entry in
             guard let host = entry.key, entry.value.count >= 2 else { return }

@@ -33,6 +33,9 @@ extension BrowserModel: PageSignalHandling {
             twoFactor.setupAppeared(at: origin)
         case .twoFactorSetupGone:
             twoFactor.setupGone()
+        case .formFieldActive, .formFieldInactive, .formSuggestionHighlighted, .formSuggestionChosen, .formSubmitted:
+            guard let tab = selectedTab else { return }
+            handleFormHistory(signal, from: tab)
         }
     }
 }

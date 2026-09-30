@@ -13,6 +13,7 @@ struct ContentArea: View {
     var body: some View {
         SplitPageHost(model: model)
         .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
+        .background { FormSuggestionPresenter(model: model, menu: model.formHistory.menu) }
         .overlay(alignment: .top) {
             VStack(spacing: Metric.gutter) {
                 PasswordSaveBar(model: model)

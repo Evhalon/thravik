@@ -27,11 +27,9 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
     public var timeline = TabTimeline()
     /// Page zoom, kept per tab so it survives hibernation and restart.
     public var zoom: Double = PageZoom.identity
-
-    private enum CodingKeys: String, CodingKey {
-        case id, url, title, faviconData, isPinned, pinnedURL, customTitle, lastActiveAt
-        case spaceID, containerID, groupID, parentTabID, expiresAt, lifespan, timeline, zoom
-    }
+    /// Dragged out of its site's automatic cluster, so the sidebar leaves it
+    /// on its own even while other tabs share its host.
+    public var standsApartFromSite = false
 
     public init(
         id: UUID = UUID(),
@@ -81,51 +79,6 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
             return .ephemeral(sessionID)
         }
         return .container(containerID ?? BrowserContainer.defaultID)
-    }
-
-    public init(from decoder: Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        let expiry = try values.decodeIfPresent(Date.self, forKey: .expiresAt)
-        self.init(
-            id: try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID(),
-            url: try values.decodeIfPresent(URL.self, forKey: .url),
-            title: try values.decodeIfPresent(String.self, forKey: .title) ?? "",
-            faviconData: try values.decodeIfPresent(Data.self, forKey: .faviconData),
-            isPinned: try values.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false,
-            lastActiveAt: try values.decodeIfPresent(Date.self, forKey: .lastActiveAt) ?? .now,
-            spaceID: try values.decodeIfPresent(UUID.self, forKey: .spaceID),
-            containerID: try values.decodeIfPresent(UUID.self, forKey: .containerID),
-            groupID: try values.decodeIfPresent(UUID.self, forKey: .groupID),
-            expiresAt: expiry
-        )
-        if let lifespan = try values.decodeIfPresent(TabLifespan.self, forKey: .lifespan) {
-            self.lifespan = lifespan
-        }
-        self.timeline = try values.decodeIfPresent(TabTimeline.self, forKey: .timeline) ?? TabTimeline()
-        self.zoom = PageZoom.clamped(try values.decodeIfPresent(Double.self, forKey: .zoom) ?? PageZoom.identity)
-        self.parentTabID = try values.decodeIfPresent(UUID.self, forKey: .parentTabID)
-        self.pinnedURL = try values.decodeIfPresent(URL.self, forKey: .pinnedURL)
-        self.customTitle = try values.decodeIfPresent(String.self, forKey: .customTitle)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var values = encoder.container(keyedBy: CodingKeys.self)
-        try values.encode(id, forKey: .id)
-        try values.encodeIfPresent(url, forKey: .url)
-        try values.encode(title, forKey: .title)
-        try values.encodeIfPresent(faviconData, forKey: .faviconData)
-        try values.encode(isPinned, forKey: .isPinned)
-        try values.encodeIfPresent(pinnedURL, forKey: .pinnedURL)
-        try values.encodeIfPresent(customTitle, forKey: .customTitle)
-        try values.encode(lastActiveAt, forKey: .lastActiveAt)
-        try values.encodeIfPresent(spaceID, forKey: .spaceID)
-        try values.encodeIfPresent(containerID, forKey: .containerID)
-        try values.encodeIfPresent(groupID, forKey: .groupID)
-        try values.encodeIfPresent(parentTabID, forKey: .parentTabID)
-        try values.encodeIfPresent(expiresAt, forKey: .expiresAt)
-        try values.encode(lifespan, forKey: .lifespan)
-        try values.encode(timeline.persistable(), forKey: .timeline)
-        try values.encode(zoom, forKey: .zoom)
     }
 
     public var expiresAt: Date? {

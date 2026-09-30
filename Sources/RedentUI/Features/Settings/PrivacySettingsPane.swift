@@ -71,6 +71,11 @@ struct PrivacySettingsPane: View {
                 isOn: $settings.stripsTrackingParameters
             )
             SettingsToggleRow("Offer to save passwords", isOn: $settings.offersPasswordSave)
+            SettingsToggleRow(
+                "Suggest earlier form entries",
+                caption: "Remembers what you send in ordinary fields, such as an email or an address, on this Mac. Never passwords, card numbers or codes.",
+                isOn: $settings.remembersFormEntries
+            )
             SettingsToggleRow("Show one-time code button", isOn: $settings.showsTOTPButton)
         }
     }

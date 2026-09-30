@@ -35,6 +35,11 @@ public protocol BrowserTab: FloatingVideoControlling {
     func printPage()
     func fillCredential(username: String, password: String) async
     func fillOTPCode(_ code: String) async
+    /// Tells the page how many form-history suggestions are showing, so its
+    /// arrow keys can walk them. Zero closes the menu.
+    func showFormSuggestions(count: Int)
+    /// Writes a remembered value into the field being typed in. Never submits.
+    func fillFormField(_ value: String)
     func hibernate()
     /// Some frame in the page is playing sound, muted by Redent or not.
     var isPlayingAudio: Bool { get }
@@ -77,4 +82,6 @@ public extension BrowserTab {
     func toggleReader() async {}
     var quietReceipt: QuietReceipt { QuietReceipt() }
     func visiblePageImage() async -> Data? { nil }
+    func showFormSuggestions(count: Int) {}
+    func fillFormField(_ value: String) {}
 }

@@ -2,7 +2,8 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// One Space in the manager: orb, name, quiet count. Actions live in the menu.
+/// One Space in the manager: orb, name, quiet count. Actions live in the menu;
+/// the grip shows on hover so the row reads as draggable.
 struct WorkspaceSpaceRow: View {
     let space: BrowserSpace
     let tabCount: Int
@@ -13,7 +14,7 @@ struct WorkspaceSpaceRow: View {
     struct Actions {
         let canDelete: Bool
         let onSelect: () -> Void
-        let onRename: () -> Void
+        let onCustomize: () -> Void
         let onDelete: () -> Void
     }
 
@@ -24,6 +25,7 @@ struct WorkspaceSpaceRow: View {
             Spacer(minLength: 0)
             if isSelected { ChromeBadge("Open", tint: tint) }
             menu
+            grip
         }
         .padding(.horizontal, 8)
         .frame(height: 44)
@@ -51,12 +53,20 @@ struct WorkspaceSpaceRow: View {
     private var menu: some View {
         ManageRowMenu {
             Button("Switch to this Space", action: actions.onSelect)
-            Button("Rename…", action: actions.onRename)
+            Button("Customize…", action: actions.onCustomize)
             Divider()
             Button("Delete Space", role: .destructive, action: actions.onDelete)
                 .disabled(!actions.canDelete)
         }
         .opacity(isHovering ? 1 : 0.35)
+    }
+
+    private var grip: some View {
+        Image(systemName: "line.3.horizontal")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(Palette.chromeSecondaryText)
+            .opacity(isHovering ? 0.8 : 0)
+            .accessibilityHidden(true)
     }
 
     private var tint: Color {

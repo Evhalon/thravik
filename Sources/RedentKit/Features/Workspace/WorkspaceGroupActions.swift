@@ -14,6 +14,7 @@ extension WorkspaceState {
         case let .deleteGroup(id): try deleteGroup(id: id)
         case let .moveTabToGroup(tabID, groupID): try moveTabToGroup(tabID: tabID, groupID: groupID)
         case let .groupTabs(groupID, tabIDs): try groupTabs(groupID: groupID, tabIDs: tabIDs)
+        case let .setApartFromSite(tabID, isApart): try setApartFromSite(tabID: tabID, isApart: isApart)
         default: return
         }
     }
@@ -51,6 +52,11 @@ extension WorkspaceState {
         guard let group = session.groups.first(where: { $0.id == groupID }) else { throw WorkspaceActionError.missingGroup(groupID) }
         guard session.tabs[tabIndex].spaceID == group.spaceID else { throw WorkspaceActionError.groupSpaceMismatch }
         session.tabs[tabIndex].groupID = groupID
+    }
+
+    private mutating func setApartFromSite(tabID: UUID, isApart: Bool) throws {
+        guard let tabIndex = session.tabs.firstIndex(where: { $0.id == tabID }) else { throw WorkspaceActionError.missingTab(tabID) }
+        session.tabs[tabIndex].standsApartFromSite = isApart
     }
 
     private mutating func deleteGroup(id: UUID) throws {

@@ -60,7 +60,8 @@ final class WindowContainer {
             ),
             suggestions: AddressSuggestionsModel(
                 engine: SuggestionEngine(history: app.history, bookmarks: app.bookmarks)
-            )
+            ),
+            formHistory: FormHistoryCoordinator(store: app.formHistory, isEnabled: settings.remembersFormEntries)
         )
         self.model = BrowserModel(
             tabs: controller, services: services, features: features, settings: settings

@@ -19,13 +19,13 @@ private struct TabDragging: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(space)) } action: {
-                drag.track(tab.id, drawing: [tab.id], frame: $0)
+                drag.track(.tab(tab.id), drawing: [tab.id], frame: $0)
             }
-            .onDisappear { drag.forget(tab.id) }
+            .onDisappear { drag.forget(.tab(tab.id)) }
             .background { liftedFill }
             .scaleEffect(lifted ? 1.02 : 1)
             .shadow(color: .black.opacity(lifted ? 0.42 : 0), radius: 12, y: 4)
-            .offset(drag.offset(for: tab.id))
+            .offset(drag.offset(for: .tab(tab.id)))
             .zIndex(lifted ? 1 : 0)
             .gesture(gesture)
     }
@@ -41,8 +41,8 @@ private struct TabDragging: ViewModifier {
     private var gesture: some Gesture {
         DragGesture(minimumDistance: 4, coordinateSpace: .named(space))
             .onChanged { value in
-                drag.follow(tab.id, to: value)
-                withAnimation(.easeInOut(duration: 0.14)) { drag.refreshSlot(value) }
+                drag.follow(tab.id, translation: value.translation)
+                withAnimation(.easeInOut(duration: 0.14)) { drag.refreshSlot(pointer: value.location) }
             }
             .onEnded { _ in
                 var transaction = Transaction()

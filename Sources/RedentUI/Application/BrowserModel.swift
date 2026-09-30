@@ -10,6 +10,7 @@ public final class BrowserModel {
     public let autofill: AutofillCoordinator
     public let otp: OTPCoordinator
     public let twoFactor: TwoFactorSetupCoordinator
+    public let formHistory: FormHistoryCoordinator
     public let address = AddressBarModel()
     public let suggestions: AddressSuggestionsModel
     public let history: any HistoryStoring
@@ -70,6 +71,7 @@ public final class BrowserModel {
         self.autofill = features.autofill
         self.otp = features.otp
         self.twoFactor = features.twoFactor
+        self.formHistory = features.formHistory
         self.suggestions = features.suggestions
         self.history = services.history
         self.bookmarks = services.bookmarks
@@ -105,6 +107,7 @@ public final class BrowserModel {
         autofill.pageChanged()
         otp.pageChanged()
         twoFactor.pageChanged()
+        dismissFormSuggestions()
     }
 
     /// One timer for the whole window, per AGENTS.md §4 — not one per code.
@@ -127,6 +130,9 @@ public final class BrowserModel {
         commandBar.searchEngine = settings.searchEngine
         if old.offersPasswordSave != settings.offersPasswordSave {
             autofill.setEnabled(settings.offersPasswordSave)
+        }
+        if old.remembersFormEntries != settings.remembersFormEntries {
+            formHistory.setEnabled(settings.remembersFormEntries)
         }
         if !settings.showsTOTPButton {
             otp.fieldDisappeared()
