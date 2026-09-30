@@ -75,10 +75,26 @@ extension BrowserModel {
 
     /// - Parameter forward: ⌘G searches on, ⇧⌘G searches back.
     public func findNext(forward: Bool = true) {
+        search(chrome.findQuery, forward: forward, after: nil)
+    }
+
+    /// Typing asks the page once per pause, not once per letter: every search
+    /// reads the page's whole text, and a burst of them queues up on the page
+    /// and lags behind the field. Return still searches at once.
+    public func findQueryChanged() {
         let query = chrome.findQuery
+        search(query, forward: true, after: query.count == 1 ? .milliseconds(350) : .milliseconds(150))
+    }
+
+    private func search(_ query: String, forward: Bool, after pause: Duration?) {
+        chrome.findInFlight?.cancel()
         guard let tab = selectedTab else { return }
         guard !query.isEmpty else { return clearFindMatches(on: tab) }
         chrome.findInFlight = Task {
+            if let pause {
+                try? await Task.sleep(for: pause)
+                guard !Task.isCancelled else { return }
+            }
             let matches = await tab.findInPage(query, forward: forward)
             // Typing outruns the page: a stale answer must not overwrite the
             // count for the query the reader has since typed.

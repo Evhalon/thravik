@@ -74,11 +74,19 @@
       var text = '';
       var lastBlock = null;
       if (!root) return { segments: segments, text: text };
+      // Decided once per element: a paragraph is dozens of text nodes, and
+      // asking each one's visibility again forces a style pass apiece.
+      var verdicts = new Map();
       var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode: function (node) {
           var parent = node.parentElement;
-          if (!node.data || !parent || omitted(parent, root)) return NodeFilter.FILTER_REJECT;
-          return visible(parent) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+          if (!node.data || !parent) return NodeFilter.FILTER_REJECT;
+          var verdict = verdicts.get(parent);
+          if (verdict === undefined) {
+            verdict = !omitted(parent, root) && visible(parent);
+            verdicts.set(parent, verdict);
+          }
+          return verdict ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
         }
       });
       for (var node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -200,6 +208,9 @@
     function findMatches(query) {
       var ranges = rangeMatches(query, document.body);
       var controls = controlMatches(query, document.body);
+      // The walk already yields text matches in document order; only form
+      // values need interleaving, and sorting thousands of ranges is not free.
+      if (!controls.length) return ranges;
       return ranges.concat(controls).sort(compareMatches);
     }
 

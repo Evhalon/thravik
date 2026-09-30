@@ -83,4 +83,31 @@ struct FindCounterTests {
         #expect(model.chrome.findMatches == nil)
         #expect(tab.findHighlightClears == 1)
     }
+
+    @Test("A burst of typing asks the page once, for the whole word")
+    func typingAsksOncePerPause() async {
+        let (model, tab) = windowOnAPage()
+        tab.findResult = FindMatches(total: 2, current: 1)
+        for query in ["q", "qu", "qui", "quick"] {
+            model.chrome.findQuery = query
+            model.findQueryChanged()
+        }
+        await model.chrome.findInFlight?.value
+
+        #expect(tab.findQueries == ["quick"])
+        #expect(model.chrome.findMatches == FindMatches(total: 2, current: 1))
+    }
+
+    @Test("Return searches at once, without waiting out the pause")
+    func returnSkipsThePause() async {
+        let (model, tab) = windowOnAPage()
+        tab.findResult = FindMatches(total: 1, current: 1)
+        model.chrome.findQuery = "quick"
+        model.findQueryChanged()
+
+        model.findNext()
+        await model.chrome.findInFlight?.value
+
+        #expect(tab.findQueries == ["quick"])
+    }
 }

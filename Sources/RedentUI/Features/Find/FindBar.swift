@@ -22,7 +22,7 @@ struct FindBar: View {
                 .focused($isFocused)
                 .onSubmit { model.findNext(forward: true) }
                 .onExitCommand(perform: model.closeFindBar)
-                .onChange(of: model.chrome.findQuery) { _, _ in model.findNext(forward: true) }
+                .onChange(of: model.chrome.findQuery) { _, _ in model.findQueryChanged() }
                 .onChange(of: model.chrome.findFocusEpoch) { _, _ in isFocused = true }
 
             counter
