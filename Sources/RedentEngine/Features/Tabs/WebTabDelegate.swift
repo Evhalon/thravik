@@ -33,6 +33,11 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
         decidePolicyFor navigationAction: WKNavigationAction
     ) async -> WKNavigationActionPolicy {
         if navigationAction.shouldPerformDownload { return .download }
+        if navigationAction.targetFrame?.isMainFrame == true,
+           let url = navigationAction.request.url, ExternalURLRouting.leavesBrowser(url) {
+            Task { await ExternalAppLauncher.offer(url, from: webView) }
+            return .cancel
+        }
         guard Self.tracksTab(targetFrameIsMain: navigationAction.targetFrame?.isMainFrame) else {
             return .allow
         }
@@ -112,6 +117,10 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
         guard navigationAction.targetFrame == nil,
               let tab, let controller = tab.controller else { return nil }
         let url = navigationAction.request.url
+        if let url, ExternalURLRouting.leavesBrowser(url) {
+            Task { await ExternalAppLauncher.offer(url, from: webView) }
+            return nil
+        }
         guard !controller.shouldBlockPopup(url: url, from: tab.snapshot.url) else { return nil }
         return controller.openPopupTab(
             configuration: configuration, url: url, of: tab.snapshot
@@ -121,30 +130,5 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
     func webViewDidClose(_ webView: WKWebView) {
         guard let tab, tab.pageTrustIssue == nil else { return }
         tab.controller?.closePopup(tab.id)
-    }
-
-    func webView(
-        _ webView: WKWebView,
-        runJavaScriptAlertPanelWithMessage message: String,
-        initiatedByFrame frame: WKFrameInfo
-    ) async {
-        await JavaScriptPanelPresenter.alert(message: message, on: webView)
-    }
-
-    func webView(
-        _ webView: WKWebView,
-        runJavaScriptConfirmPanelWithMessage message: String,
-        initiatedByFrame frame: WKFrameInfo
-    ) async -> Bool {
-        await JavaScriptPanelPresenter.confirm(message: message, on: webView)
-    }
-
-    func webView(
-        _ webView: WKWebView,
-        runJavaScriptTextInputPanelWithPrompt prompt: String,
-        defaultText: String?,
-        initiatedByFrame frame: WKFrameInfo
-    ) async -> String? {
-        await JavaScriptPanelPresenter.prompt(message: prompt, defaultText: defaultText, on: webView)
     }
 }
