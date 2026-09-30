@@ -5,6 +5,8 @@ CONFIG     ?= release
 TEST_FLAGS ?=
 BUILD_DIR  := .build/$(CONFIG)
 APP_DIR    := dist/$(APP).app
+STAGING_APP_DIR := dist/.$(APP)-build.app
+PREVIOUS_APP_DIR := dist/.$(APP)-previous.app
 MAX_LINES  := 150
 
 .PHONY: all build test run app clean verify release check-lines check-layout check-arch check-force-unwrap
@@ -18,25 +20,28 @@ test:
 	swift test $(TEST_FLAGS)
 
 ## Bundle the SPM executable into a signed .app.
-## Keep the .app directory so Launch Services / TCC see the same app. Local
+## Keep the .app path so Launch Services / TCC see the same app. Local
 ## builds use an explicit stable designated requirement; release builds can
 ## provide CODESIGN_IDENTITY and REQUIRE_SIGNING=1.
 app: build
-	@mkdir -p "$(APP_DIR)/Contents/MacOS" "$(APP_DIR)/Contents/Resources"
-	@rm -rf "$(APP_DIR)/Contents/MacOS/$(APP)" "$(APP_DIR)/Contents/Resources/"*.bundle
-	@cp "$(BUILD_DIR)/$(EXECUTABLE)" "$(APP_DIR)/Contents/MacOS/$(APP)"
-	@mkdir -p "$(APP_DIR)/Contents/Helpers"
-	@cp "$(BUILD_DIR)/RedentAppShim" "$(APP_DIR)/Contents/Helpers/RedentAppShim"
-	@cp Resources/Info.plist "$(APP_DIR)/Contents/Info.plist"
-	@if [ -f Resources/AppIcon.icns ]; then cp Resources/AppIcon.icns "$(APP_DIR)/Contents/Resources/"; fi
+	@rm -rf "$(STAGING_APP_DIR)"
+	@mkdir -p "$(STAGING_APP_DIR)/Contents/MacOS" "$(STAGING_APP_DIR)/Contents/Resources" "$(STAGING_APP_DIR)/Contents/Helpers"
+	@cp "$(BUILD_DIR)/$(EXECUTABLE)" "$(STAGING_APP_DIR)/Contents/MacOS/$(APP)"
+	@cp "$(BUILD_DIR)/RedentAppShim" "$(STAGING_APP_DIR)/Contents/Helpers/RedentAppShim"
+	@cp Resources/Info.plist "$(STAGING_APP_DIR)/Contents/Info.plist"
+	@if [ -f Resources/AppIcon.icns ]; then cp Resources/AppIcon.icns "$(STAGING_APP_DIR)/Contents/Resources/"; fi
 	@copied=0; \
 	for b in $(BUILD_DIR)/*.bundle; do \
 		[ -e "$$b" ] || continue; \
-		cp -R "$$b" "$(APP_DIR)/Contents/Resources/" || exit 1; copied=1; \
+		cp -R "$$b" "$(STAGING_APP_DIR)/Contents/Resources/" || exit 1; copied=1; \
 	done; \
 	if [ "$$copied" -eq 0 ]; then \
 		echo "error: no SwiftPM resource bundle in $(BUILD_DIR) — the app would crash on launch"; exit 1; fi
-	@sh scripts/sign-app.sh "$(APP_DIR)" "$(BUNDLE_ID)" Resources/Redent.entitlements
+	@sh scripts/sign-app.sh "$(STAGING_APP_DIR)" "$(BUNDLE_ID)" Resources/Redent.entitlements
+	@rm -rf "$(PREVIOUS_APP_DIR)"
+	@if [ -d "$(APP_DIR)" ]; then mv "$(APP_DIR)" "$(PREVIOUS_APP_DIR)"; fi
+	@mv "$(STAGING_APP_DIR)" "$(APP_DIR)" || { mv "$(PREVIOUS_APP_DIR)" "$(APP_DIR)"; exit 1; }
+	@rm -rf "$(PREVIOUS_APP_DIR)"
 	@echo "built $(APP_DIR)"
 
 run: app

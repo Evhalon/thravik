@@ -25,6 +25,7 @@ struct ChromeRevealInteractions: ViewModifier {
     }
 
     private var isLocked: Bool {
-        model.address.isEditing || model.sheet != nil || model.showsCommandBar || trackedPresentations > 0
+        model.address.isEditing || model.sheet != nil || model.showsCommandBar
+            || model.showsFloatingNewTab || trackedPresentations > 0
     }
 }

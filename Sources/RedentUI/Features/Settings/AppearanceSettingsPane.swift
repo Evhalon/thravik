@@ -22,6 +22,11 @@ struct AppearanceSettingsPane: View {
             }
             SettingsSection("CHROME") {
                 SettingsToggleRow(
+                    "Floating new tab search",
+                    caption: "⌘T opens a search above the current page. Press Return to open a tab.",
+                    isOn: $settings.opensFloatingNewTab
+                )
+                SettingsToggleRow(
                     "Hide top navigation bar",
                     caption: "Collapse with ⌘B for a full-height page. Hover the left or top edge to reveal controls.",
                     isOn: hiddenNavigationSelection

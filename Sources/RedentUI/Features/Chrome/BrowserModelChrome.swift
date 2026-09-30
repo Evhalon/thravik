@@ -58,6 +58,15 @@ extension BrowserModel {
     public func newPrivateWindow() { windowOpener?(true) }
 
     public func openNewTab() {
+        guard !settings.opensFloatingNewTab else {
+            guard !showsFloatingNewTab else { return }
+            dismissCommands()
+            address.finishEditing()
+            suggestions.close()
+            showsFloatingNewTab = true
+            return
+        }
+        dismissFloatingNewTab()
         tabs.newTab(url: nil)
         requestCenterSearchFocus()
     }
@@ -75,6 +84,7 @@ extension BrowserModel {
     public func dismissPresentations() {
         sheet = nil
         dismissCommands()
+        dismissFloatingNewTab()
     }
 }
 

@@ -5,6 +5,7 @@ import RedentKit
 /// gestures and the Command Bar all arrive here.
 extension BrowserModel {
     public func showCommands() {
+        dismissFloatingNewTab()
         showsCommandBar = true
         refreshCommandContext()
         commandBar.query = ""
