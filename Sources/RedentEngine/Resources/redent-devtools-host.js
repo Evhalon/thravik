@@ -21,6 +21,15 @@
     ShadowRoot.prototype.getSelection = function () { return this.ownerDocument.getSelection(); };
   }
 
+  // The Elements tree sizes its scroller as `height: 100%` of a flex item.
+  // With Styles docked beside it, WebKit leaves that percentage unresolved:
+  // the scroller grew to the whole tree, so it neither scrolled nor could
+  // reveal a picked node. Filling the item by its insets needs no percentage.
+  // Its two ids outrank the frontend's one, wherever its sheet lands.
+  const layoutFixes = document.createElement("style");
+  layoutFixes.textContent = "#main-content > #elements-content { position: absolute; inset: 0; height: auto; }";
+  document.documentElement.append(layoutFixes);
+
   // Chrome's frontend defers work — parsing in the Sources editor, queued
   // panel updates — to idle time and background tasks, through APIs WebKit
   // lacks and calls unchecked; each call would throw instead of running.
