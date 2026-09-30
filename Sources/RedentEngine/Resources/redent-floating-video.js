@@ -81,7 +81,8 @@
       visibility: 'visible', display: 'block', opacity: '1', 'z-index': '2147483647' });
     sheet = document.createElement('style');
     sheet.textContent = 'html,body{background:black!important;overflow:hidden!important}' +
-      'body *{visibility:hidden!important}[data-redent-floating-video]{visibility:visible!important}';
+      'body *{visibility:hidden!important}[data-redent-floating-video]{visibility:visible!important}' +
+      '[data-redent-floating-video]::-webkit-media-controls{display:none!important}';
     document.documentElement.appendChild(sheet);
     report();
     return true;

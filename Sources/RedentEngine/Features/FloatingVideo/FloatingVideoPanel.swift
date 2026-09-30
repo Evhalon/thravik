@@ -4,6 +4,10 @@ import WebKit
 @MainActor
 final class FloatingVideoPanel: NSPanel {
     var onDismiss: (() -> Void)?
+    var onReturn: (() -> Void)? {
+        get { surface.onReturn }
+        set { surface.onReturn = newValue }
+    }
     private let surface: FloatingVideoSurface
     private weak var originalParent: NSView?
     private weak var originalWindow: NSWindow?

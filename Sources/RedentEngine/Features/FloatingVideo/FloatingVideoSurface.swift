@@ -5,6 +5,8 @@ final class FloatingVideoSurface: NSView {
     let host: WebViewHost
     private let interaction = FloatingVideoInteraction()
     private let resizeHandle = FloatingVideoResizeHandle()
+    var onReturn: (() -> Void)?
+    private lazy var returnButton = FloatingVideoReturnButton { [weak self] in self?.onReturn?() }
     private var controls: NSView?
     private var hoverTracking: NSTrackingArea?
     private var isTransitioning = false
@@ -15,12 +17,11 @@ final class FloatingVideoSurface: NSView {
         wantsLayer = true
         layer?.cornerRadius = 16
         layer?.masksToBounds = true
-        layer?.borderWidth = 1
-        layer?.borderColor = NSColor.white.withAlphaComponent(0.16).cgColor
         allowedTouchTypes = [.indirect]
         wantsRestingTouches = true
         resizeHandle.onBegin = { [weak self] in self?.interaction.stop() }
         addSubview(resizeHandle)
+        addSubview(returnButton)
         setAccessibilityLabel("Floating video. Drag or swipe with two fingers to move.")
     }
 
@@ -33,6 +34,7 @@ final class FloatingVideoSurface: NSView {
         host.isHidden = false
         addSubview(host)
         addSubview(resizeHandle, positioned: .above, relativeTo: host)
+        addSubview(returnButton, positioned: .above, relativeTo: host)
         host.frame = bounds
     }
 
@@ -48,6 +50,8 @@ final class FloatingVideoSurface: NSView {
         host.frame = bounds
         let width = min(360, max(0, bounds.width - 24))
         controls?.frame = NSRect(x: (bounds.width - width) / 2, y: 8, width: width, height: 104)
+        let side = FloatingVideoReturnButton.side
+        returnButton.frame = NSRect(x: 10, y: bounds.height - side - 10, width: side, height: side)
         resizeHandle.frame = NSRect(x: bounds.width - 32, y: 0, width: 32, height: 32)
     }
 
@@ -63,14 +67,19 @@ final class FloatingVideoSurface: NSView {
     override func mouseEntered(with event: NSEvent) {
         guard !isTransitioning else { return }
         controls?.animator().alphaValue = 1
+        returnButton.animator().alphaValue = 1
     }
-    override func mouseExited(with event: NSEvent) { controls?.animator().alphaValue = 0 }
+    override func mouseExited(with event: NSEvent) {
+        controls?.animator().alphaValue = 0
+        returnButton.animator().alphaValue = 0
+    }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard !isTransitioning else { return nil }
         let local = convert(point, from: superview)
         guard bounds.contains(local) else { return nil }
         if resizeHandle.frame.contains(local) { return super.hitTest(point) }
+        if returnButton.alphaValue > 0.1, returnButton.frame.contains(local) { return super.hitTest(point) }
         if let controls, controls.alphaValue > 0.1, controls.frame.contains(local) {
             return super.hitTest(point)
         }
@@ -114,6 +123,6 @@ final class FloatingVideoSurface: NSView {
 
     func setTransitioning(_ transitioning: Bool) {
         isTransitioning = transitioning
-        if transitioning { interaction.stop(); controls?.alphaValue = 0 }
+        if transitioning { interaction.stop(); controls?.alphaValue = 0; returnButton.alphaValue = 0 }
     }
 }

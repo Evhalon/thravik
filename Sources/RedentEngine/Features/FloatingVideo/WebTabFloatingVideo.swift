@@ -29,6 +29,7 @@ extension WebTab {
         let source = FloatingVideoSource(bounds: bounds, view: view)
         let panel = FloatingVideoPanel(view: view, aspectRatio: videoAspectRatio)
         panel.onDismiss = { [weak self] in self?.closeFloatingVideo() }
+        panel.onReturn = { [weak self] in self?.returnVideoToTab() }
         if let controls = controller?.videoPresentation.makeControls?(self) { panel.installControls(controls) }
         floatingVideoPanel = panel
         controller?.videoPresentation.activeTab = self
