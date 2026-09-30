@@ -14,4 +14,6 @@ struct TabRowActions {
     var onUngroup: (() -> Void)?
     /// Visual order after a live drag. Nil for rows that cannot reorder.
     var onReorder: (([UUID]) -> Void)?
+    /// Moves the tab into a window of its own when a drag ends outside this one.
+    var onDetach: (() -> Void)?
 }

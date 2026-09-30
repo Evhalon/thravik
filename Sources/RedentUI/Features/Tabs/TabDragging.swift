@@ -48,7 +48,12 @@ private struct TabDragging: ViewModifier {
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
-                    if let order = drag.drop() { actions.onReorder?(order) }
+                    let order = drag.drop()
+                    if let detach = actions.onDetach, TabDetachZone.pointerIsOutsideKeyWindow {
+                        detach()
+                    } else if let order {
+                        actions.onReorder?(order)
+                    }
                 }
             }
     }

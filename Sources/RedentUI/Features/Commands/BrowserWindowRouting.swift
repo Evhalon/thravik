@@ -23,6 +23,13 @@ extension BrowserModel {
         return true
     }
 
+    /// A lone tab stays put: detaching it would leave this window empty.
+    func canDetach(_ id: UUID) -> Bool {
+        windowDirectory != nil
+            && tabs.tabs.count > 1
+            && tabs.tabs.contains { $0.id == id && $0.url != nil }
+    }
+
     /// The page reopens at its address in the other window; the tab here
     /// closes only once that window has accepted it.
     private func moveTab(_ id: UUID, toWindow windowID: UUID?) throws {

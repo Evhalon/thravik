@@ -118,7 +118,8 @@ struct SidebarTabList: View {
             onUnsplit: model.isInSplit(tab.id) ? { model.removeFromSplit(tab.id) } : nil,
             onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
             onUngroup: grouped ? { try? model.tabs.perform(.moveTabToGroup(tabID: tab.id, groupID: nil)) } : nil,
-            onReorder: { model.commitTabDrag(tab.id, order: $0) }
+            onReorder: { model.commitTabDrag(tab.id, order: $0) },
+            onDetach: model.canDetach(tab.id) ? { model.execute(.moveTabToWindow(tabID: tab.id, windowID: nil)) } : nil
         )
     }
 
