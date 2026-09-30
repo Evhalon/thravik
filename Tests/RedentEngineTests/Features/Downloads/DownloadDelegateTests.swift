@@ -26,6 +26,11 @@ struct DownloadDelegateTests {
         #expect(delegate().responds(to: NSSelectorFromString("webView:navigationResponse:didBecomeDownload:")))
     }
 
+    @Test("WebKit can hand a context-menu download over")
+    func respondsToContextMenuHook() {
+        #expect(delegate().responds(to: NSSelectorFromString("_webView:contextMenuDidCreateDownload:")))
+    }
+
     @Test("A response the page cannot render is offered a policy")
     func respondsToResponsePolicy() {
         #expect(delegate().responds(

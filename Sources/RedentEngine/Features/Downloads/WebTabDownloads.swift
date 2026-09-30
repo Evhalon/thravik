@@ -1,8 +1,8 @@
 import RedentKit
 import WebKit
 
-/// The three places WebKit can decide a navigation is a file rather than a
-/// page. All of them end in the same coordinator.
+/// Every place WebKit can decide a fetch is a file rather than a page. All of
+/// them end in the same coordinator.
 extension WebTabNavigationDelegate {
     /// A response the web view cannot render, a data file such as a CSV, or
     /// one the server marked as an attachment, is a download — that is what makes a link to a `.zip` or an
@@ -40,6 +40,15 @@ extension WebTabNavigationDelegate {
         didBecomeDownload download: WKDownload
     ) {
         adopt(download, from: navigationResponse.response.url)
+    }
+
+    /// "Download Image" and "Download Linked File" from the page's context
+    /// menu are no navigation, so neither hook above sees them: WebKit hands
+    /// the fetch to its UI delegate through this selector instead. Unanswered,
+    /// the download has no delegate and WebKit drops it without a word.
+    @objc(_webView:contextMenuDidCreateDownload:)
+    func webView(_ webView: WKWebView, contextMenuDidCreateDownload download: WKDownload) {
+        adopt(download, from: download.originalRequest?.url)
     }
 
     private func adopt(_ download: WKDownload, from url: URL?) {
