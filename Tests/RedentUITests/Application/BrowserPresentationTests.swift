@@ -76,25 +76,19 @@ struct BrowserPresentationTests {
         #expect(!model.showsFloatingNewTab)
     }
 
-    @Test("Command-T opens a regular new tab by default and floating search remains opt-in")
+    @Test("Command-T opens floating search by default and a regular tab when opted out")
     func floatingNewTabCanBeDisabled() {
         let browser = FakeBrowser()
         let model = makeTestBrowserModel(tabs: browser)
         model.openNewTab()
-        #expect(!model.showsFloatingNewTab)
-        #expect(browser.openedURLs.count == 1)
-        #expect(browser.openedURLs[0] == nil)
-
-        model.settings.opensFloatingNewTab = true
-        model.openNewTab()
         #expect(model.showsFloatingNewTab)
         model.dismissFloatingNewTab()
-        #expect(browser.openedURLs.count == 1)
+        #expect(browser.openedURLs.isEmpty)
 
         model.settings.opensFloatingNewTab = false
         model.openNewTab()
         #expect(!model.showsFloatingNewTab)
-        #expect(browser.openedURLs.count == 2)
-        #expect(browser.openedURLs[1] == nil)
+        #expect(browser.openedURLs.count == 1)
+        #expect(browser.openedURLs.first == .some(nil))
     }
 }

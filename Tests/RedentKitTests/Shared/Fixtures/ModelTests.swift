@@ -18,18 +18,18 @@ struct ModelTests {
         #expect(!restored.reopensTabsOnLaunch)
     }
 
-    @Test("Floating new tab search defaults off and keeps saved choices")
+    @Test("Floating new tab search defaults on and keeps saved choices")
     func floatingNewTabSetting() throws {
-        #expect(!BrowserSettings().opensFloatingNewTab)
-        var enabled = BrowserSettings()
-        enabled.opensFloatingNewTab = true
-        let saved = try JSONEncoder().encode(enabled)
-        #expect(try JSONDecoder().decode(BrowserSettings.self, from: saved).opensFloatingNewTab)
+        #expect(BrowserSettings().opensFloatingNewTab)
+        var disabled = BrowserSettings()
+        disabled.opensFloatingNewTab = false
+        let saved = try JSONEncoder().encode(disabled)
+        #expect(try !JSONDecoder().decode(BrowserSettings.self, from: saved).opensFloatingNewTab)
 
         var legacy = try #require(JSONSerialization.jsonObject(with: saved) as? [String: Any])
         legacy.removeValue(forKey: "opensFloatingNewTab")
         let data = try JSONSerialization.data(withJSONObject: legacy)
-        #expect(try !JSONDecoder().decode(BrowserSettings.self, from: data).opensFloatingNewTab)
+        #expect(try JSONDecoder().decode(BrowserSettings.self, from: data).opensFloatingNewTab)
     }
 
     @Test("Saved settings from before the launch preference keep restoring tabs")

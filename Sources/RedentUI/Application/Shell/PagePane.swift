@@ -15,6 +15,7 @@ struct PagePane: View {
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
             .background { if tab?.url != nil { Palette.canvas } }
             .overlay(alignment: .top) { activeEdge }
+            .overlay(alignment: .top) { loadingLine }
             .overlay(alignment: .topTrailing) { closeButton }
             .onHover { isHovering = $0 }
             .contentShape(.rect)
@@ -58,6 +59,16 @@ struct PagePane: View {
             }
             .padding(Metric.tightGutter)
             .transition(.opacity)
+        }
+    }
+
+    /// Drawn on the page itself rather than in the toolbar, so it shows with
+    /// the chrome hidden too. Keyed to the tab so switching away mid-load
+    /// never hands one page's line to another.
+    @ViewBuilder
+    private var loadingLine: some View {
+        if let tab, tab.url != nil, !tab.isVideoFloating {
+            LoadingLine(isLoading: tab.isLoading, progress: tab.progress).id(tab.id)
         }
     }
 

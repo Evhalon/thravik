@@ -70,12 +70,15 @@ is a few megabytes, and a background tab costs nothing once it hibernates.
 ```
 make app     # builds and bundles dist/Thravik.app
 make run     # builds, bundles, launches
+make run-dev # debug build as dist/ThravikDev.app, alongside the release
 make verify  # line limits + architecture rules + build + tests
 ```
 
 Use `make run` for local development. It signs every rebuild with the same
 local identity, so passwords, authenticator accounts, cookies and permissions
-survive subsequent runs. `swift run` bypasses that identity and is unsupported.
+survive subsequent runs. `make run-dev` builds "Thravik Dev" under its own bundle
+ID, so it keeps its own Keychain vaults and never fights the installed release
+for them. `swift run` bypasses that identity and is unsupported.
 
 Every push to `main` builds and publishes a new unnotarized GitHub release.
 Release setup is documented in [docs/RELEASING.md](docs/RELEASING.md).

@@ -1,15 +1,18 @@
 APP        := Thravik
 EXECUTABLE := Redent
-BUNDLE_ID  := app.redent.browser
+BUNDLE_ID  ?= app.redent.browser
+BUNDLE_NAME ?= $(APP)
+DISPLAY_NAME ?= $(APP)
 CONFIG     ?= release
 TEST_FLAGS ?=
 BUILD_DIR  := .build/$(CONFIG)
-APP_DIR    := dist/$(APP).app
-STAGING_APP_DIR := dist/.$(APP)-build.app
-PREVIOUS_APP_DIR := dist/.$(APP)-previous.app
+APP_DIR    := dist/$(BUNDLE_NAME).app
+STAGING_APP_DIR := dist/.$(BUNDLE_NAME)-build.app
+PREVIOUS_APP_DIR := dist/.$(BUNDLE_NAME)-previous.app
+PLIST      := $(STAGING_APP_DIR)/Contents/Info.plist
 MAX_LINES  := 150
 
-.PHONY: all build test run app clean verify release check-lines check-layout check-arch check-force-unwrap
+.PHONY: all build test run app dev run-dev clean verify release check-lines check-layout check-arch check-force-unwrap
 
 all: app
 
@@ -28,7 +31,10 @@ app: build
 	@mkdir -p "$(STAGING_APP_DIR)/Contents/MacOS" "$(STAGING_APP_DIR)/Contents/Resources" "$(STAGING_APP_DIR)/Contents/Helpers"
 	@cp "$(BUILD_DIR)/$(EXECUTABLE)" "$(STAGING_APP_DIR)/Contents/MacOS/$(APP)"
 	@cp "$(BUILD_DIR)/RedentAppShim" "$(STAGING_APP_DIR)/Contents/Helpers/RedentAppShim"
-	@cp Resources/Info.plist "$(STAGING_APP_DIR)/Contents/Info.plist"
+	@cp Resources/Info.plist "$(PLIST)"
+	@plutil -replace CFBundleIdentifier -string "$(BUNDLE_ID)" "$(PLIST)"
+	@plutil -replace CFBundleName -string "$(DISPLAY_NAME)" "$(PLIST)"
+	@plutil -replace CFBundleDisplayName -string "$(DISPLAY_NAME)" "$(PLIST)"
 	@if [ -f Resources/AppIcon.icns ]; then cp Resources/AppIcon.icns "$(STAGING_APP_DIR)/Contents/Resources/"; fi
 	@copied=0; \
 	for b in $(BUILD_DIR)/*.bundle; do \
@@ -46,6 +52,17 @@ app: build
 
 run: app
 	@open "$(APP_DIR)"
+
+## Debug build as its own app next to the release one. A separate bundle ID
+## means separate Keychain vaults, preferences and WebKit data, so switching
+## between the two never makes either re-ask for the Keychain password.
+DEV_FLAGS := CONFIG=debug BUNDLE_ID=app.redent.browser.dev BUNDLE_NAME=ThravikDev DISPLAY_NAME="Thravik Dev"
+
+dev:
+	@$(MAKE) app $(DEV_FLAGS)
+
+run-dev:
+	@$(MAKE) run $(DEV_FLAGS)
 
 release: verify app
 	@sh scripts/package-release.sh "$(APP_DIR)" dist/Thravik-macOS.dmg

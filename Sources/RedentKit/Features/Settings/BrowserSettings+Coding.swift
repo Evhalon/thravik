@@ -28,7 +28,7 @@ extension BrowserSettings {
             reopensTabsOnLaunch: try values.decodeIfPresent(Bool.self, forKey: .reopensTabsOnLaunch) ?? defaults.reopensTabsOnLaunch
         )
         hidesNavigationBar = try values.decodeIfPresent(Bool.self, forKey: .hidesNavigationBar) ?? false
-        opensFloatingNewTab = try values.decodeIfPresent(Bool.self, forKey: .opensFloatingNewTab) ?? false
+        opensFloatingNewTab = try values.decodeIfPresent(Bool.self, forKey: .opensFloatingNewTab) ?? true
         namesGroupsOnDevice = try values.decodeIfPresent(Bool.self, forKey: .namesGroupsOnDevice) ?? true
         remembersFormEntries = try values.decodeIfPresent(Bool.self, forKey: .remembersFormEntries) ?? true
     }

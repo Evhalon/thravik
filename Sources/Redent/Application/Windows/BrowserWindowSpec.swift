@@ -13,12 +13,18 @@ struct BrowserWindowSpec: Hashable, Codable, Identifiable {
     let startURL: URL?
     /// Set when the window was opened for a saved web app.
     let webApp: WebAppWindow?
+    /// Where a window opened for a torn-off tab lands. Nil lets the system place it.
+    let frame: TornOffFrame?
 
-    init(id: UUID = UUID(), isPrivate: Bool = false, startURL: URL? = nil, webApp: WebAppWindow? = nil) {
+    init(
+        id: UUID = UUID(), isPrivate: Bool = false, startURL: URL? = nil,
+        webApp: WebAppWindow? = nil, frame: TornOffFrame? = nil
+    ) {
         self.id = id
         self.isPrivate = isPrivate
         self.startURL = startURL
         self.webApp = webApp
+        self.frame = frame
     }
 
     /// The window that owns the saved workspace. Its identity is fixed so the

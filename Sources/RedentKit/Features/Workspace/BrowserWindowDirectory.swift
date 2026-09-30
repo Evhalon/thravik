@@ -15,6 +15,9 @@ public protocol BrowserWindowDirectory: AnyObject {
     /// - Returns: false when the move would carry a page across the private
     ///   boundary, or the window is gone. Nothing is opened then.
     @discardableResult func adopt(_ url: URL, into id: UUID?) -> Bool
+    /// Opens `url` in a new window at `frame`, in screen points: a tab the
+    /// user dragged out and let go of there.
+    @discardableResult func tearOff(_ url: URL, into frame: CGRect) -> Bool
     /// Brings the app's window forward, or opens one browsing in `space` at
     /// `url` — the app's own address when nil.
     func open(_ app: WebApp, at url: URL?, in space: BrowserSpace?)

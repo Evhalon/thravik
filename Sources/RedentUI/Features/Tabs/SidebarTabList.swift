@@ -33,6 +33,7 @@ struct SidebarTabList: View {
             .coordinateSpace(.named(Self.dragSpace))
         }
         .scrollIndicators(.never)
+        .onScrollGeometryChange(for: CGRect.self, of: \.visibleRect) { _, rect in drag.viewport = rect }
         .animation(.spring(duration: 0.3), value: model.tabs.selectedID)
         .animation(.spring(duration: 0.3), value: model.split.tabIDs)
         .onChange(of: model.tabs.selectedID) { _, id in expand(containing: id) }
@@ -119,7 +120,7 @@ struct SidebarTabList: View {
             onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
             onUngroup: grouped ? { try? model.tabs.perform(.moveTabToGroup(tabID: tab.id, groupID: nil)) } : nil,
             onReorder: { model.commitTabDrag(tab.id, order: $0) },
-            onDetach: model.canDetach(tab.id) ? { model.execute(.moveTabToWindow(tabID: tab.id, windowID: nil)) } : nil
+            onDetach: model.canDetach(tab.id) ? { model.tearOff(tab.id, into: $0) } : nil
         )
     }
 

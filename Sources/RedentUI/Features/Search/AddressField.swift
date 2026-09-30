@@ -26,7 +26,6 @@ struct AddressField: View {
         .frame(height: Metric.controlHeight)
         .background { pill.onTapGesture { isFocused = true } }
         .background { reportFrame }
-        .overlay(alignment: .bottomLeading) { progressBar }
         .animation(.easeOut(duration: 0.18), value: isFocused)
     }
 
@@ -54,22 +53,6 @@ struct AddressField: View {
             )
         }
         .shadow(color: Palette.accent.opacity(isFocused ? 0.28 : 0), radius: 9)
-    }
-
-    @ViewBuilder
-    private var progressBar: some View {
-        if let tab = model.selectedTab, tab.isLoading {
-            GeometryReader { geometry in
-                Capsule()
-                    .fill(LinearGradient(colors: [Palette.accent.opacity(0.5), Palette.accent],
-                                         startPoint: .leading, endPoint: .trailing))
-                    .frame(width: geometry.size.width * tab.progress, height: 2)
-                    .animation(.easeOut(duration: 0.25), value: tab.progress)
-            }
-            .frame(height: 2)
-            .padding(.horizontal, 6)
-            .padding(.bottom, 1.5)
-        }
     }
 
     private var isSecure: Bool { model.selectedTab?.origin?.scheme == "https" }

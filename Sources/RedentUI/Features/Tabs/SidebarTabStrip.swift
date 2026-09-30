@@ -8,6 +8,7 @@ import SwiftUI
 struct SidebarTabStrip: View {
     @Bindable var model: BrowserModel
     @Namespace private var selection
+    @State private var pinDrop = PinDropTarget()
 
     var body: some View {
         VStack(alignment: .leading, spacing: Metric.tightGutter + 2) {
@@ -40,12 +41,13 @@ struct SidebarTabStrip: View {
     }
 
     private func spacePage(_ space: BrowserSpace) -> some View {
-        VStack(alignment: .leading, spacing: Metric.tightGutter + 2) {
-            PinnedTileGrid(model: model, spaceID: space.id)
+        VStack(alignment: .leading, spacing: Metric.gutter) {
             SpaceSwitcher(model: model, current: space)
+            PinnedTileGrid(model: model, spaceID: space.id, pinDrop: pinDrop)
             SidebarTabList(model: model, namespace: selection, spaceID: space.id)
         }
         .padding(.horizontal, Metric.gutter - 2)
+        .environment(pinDrop)
         // Clears the window buttons, which now sit over the top of this rail.
         .padding(.top, model.usesSidebarNavigation ? 0 : Metric.toolbarHeight)
     }

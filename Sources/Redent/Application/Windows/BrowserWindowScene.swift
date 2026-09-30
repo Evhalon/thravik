@@ -35,6 +35,11 @@ struct BrowserWindowScene: View {
             }
             .frame(width: 0, height: 0)
         }
+        .background {
+            if let frame = spec.frame {
+                TornOffWindowPlacer(frame: frame.rect).frame(width: 0, height: 0)
+            }
+        }
     }
 
     private func open(isPrivate: Bool) {

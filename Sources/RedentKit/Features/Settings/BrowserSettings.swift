@@ -68,7 +68,7 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
     public var tabLayout: TabLayout
     public var isTabStripVisible: Bool
     /// Command-T starts with a floating search instead of a blank tab.
-    public var opensFloatingNewTab = false
+    public var opensFloatingNewTab = true
     public var hidesNavigationBar = false
     public var sidebarWidth: Double
     public var hibernation: HibernationPolicy

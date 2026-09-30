@@ -249,21 +249,34 @@
         else all.add(match);
       }
       all.priority = 0;
-      if (all.size) CSS.highlights.set(ALL, all);
-      else CSS.highlights.delete(ALL);
+      publish(ALL, all);
       if (active.control) markControl(active.control, CONTROL_ACTIVE);
       var activeRange = active.control ? new Highlight() : new Highlight(active);
       // The active match sits inside the all-matches highlight; priority is
       // what decides which colour wins on the overlap.
       activeRange.priority = 1;
-      if (activeRange.size) CSS.highlights.set(ACTIVE, activeRange);
-      else CSS.highlights.delete(ACTIVE);
+      publish(ACTIVE, activeRange);
+    }
+
+    // WebKit repaints a range when it leaves a Highlight, but not when the
+    // whole Highlight is swapped out of the registry: the previous query's
+    // paint would linger wherever the new one does not cover it. Emptying the
+    // outgoing Highlight first is what invalidates those pixels.
+    function retire(name) {
+      var previous = CSS.highlights.get(name);
+      if (previous) previous.clear();
+      CSS.highlights.delete(name);
+    }
+
+    function publish(name, highlight) {
+      retire(name);
+      if (highlight.size) CSS.highlights.set(name, highlight);
     }
 
     function clearHighlights() {
       if (!supported()) return;
-      CSS.highlights.delete(ALL);
-      CSS.highlights.delete(ACTIVE);
+      retire(ALL);
+      retire(ACTIVE);
       clearControlMarks();
     }
 

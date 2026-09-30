@@ -58,6 +58,11 @@ final class AppWindowDirectory: BrowserWindowDirectory {
         return true
     }
 
+    func tearOff(_ url: URL, into frame: CGRect) -> Bool {
+        openWindow(BrowserWindowSpec(isPrivate: current.isPrivate, startURL: url, frame: TornOffFrame(frame)))
+        return true
+    }
+
     func open(_ app: WebApp, at url: URL?, in space: BrowserSpace?) {
         let existing = self.app?.windows.values.first { $0.spec.webApp?.appID == app.id }
         guard let existing else {

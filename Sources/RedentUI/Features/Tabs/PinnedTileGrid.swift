@@ -5,9 +5,12 @@ import SwiftUI
 struct PinnedTileGrid: View {
     let model: BrowserModel
     let spaceID: UUID?
+    let pinDrop: PinDropTarget
 
     var body: some View {
-        if !pinned.isEmpty {
+        if pinnedIDs.isEmpty {
+            PinDropZone(target: pinDrop)
+        } else if !pinned.isEmpty {
             PinnedTileLayout {
                 ForEach(pinned, id: \.id) { tab in
                     PinnedTile(tab: tab, isSelected: tab.id == model.tabs.selectedID, actions: actions(for: tab))
@@ -19,10 +22,14 @@ struct PinnedTileGrid: View {
 
     /// A pin a split is showing is drawn as the split's row instead.
     private var pinned: [any BrowserTab] {
-        let ids = SidebarOutline(
-            tabs: model.tabs.session.tabs, groups: model.tabs.session.groups, spaceID: spaceID
-        ).pinnedIDs.filter { !model.isInSplit($0) }
+        let ids = pinnedIDs.filter { !model.isInSplit($0) }
         return ids.compactMap { id in model.tabs.tabs.first { $0.id == id } }
+    }
+
+    private var pinnedIDs: [UUID] {
+        SidebarOutline(
+            tabs: model.tabs.session.tabs, groups: model.tabs.session.groups, spaceID: spaceID
+        ).pinnedIDs
     }
 
     private func actions(for tab: any BrowserTab) -> PinnedTileActions {

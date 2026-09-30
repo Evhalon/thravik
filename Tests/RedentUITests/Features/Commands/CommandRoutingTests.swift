@@ -46,6 +46,16 @@ struct CommandRoutingTests {
         #expect(browser.closed == [id])
     }
 
+    @Test("A tab dragged out opens where it was let go, then leaves this window")
+    func tearOff() throws {
+        let (model, browser, directory) = window(pages: ["https://a.example"])
+        let id = try #require(browser.stubTabs.first).id
+        let frame = CGRect(x: 40, y: 60, width: 900, height: 600)
+        model.tearOff(id, into: frame)
+        #expect(directory.tornOff.map(\.frame) == [frame])
+        #expect(browser.closed == [id])
+    }
+
     @Test("A refused move keeps the tab and says so")
     func refusedMove() throws {
         let (model, browser, directory) = window(pages: ["https://a.example"])

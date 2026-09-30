@@ -17,6 +17,9 @@ struct WorkspaceSpaceList: View {
     private static let rowHeight: CGFloat = 44
     private static let rowSpacing: CGFloat = 4
     private static let pitch = rowHeight + rowSpacing
+    /// Room for the lifted row's scale and shadow: the scroll view clips to its
+    /// bounds, so the list pads its content and bleeds the frame out to match.
+    private static let liftBleed: CGFloat = 14
 
     var body: some View {
         ScrollView {
@@ -25,9 +28,11 @@ struct WorkspaceSpaceList: View {
                     row(space, at: index)
                 }
             }
-            .padding(.vertical, 2)
+            .padding(.horizontal, Self.liftBleed)
+            .padding(.vertical, Self.liftBleed + 2)
         }
         .scrollIndicators(.never)
+        .padding(-Self.liftBleed)
     }
 
     private var spaces: [BrowserSpace] { model.tabs.session.spaces }

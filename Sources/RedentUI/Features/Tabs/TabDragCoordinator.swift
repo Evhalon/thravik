@@ -31,7 +31,15 @@ final class TabDragCoordinator {
     @ObservationIgnored private var owners: [Row: UUID] = [:]
     @ObservationIgnored private var frozen: [(Row, CGRect)] = []
 
+    /// The strip's visible area in its own space. A pointer outside it has
+    /// left the strip: the tab floats instead of being clipped by the scroll.
+    @ObservationIgnored var viewport: CGRect?
+
     init(axis: Axis) { self.axis = axis }
+
+    func contains(_ point: CGPoint) -> Bool {
+        viewport?.insetBy(dx: -4, dy: -4).contains(point) ?? true
+    }
 
     /// - Parameter tabs: the tabs this row stands for. A cluster header speaks
     ///   for its whole cluster while collapsed, so hidden members travel with it.

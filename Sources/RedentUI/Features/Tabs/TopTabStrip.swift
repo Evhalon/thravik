@@ -56,7 +56,7 @@ struct TopTabStrip: View {
             onUnsplit: model.isInSplit(tab.id) ? { model.removeFromSplit(tab.id) } : nil,
             onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
             onReorder: { model.commitTabDrag(tab.id, order: $0) },
-            onDetach: model.canDetach(tab.id) ? { model.execute(.moveTabToWindow(tabID: tab.id, windowID: nil)) } : nil
+            onDetach: model.canDetach(tab.id) ? { model.tearOff(tab.id, into: $0) } : nil
         )
     }
 

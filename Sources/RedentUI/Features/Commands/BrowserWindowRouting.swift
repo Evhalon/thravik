@@ -30,6 +30,14 @@ extension BrowserModel {
             && tabs.tabs.contains { $0.id == id && $0.url != nil }
     }
 
+    /// A tab dragged out of the window reopens where it was let go.
+    func tearOff(_ id: UUID, into frame: CGRect) {
+        guard let directory = windowDirectory,
+              let url = tabs.tabs.first(where: { $0.id == id })?.url,
+              directory.tearOff(url, into: frame) else { return }
+        tabs.close(id)
+    }
+
     /// The page reopens at its address in the other window; the tab here
     /// closes only once that window has accepted it.
     private func moveTab(_ id: UUID, toWindow windowID: UUID?) throws {

@@ -21,6 +21,14 @@ final class RecordingWindowDirectory: BrowserWindowDirectory {
         return true
     }
 
+    private(set) var tornOff: [(url: URL, frame: CGRect)] = []
+
+    func tearOff(_ url: URL, into frame: CGRect) -> Bool {
+        guard acceptsTabs else { return false }
+        tornOff.append((url, frame))
+        return true
+    }
+
     func open(_ app: WebApp, at url: URL?, in space: BrowserSpace?) {
         openedApps.append((app, url))
     }
