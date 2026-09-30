@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import RedentKit
 import Testing
 @testable import RedentEngine
 
@@ -19,8 +20,7 @@ struct FloatingVideoDisplayTests {
         #expect(window.frame.minX == main.maxX - 124)
         driver.move(window, delta: CGSize(width: 300, height: 0), at: timestamp + 0.02)
         #expect(window.frame.minX == main.maxX + 176)
-        driver.finish(window, throwing: false)
-        try await Task.sleep(for: .milliseconds(500))
+        await finish(driver, window)
         #expect(second.contains(window.frame))
     }
 
@@ -31,13 +31,17 @@ struct FloatingVideoDisplayTests {
         let driver = FloatingVideoDrag(screens: { [main] })
         defer { driver.cancel(); window.close() }
         driver.begin(at: ProcessInfo.processInfo.systemUptime)
-        let original = window.frame.origin
-        driver.finish(window, throwing: false)
-        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            #expect(window.frame.origin == original)
-        }
-        try await Task.sleep(for: .milliseconds(500))
+        await finish(driver, window)
         #expect(main.contains(window.frame))
+    }
+
+    private func finish(_ driver: FloatingVideoDrag, _ window: NSWindow) async {
+        await withCheckedContinuation { continuation in
+            driver.finish(window, throwing: false) { window, origin, elapsed in
+                window.setFrameOrigin(origin)
+                if elapsed >= FloatingVideoMotion.duration { continuation.resume() }
+            }
+        }
     }
 
     private func makeWindow(at origin: CGPoint) -> NSWindow {

@@ -98,6 +98,7 @@ final class AppContainer {
         Task { await permissions.load() }
         KeychainMigration.run(credentials: credentials, authenticator: authenticator)
         observeWebAppLaunchers()
+        startUpdatePolling()
     }
 
     /// Memoised: SwiftUI re-evaluates a scene's body freely, and rebuilding a

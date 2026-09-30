@@ -47,6 +47,7 @@ final class WindowContainer {
             downloads: app.downloads
         )
         services.webApps = app.webApps
+        services.updates = app.updates
         services.webAppInstaller = app.webAppInstaller
         services.groupNaming = OnDeviceGroupNamer()
         let features = BrowserFeatures(

@@ -8,6 +8,7 @@ struct SpacePageDots: View {
     let selectedID: UUID?
     let onSelect: (UUID) -> Void
     var onManage: (() -> Void)?
+    var updates: UpdateModel?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -40,6 +41,7 @@ struct SpacePageDots: View {
                     .buttonStyle(PressScaleStyle())
                     .help("Manage Spaces")
                 }
+                if let updates { SpaceUpdateButton(updates: updates) }
             }
             .frame(maxWidth: .infinity)
         }

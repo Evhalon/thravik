@@ -5,6 +5,18 @@ import RedentUpdate
 
 /// How the app updates itself, and what has to be cleared before it can.
 extension AppContainer {
+    /// Check on launch, then at a low rate that respects GitHub's public API.
+    func startUpdatePolling() {
+        let updates = updates
+        guard updates.currentVersion != nil else { return }
+        Task {
+            while !Task.isCancelled {
+                await updates.check()
+                try? await Task.sleep(for: .seconds(6 * 60 * 60))
+            }
+        }
+    }
+
     /// Releases are published as signed disk images on GitHub; the installer
     /// swaps the running bundle and reopens it once this process exits.
     var updates: UpdateModel {

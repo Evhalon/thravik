@@ -64,7 +64,8 @@ public final class UpdateModel {
     /// Stages the release, then quits — the helper armed by `stage` reopens the
     /// app once this process is gone. A failure leaves the running app alone.
     public func installAndRestart(_ release: AppRelease) async {
-        guard !isBusy else { return }
+        guard case .available(let offeredRelease) = phase,
+              offeredRelease == release else { return }
         phase = .installing
         do {
             try await installer.stage(release)

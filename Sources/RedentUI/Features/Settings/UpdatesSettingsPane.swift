@@ -4,8 +4,7 @@ import SwiftUI
 
 /// The installed version, and the one button that replaces it.
 ///
-/// Opening the pane checks once. That is the only automatic thing here: the
-/// download and the restart both wait for a click.
+/// The shared model checks periodically; download and restart wait for a click.
 struct UpdatesSettingsPane: View {
     let updates: UpdateModel
 

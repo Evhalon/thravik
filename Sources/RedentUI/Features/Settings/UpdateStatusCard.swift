@@ -41,6 +41,8 @@ struct UpdateStatusCard: View {
                         .foregroundStyle(Palette.accent)
                 }
             }
+        } else if updates.phase == .installing {
+            button("Update and restart") {}
         } else if !updates.isBusy {
             button("Check for updates") {
                 Task { await updates.check() }

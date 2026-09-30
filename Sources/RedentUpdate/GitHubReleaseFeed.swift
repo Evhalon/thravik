@@ -3,8 +3,7 @@ import RedentKit
 
 /// Reads the newest published release of a public GitHub repository.
 ///
-/// Unauthenticated, so it is subject to GitHub's per-IP rate limit. That is
-/// fine for a check the user asks for; it is the reason there is no polling.
+/// Unauthenticated, so the app spaces background checks six hours apart.
 public struct GitHubReleaseFeed: UpdateChecking {
     private let repository: String
     private let session: URLSession

@@ -15,6 +15,7 @@ public final class BrowserModel {
     public let history: any HistoryStoring
     public let bookmarks: any BookmarkStoring
     public let downloads: DownloadsModel
+    public let updates: UpdateModel?
 
     public var settings: BrowserSettings { didSet { settingsChanged(from: oldValue) } }
     public var sheet: SheetRoute?
@@ -73,6 +74,7 @@ public final class BrowserModel {
         self.history = services.history
         self.bookmarks = services.bookmarks
         self.downloads = services.downloads
+        self.updates = services.updates
         self.webAppStore = services.webApps
         self.webAppInstaller = services.webAppInstaller
         self.groupNames = GroupNameModel(naming: services.groupNaming)

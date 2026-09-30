@@ -9,6 +9,8 @@ public struct BrowserServices {
     /// Shared by every window: a download belongs to the app, not to whichever
     /// window happened to start it.
     public let downloads: DownloadsModel
+    /// Shared with Settings so every window sees the same update state.
+    public var updates: UpdateModel?
     /// Sites kept as apps. Nil where there is nowhere to keep them.
     public var webApps: (any WebAppStoring)?
     /// Gives each web app an app of its own in Applications. Nil in tests.

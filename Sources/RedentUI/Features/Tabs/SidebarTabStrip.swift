@@ -24,7 +24,8 @@ struct SidebarTabStrip: View {
                     spaces: model.tabs.session.spaces,
                     selectedID: model.tabs.session.selectedSpaceID,
                     onSelect: { model.execute(.focusSpace($0)) },
-                    onManage: { model.sheet = .spaces }
+                    onManage: { model.sheet = .spaces },
+                    updates: model.updates
                 )
             }
             .padding(.horizontal, Metric.gutter - 2)
