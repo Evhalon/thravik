@@ -23,6 +23,13 @@ public enum SpaceIdentity: Sendable {
     public static let travel = Look(icon: "airplane", colorToken: "teal")
 
     public static let tokens = ["amber", "rose", "indigo", "teal", "violet", "lime", "coral", "sky"]
+
+    /// The swatches the Space composer offers. A superset of `tokens`, which
+    /// stays fixed because derived looks index into it.
+    public static let pickerTokens = tokens + [
+        "blue", "red", "orange", "yellow", "green", "mint", "cyan",
+        "purple", "pink", "magenta", "brown", "slate"
+    ]
     public static let icons = [
         "square.stack.3d.up.fill", "sparkles", "leaf.fill", "moon.fill",
         "flame.fill", "drop.fill", "star.fill", "bolt.fill"

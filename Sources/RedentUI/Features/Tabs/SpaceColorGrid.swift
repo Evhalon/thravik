@@ -6,11 +6,11 @@ import SwiftUI
 struct SpaceColorGrid: View {
     @Binding var selection: String
 
-    private let columns = Array(repeating: GridItem(.fixed(38), spacing: 10), count: 4)
+    private let columns = Array(repeating: GridItem(.fixed(34), spacing: 8), count: 7)
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(SpaceIdentity.tokens, id: \.self) { token in
+            ForEach(SpaceIdentity.pickerTokens, id: \.self) { token in
                 swatch(token)
             }
         }

@@ -57,12 +57,27 @@ struct SpaceDraftTests {
         #expect(draft.actions == [.renameSpace(id: space.id, name: "Lab"), .setSpaceLook(id: space.id, look: look)])
     }
 
-    @Test("A drag reports the landing index, not SwiftUI's pre-removal offset")
-    func reorderTranslatesOffsets() {
+    @Test("A drag lands on the row the pointer travelled to, clamped to the list")
+    func reorderLandsOnTravelledRow() {
+        #expect(SpaceReorder.landing(origin: 0, travel: 100, pitch: 48, count: 4) == 2)
+        #expect(SpaceReorder.landing(origin: 3, travel: -500, pitch: 48, count: 4) == 0)
+        #expect(SpaceReorder.landing(origin: 1, travel: 20, pitch: 48, count: 4) == 1)
+        #expect(SpaceReorder.landing(origin: 2, travel: 900, pitch: 48, count: 4) == 3)
+    }
+
+    @Test("Rows between origin and landing slide toward the gap")
+    func reorderShiftsNeighbours() {
+        #expect(SpaceReorder.shift(for: 1, origin: 0, landing: 2, pitch: 48) == -48)
+        #expect(SpaceReorder.shift(for: 3, origin: 0, landing: 2, pitch: 48) == 0)
+        #expect(SpaceReorder.shift(for: 1, origin: 3, landing: 1, pitch: 48) == 48)
+        #expect(SpaceReorder.shift(for: 0, origin: 3, landing: 1, pitch: 48) == 0)
+    }
+
+    @Test("A drop moves the Space only when it lands somewhere new")
+    func reorderAction() {
         let spaces = BrowserSpace.starterSpaces
-        #expect(SpaceReorder.action(spaces: spaces, from: [0], to: 3) == .moveSpace(id: spaces[0].id, toIndex: 2))
-        #expect(SpaceReorder.action(spaces: spaces, from: [3], to: 0) == .moveSpace(id: spaces[3].id, toIndex: 0))
-        #expect(SpaceReorder.action(spaces: spaces, from: [1], to: 2) == nil)
-        #expect(SpaceReorder.action(spaces: spaces, from: [1], to: 1) == nil)
+        #expect(SpaceReorder.action(spaces: spaces, origin: 0, landing: 2) == .moveSpace(id: spaces[0].id, toIndex: 2))
+        #expect(SpaceReorder.action(spaces: spaces, origin: 3, landing: 0) == .moveSpace(id: spaces[3].id, toIndex: 0))
+        #expect(SpaceReorder.action(spaces: spaces, origin: 1, landing: 1) == nil)
     }
 }

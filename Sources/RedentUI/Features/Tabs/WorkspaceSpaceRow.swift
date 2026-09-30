@@ -2,8 +2,9 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// One Space in the manager: orb, name, quiet count. Actions live in the menu;
-/// the grip shows on hover so the row reads as draggable.
+/// One Space in the manager: orb, name, quiet count. Tapping the row edits it
+/// (the pencil says so); switching lives in the menu. The grip shows on hover
+/// so the row reads as draggable.
 struct WorkspaceSpaceRow: View {
     let space: BrowserSpace
     let tabCount: Int
@@ -26,12 +27,13 @@ struct WorkspaceSpaceRow: View {
             if isSelected { ChromeBadge("Open", tint: tint) }
             menu
             grip
+            editGlyph
         }
         .padding(.horizontal, 8)
         .frame(height: 44)
         .background { rowFill }
         .contentShape(.rect)
-        .onTapGesture(perform: actions.onSelect)
+        .onTapGesture(perform: actions.onCustomize)
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.14)) { isHovering = hovering }
         }
@@ -66,6 +68,14 @@ struct WorkspaceSpaceRow: View {
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(Palette.chromeSecondaryText)
             .opacity(isHovering ? 0.8 : 0)
+            .accessibilityHidden(true)
+    }
+
+    private var editGlyph: some View {
+        Image(systemName: "pencil")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(Palette.chromeSecondaryText)
+            .opacity(isHovering ? 0.9 : 0.55)
             .accessibilityHidden(true)
     }
 
