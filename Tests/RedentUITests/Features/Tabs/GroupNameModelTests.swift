@@ -66,6 +66,22 @@ struct GroupNameModelTests {
         #expect(await namer.calls == 2)
     }
 
+    @Test("The header waits empty for the first name")
+    func pendingNameIsEmpty() async {
+        let names = GroupNameModel(naming: CountingNamer(answer: "Code review"), settleDelay: .zero)
+        let cluster = siteCluster(members: [UUID(), UUID()])
+        #expect(names.displayName(for: cluster, isEnabled: true) == nil)
+        await names.resolve(cluster, isEnabled: true) { pages }
+        #expect(names.displayName(for: cluster, isEnabled: true) == "Code review")
+    }
+
+    @Test("A namer with no model shows the site name at once")
+    func unavailableNamerShowsSite() {
+        let names = GroupNameModel(naming: CountingNamer(answer: "Code review", isAvailable: false), settleDelay: .zero)
+        let cluster = siteCluster(members: [UUID(), UUID()])
+        #expect(names.displayName(for: cluster, isEnabled: true) == "github.com")
+    }
+
     private func siteCluster(id: UUID = UUID(), members: [UUID]) -> SidebarNode.Cluster {
         SidebarNode.Cluster(id: id, name: "github.com", memberIDs: members, isNameAutomatic: true)
     }
@@ -73,10 +89,12 @@ struct GroupNameModelTests {
 
 private actor CountingNamer: TabGroupNaming {
     private let answer: String?
+    nonisolated let isAvailable: Bool
     private(set) var calls = 0
 
-    init(answer: String?) {
+    init(answer: String?, isAvailable: Bool = true) {
         self.answer = answer
+        self.isAvailable = isAvailable
     }
 
     func name(for pages: [TabGroupPage]) async -> String? {

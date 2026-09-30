@@ -23,10 +23,13 @@ final class GroupNameModel {
     }
 
     /// The generated topic when there is one; the site the browser named the
-    /// group after otherwise, or whatever the user typed.
-    func displayName(for cluster: SidebarNode.Cluster, isEnabled: Bool) -> String {
-        guard isEnabled, cluster.isNameAutomatic, let name = entries[cluster.id]?.name else { return cluster.name }
-        return name
+    /// group after otherwise, or whatever the user typed. Nil while the first
+    /// name is on its way, so the header waits empty instead of flashing the
+    /// site name it is about to replace.
+    func displayName(for cluster: SidebarNode.Cluster, isEnabled: Bool) -> String? {
+        guard isEnabled, cluster.isNameAutomatic, let naming, naming.isAvailable else { return cluster.name }
+        guard let entry = entries[cluster.id] else { return nil }
+        return entry.name ?? cluster.name
     }
 
     /// `pages` is read after the settle delay, not before, so it sees titles

@@ -52,6 +52,7 @@ struct SidebarTabList: View {
         let naming = model.settings.namesGroupsOnDevice
         SidebarGroupHeader(
             title: model.groupNames.displayName(for: cluster, isEnabled: naming),
+            siteName: cluster.name,
             iconTab: tab(cluster.memberIDs.first),
             isCollapsed: folded,
             actions: .init(

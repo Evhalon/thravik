@@ -8,6 +8,8 @@ import RedentKit
 public struct OnDeviceGroupNamer: TabGroupNaming {
     public init() {}
 
+    public var isAvailable: Bool { SystemLanguageModel.default.isAvailable }
+
     public func name(for pages: [TabGroupPage]) async -> String? {
         let model = SystemLanguageModel.default
         guard model.isAvailable, !pages.isEmpty else { return nil }
