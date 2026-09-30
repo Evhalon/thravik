@@ -123,6 +123,7 @@ public final class TabController: BrowserControlling {
     public func close(_ id: UUID) {
         guard let index = webTabs.firstIndex(where: { $0.id == id }) else { return }
         let tab = webTabs[index]
+        if tab.isPinned { return releasePinned(tab) }
         if !tab.snapshot.isTemporary { undoHistory.record(session) }
         if selectedID == id { updateSelectedID(selectionAfterClosing(id)) }
         tab.hibernate()
@@ -139,12 +140,5 @@ public final class TabController: BrowserControlling {
         for tab in webTabs { tab.hibernate() }
         contexts.release(owner: ObjectIdentifier(self))
         warmer.discard()
-    }
-
-    func pushClosed(_ snapshot: TabSnapshot) {
-        closedStack.append(snapshot)
-        if closedStack.count > Self.closedStackLimit {
-            closedStack.removeFirst()
-        }
     }
 }
