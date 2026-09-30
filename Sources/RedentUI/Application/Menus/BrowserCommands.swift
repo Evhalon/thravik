@@ -13,6 +13,11 @@ public struct BrowserCommands: Commands {
     public init() {}
 
     public var body: some Commands {
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…") { model?.showSettings() }
+                .keyboardShortcut(",")
+                .disabled(model == nil)
+        }
         CommandGroup(replacing: .newItem) { fileItems }
         CommandMenu("Browser") {
             Button("Command Center…") { model?.toggleCommands() }

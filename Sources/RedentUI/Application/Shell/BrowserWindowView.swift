@@ -11,10 +11,16 @@ import SwiftUI
 /// of the concrete vault and scanner screens.
 public struct BrowserWindowView<Sheets: View>: View {
     @Bindable private var model: BrowserModel
+    private let settingsServices: SettingsServices
     private let sheetContent: (SheetRoute) -> Sheets
 
-    public init(model: BrowserModel, @ViewBuilder sheetContent: @escaping (SheetRoute) -> Sheets) {
+    public init(
+        model: BrowserModel,
+        settingsServices: SettingsServices,
+        @ViewBuilder sheetContent: @escaping (SheetRoute) -> Sheets
+    ) {
         self.model = model
+        self.settingsServices = settingsServices
         self.sheetContent = sheetContent
     }
 
@@ -26,15 +32,18 @@ public struct BrowserWindowView<Sheets: View>: View {
         .coordinateSpace(WindowBackdrop.space)
         .clipped()
         .environment(\.ambientTint, ambientTint)
+        .environment(\.settingsServices, settingsServices)
         .modifier(AddressSuggestionsPresenter(model: model))
         .overlay { floatingInput }
         .overlay(alignment: .bottom) { expiryBar }
+        .overlay(alignment: .bottomLeading) { updateToast }
         .onChange(of: model.selectedTab?.url) { _, _ in
             model.pageContextChanged()
             model.address.sync(with: model.selectedTab)
         }
         .task(id: model.selectedTab?.url) { await model.refreshBookmarkState() }
         .onChange(of: model.tabs.selectedID) { _, _ in
+            model.closeSettings()
             model.pageContextChanged()
             model.address.syncSelection(with: model.selectedTab)
         }
@@ -85,6 +94,15 @@ public struct BrowserWindowView<Sheets: View>: View {
             )
             .padding(Metric.gutter)
             .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
+    @ViewBuilder
+    private var updateToast: some View {
+        if let updates = model.updates, let release = updates.announcedRelease {
+            UpdateToast(updates: updates, release: release)
+                .padding(Metric.gutter)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 

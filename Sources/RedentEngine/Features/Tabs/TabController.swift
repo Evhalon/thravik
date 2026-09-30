@@ -54,6 +54,7 @@ public final class TabController: BrowserControlling {
     public var isPrivate: Bool { privateSessionID != nil }
     public var canReopen: Bool { !closedStack.isEmpty }
     public var canUndo: Bool { undoHistory.canUndo }
+    public var canUndoSpaces: Bool { undoHistory.canUndoSpaces }
     /// Filters `webTabs` rather than `tabs`: the latter boxes every tab into an
     /// existential first, and this is read on every sidebar render.
     public var visibleTabs: [any BrowserTab] {

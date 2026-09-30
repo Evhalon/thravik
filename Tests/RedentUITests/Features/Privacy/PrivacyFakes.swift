@@ -62,6 +62,7 @@ final class FakeBrowser: BrowserControlling {
     var visibleTabs: [any BrowserTab] { stubTabs }
     var canReopen = false
     var canUndo = false
+    var canUndoSpaces = false
     var isPrivate = false
     var signalHandler: (any PageSignalHandling)?
     var onChange: (@MainActor () -> Void)?
@@ -69,6 +70,7 @@ final class FakeBrowser: BrowserControlling {
 
     func perform(_ action: WorkspaceAction) throws {}
     func undo() {}
+    func undoSpaces() {}
     func apply(settings: BrowserSettings) {}
     func resetWorkspace() {}
     func newTab(url: URL?) -> any BrowserTab {

@@ -18,17 +18,6 @@ struct SheetRouter: View {
     var body: some View {
         Group {
             switch route {
-            case .settings:
-                SettingsSheet(
-                    settings: settingsBinding,
-                    services: SettingsServices(
-                        updates: app.updates, defaultBrowser: app.defaultBrowser, passkeys: app.passkeys
-                    ),
-                    onOpenPasswords: { model.sheet = .passwords },
-                    onOpenAuthenticatorImport: { model.sheet = .importAuthenticator },
-                    onResetWorkspace: { model.resetWorkspace() }
-                )
-
             case .passwords, .authenticator:
                 VaultWindowView(
                     sources: VaultSources(
@@ -104,9 +93,5 @@ struct SheetRouter: View {
                 AuthenticatorImportView(importer: app.importer, store: app.authenticator)
             }
         }
-    }
-
-    private var settingsBinding: Binding<BrowserSettings> {
-        Binding(get: { model.settings }, set: { model.settings = $0 })
     }
 }

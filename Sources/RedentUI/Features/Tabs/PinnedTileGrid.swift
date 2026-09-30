@@ -37,7 +37,7 @@ struct PinnedTileGrid: View {
         let canRepin = tab.url != nil && tab.url != snapshot.pinnedURL
         return PinnedTileActions(
             row: TabRowActions(
-                onSelect: { model.tabs.select(tab.id) },
+                onSelect: { model.selectTab(tab.id) },
                 onClose: { model.tabs.close(tab.id) },
                 onTogglePin: { model.tabs.togglePin(tab.id) },
                 onDuplicate: tab.url == nil ? nil : { _ = model.tabs.duplicateTab(tab.id) },

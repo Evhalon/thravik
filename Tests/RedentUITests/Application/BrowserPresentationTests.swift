@@ -13,7 +13,7 @@ struct BrowserPresentationTests {
     func clearsEveryPresentation() {
         let model = makeTestBrowserModel()
         model.settings.opensFloatingNewTab = true
-        model.sheet = .settings
+        model.sheet = .history
         model.showCommands()
         model.openNewTab()
 

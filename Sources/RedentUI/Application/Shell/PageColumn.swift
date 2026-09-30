@@ -9,6 +9,7 @@ struct PageColumn<Backdrop: View>: View {
     @Bindable var model: BrowserModel
     let usesTopStrip: Bool
     let backdrop: Backdrop
+    @Environment(\.settingsServices) private var settingsServices
 
     var body: some View {
         VStack(spacing: 0) {
@@ -18,8 +19,14 @@ struct PageColumn<Backdrop: View>: View {
     }
 
     private var page: some View {
-        ContentArea(model: model)
-            .pageCard(isInset: !model.isFocusMode && !model.usesEdgeReveal && !isShowingNewTab) { backdrop }
+        Group {
+            if model.showsSettings, let settingsServices {
+                SettingsPage(model: model, services: settingsServices)
+            } else {
+                ContentArea(model: model)
+            }
+        }
+        .pageCard(isInset: !model.isFocusMode && !model.usesEdgeReveal && !isShowingNewTab) { backdrop }
     }
 
     /// Without the rail there is nothing else holding the window buttons, so the

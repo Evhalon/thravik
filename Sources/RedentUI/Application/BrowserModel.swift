@@ -20,6 +20,8 @@ public final class BrowserModel {
 
     public var settings: BrowserSettings { didSet { settingsChanged(from: oldValue) } }
     public var sheet: SheetRoute?
+    /// Settings replace the page in this window until the user leaves them.
+    public var showsSettings = false
     public var showsCommandBar = false
     public var showsFloatingNewTab = false
     public var actionError: String?
@@ -101,6 +103,7 @@ public final class BrowserModel {
     }
 
     public func navigate(to url: URL) {
+        showsSettings = false
         if let tab = selectedTab { tab.load(url) } else { tabs.newTab(url: url) }
     }
 

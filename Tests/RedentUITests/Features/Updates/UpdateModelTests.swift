@@ -84,6 +84,17 @@ struct UpdateModelTests {
         #expect(quits == 0)
     }
 
+    @Test("Dismissing the popup silences only the release it announced")
+    func dismissalIsPerRelease() async throws {
+        let model = makeModel(installed: "0.1.2", published: "0.1.3")
+        await model.check()
+        #expect(model.announcedRelease?.version.description == "0.1.3")
+        model.dismissAnnouncement()
+        #expect(model.announcedRelease == nil)
+        await model.check()
+        #expect(model.announcedRelease == nil)
+    }
+
     private func makeModel(installed: String, published: String) -> UpdateModel {
         UpdateModel(
             currentVersion: AppVersion(installed),

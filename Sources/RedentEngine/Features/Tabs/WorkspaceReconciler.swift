@@ -26,7 +26,7 @@ extension TabController {
             applySelection(next)
         default:
             guard next != before else { return }
-            undoHistory.record(before)
+            undoHistory.record(before, scope: action.undoScope)
             reconcile(next)
         }
     }
@@ -43,8 +43,13 @@ extension TabController {
         onChange?()
     }
 
-    public func undo() {
-        guard var previous = undoHistory.pop() else { return }
+    public func undo() { rewind(undoHistory.pop()) }
+
+    public func undoSpaces() { rewind(undoHistory.pop(.spaces)) }
+
+    private func rewind(_ record: BrowserUndoHistory.Record?) {
+        guard let record else { return }
+        var previous = SessionRewind.rewind(session, to: record.session, scope: record.scope)
         let current = Dictionary(uniqueKeysWithValues: webTabs.map { ($0.id, $0.snapshot) })
         previous.tabs = previous.tabs.map { snapshot in
             guard let live = current[snapshot.id] else { return snapshot }
@@ -56,7 +61,6 @@ extension TabController {
             restored.timeline = live.timeline
             return restored
         }
-        previous.tabs.append(contentsOf: webTabs.filter { $0.snapshot.isTemporary }.map(\.snapshot))
         reconcile(previous)
     }
 

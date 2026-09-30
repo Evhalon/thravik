@@ -54,7 +54,7 @@ extension BrowserModel {
         case .printPage: printPage()
         case .toggleReader: toggleReader()
         case .toggleMute: toggleMute()
-        case .showScreen(let screen): sheet = SheetRoute(screen)
+        case .showScreen(let screen): show(screen)
         default: return
         }
     }

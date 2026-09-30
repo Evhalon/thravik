@@ -45,7 +45,7 @@ struct SidebarFooter: View {
             Divider()
             Button("Import from another browser…") { model.sheet = .importBrowser }
             Divider()
-            Button("Settings…") { model.sheet = .settings }
+            Button("Settings…", action: model.showSettings)
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 12, weight: .semibold))

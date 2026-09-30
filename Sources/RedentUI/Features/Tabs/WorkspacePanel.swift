@@ -58,10 +58,10 @@ public struct WorkspacePanel: View {
 
     private var footer: some View {
         HStack {
-            Button("Undo") { model.tabs.undo() }
+            Button("Undo") { model.tabs.undoSpaces() }
                 .buttonStyle(.plain)
                 .foregroundStyle(Palette.chromeSecondaryText)
-                .disabled(!model.tabs.canUndo)
+                .disabled(!model.tabs.canUndoSpaces)
             Spacer()
             Button("Done") { dismiss() }
                 .buttonStyle(.plain)

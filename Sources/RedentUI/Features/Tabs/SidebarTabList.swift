@@ -31,8 +31,10 @@ struct SidebarTabList: View {
             }
             .padding(.vertical, 2)
             .coordinateSpace(.named(Self.dragSpace))
+            .background(RigidScrollEdges())
         }
         .scrollIndicators(.never)
+        .clipped()
         .onScrollGeometryChange(for: CGRect.self, of: \.visibleRect) { _, rect in drag.viewport = rect }
         .animation(.spring(duration: 0.3), value: model.tabs.selectedID)
         .animation(.spring(duration: 0.3), value: model.split.tabIDs)
@@ -57,7 +59,7 @@ struct SidebarTabList: View {
             iconTab: tab(cluster.memberIDs.first),
             isCollapsed: folded,
             actions: .init(
-                onToggle: { toggle(cluster.id) },
+                onToggle: { collapsed.formSymmetricDifference([cluster.id]) },
                 onClose: { model.tabs.closeTabs(Set(cluster.memberIDs)) }
             )
         )
@@ -111,7 +113,7 @@ struct SidebarTabList: View {
     private func actions(for tab: any BrowserTab) -> TabRowActions {
         let grouped = tab.snapshot.groupID != nil || tab.snapshot.parentTabID != nil
         return TabRowActions(
-            onSelect: { model.tabs.select(tab.id) },
+            onSelect: { model.selectTab(tab.id) },
             onClose: { model.tabs.close(tab.id) },
             onTogglePin: { model.tabs.togglePin(tab.id) },
             onDuplicate: tab.url == nil ? nil : { _ = model.tabs.duplicateTab(tab.id) },
@@ -133,10 +135,6 @@ struct SidebarTabList: View {
     private func tab(_ id: UUID?) -> (any BrowserTab)? {
         guard let id else { return nil }
         return model.tabs.tabs.first { $0.id == id && $0.snapshot.spaceID == spaceID }
-    }
-
-    private func toggle(_ id: UUID) {
-        if collapsed.contains(id) { collapsed.remove(id) } else { collapsed.insert(id) }
     }
 
     /// Selecting a tab hidden in a folded group opens the group, so the

@@ -48,7 +48,7 @@ struct TopTabStrip: View {
 
     private func actions(for tab: any BrowserTab) -> TabRowActions {
         TabRowActions(
-            onSelect: { model.tabs.select(tab.id) },
+            onSelect: { model.selectTab(tab.id) },
             onClose: { model.tabs.close(tab.id) },
             onTogglePin: { model.tabs.togglePin(tab.id) },
             onDuplicate: tab.url == nil ? nil : { _ = model.tabs.duplicateTab(tab.id) },

@@ -16,7 +16,8 @@ struct BrowserWindowScene: View {
 
     var body: some View {
         let window = app.window(for: spec)
-        return BrowserWindowView(model: window.model) { route in
+        let settings = SettingsServices(updates: app.updates, defaultBrowser: app.defaultBrowser, passkeys: app.passkeys)
+        return BrowserWindowView(model: window.model, settingsServices: settings) { route in
             SheetRouter(route: route, app: app, window: window)
         }
         .onAppear {

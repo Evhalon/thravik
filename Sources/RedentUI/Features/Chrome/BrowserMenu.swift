@@ -20,7 +20,7 @@ struct BrowserMenu: View {
             Button("Passwords…") { model.sheet = .passwords }
             Button("Authenticator…") { model.sheet = .authenticator }
             Divider()
-            Button("Settings…") { model.sheet = .settings }
+            Button("Settings…", action: model.showSettings)
         } label: {
             Image(systemName: symbol)
                 .font(.system(size: 13, weight: .medium))

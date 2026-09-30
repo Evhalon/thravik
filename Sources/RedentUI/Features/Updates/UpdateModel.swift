@@ -26,6 +26,10 @@ public final class UpdateModel {
     /// to compare against, and replacing a dev build would be wrong anyway.
     public let currentVersion: AppVersion?
 
+    /// Waving off the popup silences that release only — a newer one is
+    /// still worth a mention.
+    private var dismissedVersion: AppVersion?
+
     private let checker: any UpdateChecking
     private let installer: any UpdateInstalling
     private let quit: @MainActor () -> Void
@@ -44,6 +48,18 @@ public final class UpdateModel {
 
     public var isBusy: Bool {
         phase == .checking || phase == .installing || phase == .restarting
+    }
+
+    /// The release the popup should announce, if the user has not waved it off.
+    public var announcedRelease: AppRelease? {
+        guard case .available(let release) = phase,
+              release.version != dismissedVersion else { return nil }
+        return release
+    }
+
+    public func dismissAnnouncement() {
+        guard case .available(let release) = phase else { return }
+        dismissedVersion = release.version
     }
 
     public func check() async {
