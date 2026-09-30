@@ -3,9 +3,12 @@ import RedentKit
 
 /// The address bar and new-tab field: typing, return, and opening a row.
 extension BrowserModel {
-    public func queryChanged(_ text: String, from source: AddressSuggestionsModel.Source) {
+    public func queryChanged(
+        _ text: String, from source: AddressSuggestionsModel.Source, includeOpenTabs: Bool = true
+    ) {
         let context = SuggestionContext(
-            searchEngine: settings.searchEngine, spaceID: currentSpaceID, openTabs: switchableTabs
+            searchEngine: settings.searchEngine, spaceID: currentSpaceID,
+            openTabs: includeOpenTabs ? switchableTabs : []
         )
         suggestions.update(query: text, from: source, context: context) { [weak self] result in
             self?.suggestionsSettled(result)

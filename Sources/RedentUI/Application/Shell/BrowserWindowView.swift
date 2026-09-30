@@ -27,7 +27,7 @@ public struct BrowserWindowView<Sheets: View>: View {
         .clipped()
         .environment(\.ambientTint, ambientTint)
         .modifier(AddressSuggestionsPresenter(model: model))
-        .overlay(alignment: .top) { commandBar }
+        .overlay { floatingInput }
         .overlay(alignment: .bottom) { expiryBar }
         .onChange(of: model.selectedTab?.url) { _, _ in
             model.pageContextChanged()
@@ -50,12 +50,26 @@ public struct BrowserWindowView<Sheets: View>: View {
     }
 
     @ViewBuilder
-    private var commandBar: some View {
-        if model.showsCommandBar {
-            ZStack(alignment: .top) {
-                Color.black.opacity(0.18).onTapGesture { model.dismissCommands() }
-                CommandBarView(model: model.commandBar, onDismiss: model.dismissCommands)
-                    .padding(.top, 72)
+    private var floatingInput: some View {
+        if model.showsCommandBar || model.showsFloatingNewTab {
+            ZStack {
+                Color.black.opacity(0.18).onTapGesture {
+                    model.dismissCommands()
+                    model.dismissFloatingNewTab()
+                }
+                if model.showsCommandBar {
+                    VStack {
+                        CommandBarView(model: model.commandBar, onDismiss: model.dismissCommands)
+                            .padding(.top, 72)
+                        Spacer()
+                    }
+                } else {
+                    GeometryReader { geometry in
+                        FloatingNewTabView(model: model)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, max(20, (geometry.size.height - FloatingNewTabView.expandedHeight) / 2))
+                    }
+                }
             }
         }
     }

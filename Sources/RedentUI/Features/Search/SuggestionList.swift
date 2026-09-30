@@ -9,7 +9,13 @@ import SwiftUI
 /// will open.
 struct SuggestionList: View {
     @Bindable var model: BrowserModel
+    let onOpen: ((AddressSuggestion, Bool) -> Void)?
     @State private var hoveredID: String?
+
+    init(model: BrowserModel, onOpen: ((AddressSuggestion, Bool) -> Void)? = nil) {
+        self.model = model
+        self.onOpen = onOpen
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -18,7 +24,10 @@ struct SuggestionList: View {
                     suggestion: row,
                     query: model.suggestions.query,
                     emphasis: emphasis(at: index, for: row),
-                    onOpen: { model.open(row, inNewTab: $0) }
+                    onOpen: { commandHeld in
+                        if let onOpen { onOpen(row, commandHeld) }
+                        else { model.open(row, inNewTab: commandHeld) }
+                    }
                 )
                 .onHover { inside in
                     if inside { hoveredID = row.id } else if hoveredID == row.id { hoveredID = nil }

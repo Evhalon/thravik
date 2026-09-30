@@ -21,6 +21,7 @@ public final class BrowserModel {
     public var settings: BrowserSettings { didSet { settingsChanged(from: oldValue) } }
     public var sheet: SheetRoute?
     public var showsCommandBar = false
+    public var showsFloatingNewTab = false
     public var actionError: String?
     /// The temporary tab whose deadline passed while the user was reading it.
     public var expiredTabID: UUID?
@@ -128,6 +129,7 @@ public final class BrowserModel {
         hasUnsavedSettings = true
         tabs.apply(settings: settings)
         commandBar.searchEngine = settings.searchEngine
+        if old.opensFloatingNewTab && !settings.opensFloatingNewTab { dismissFloatingNewTab() }
         if old.offersPasswordSave != settings.offersPasswordSave {
             autofill.setEnabled(settings.offersPasswordSave)
         }
