@@ -8,6 +8,7 @@ struct FloatingNewTabView: View {
     static let expandedHeight = fieldHeight + FloatingNewTabResults.maximumHeight + Metric.hairWidth
 
     @Bindable var model: BrowserModel
+    let dismissRequest: Int
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var query = ""
     @State private var bookmarks: [Bookmark] = []
@@ -28,15 +29,16 @@ struct FloatingNewTabView: View {
             }
         }
         .frame(width: 620)
-        .background { FloatingNewTabSurface() }
+        .background { FloatingPanelSurface(space: model.currentSpace) }
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .shadow(color: .black.opacity(0.32), radius: 32, y: 16)
-        .modifier(FloatingNewTabPanelMotion(revealed: appeared, isClosing: isClosing,
+        .modifier(FloatingPanelMotion(revealed: appeared, isClosing: isClosing,
                                             reduceMotion: reduceMotion))
         .padding(.horizontal, 20)
         .task(appear)
         .task(id: model.currentSpaceID, loadHome)
         .onChange(of: model.suggestions.rows.map(\.id)) { _, _ in selectedIndex = 0 }
+        .onChange(of: dismissRequest) { _, _ in dismissAnimated() }
         .onExitCommand(perform: dismissAnimated)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("New tab search")
@@ -91,7 +93,6 @@ struct FloatingNewTabView: View {
         }
         .padding(.horizontal, 17)
         .frame(height: Self.fieldHeight)
-        .background { FloatingNewTabHeaderSurface() }
     }
 
     private func moveSelection(_ offset: Int) -> KeyPress.Result {

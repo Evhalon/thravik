@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Observation
 
@@ -17,6 +18,9 @@ final class ChromeRevealModel {
     }
 
     private(set) var surface: Surface?
+    /// How far the revealed navigation bar reaches into the page, so notices
+    /// pinned to the page's top can step below it.
+    var navigationHeight: CGFloat = 0
     @ObservationIgnored private(set) var dismissalTask: Task<Void, Never>?
     private var hoveredRegions: Set<Region> = []
     private var isLocked = false

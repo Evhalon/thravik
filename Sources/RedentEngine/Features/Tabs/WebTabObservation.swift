@@ -60,6 +60,7 @@ extension WebTab {
         stopFloatingVideo()
         pageTrustIssue = nil
         isReaderActive = false
+        progress = 0
         guard let url else { return }
         attemptedURL = url
         setLocation(url)
