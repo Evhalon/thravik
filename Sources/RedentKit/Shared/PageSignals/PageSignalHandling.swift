@@ -12,6 +12,9 @@ public enum PageSignal: Sendable, Equatable {
     /// The page is showing an authenticator QR code to enroll two-factor.
     case twoFactorSetupAppeared(origin: Origin)
     case twoFactorSetupGone
+    /// The user pressed Thravik's install button on a Chrome Web Store page.
+    /// Carries nothing: which extension is read from the tab's own URL.
+    case extensionInstallRequested
     /// The user clicked or typed in a field form history can fill.
     case formFieldActive(FormFieldFocus)
     /// Focus left the field, the page scrolled, or the user pressed Escape.

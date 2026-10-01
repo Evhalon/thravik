@@ -75,6 +75,8 @@ final class PageSignalRouter: NSObject, WKScriptMessageHandler {
             return parseOrigin(dict).map { .twoFactorSetupAppeared(origin: $0) }
         case "twoFactorSetupGone":
             return .twoFactorSetupGone
+        case "extensionInstallRequested":
+            return .extensionInstallRequested
         default:
             return nil
         }

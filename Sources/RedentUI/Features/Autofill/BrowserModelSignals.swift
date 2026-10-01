@@ -33,6 +33,10 @@ extension BrowserModel: PageSignalHandling {
             twoFactor.setupAppeared(at: origin)
         case .twoFactorSetupGone:
             twoFactor.setupGone()
+        case .extensionInstallRequested:
+            guard let url = selectedTab?.url, ChromeWebStoreID.isStorePage(url),
+                  let storeID = ChromeWebStoreID(url.absoluteString) else { return }
+            extensionInstaller?(storeID)
         case .formFieldActive, .formFieldInactive, .formSuggestionHighlighted, .formSuggestionChosen, .formSubmitted:
             guard let tab = selectedTab else { return }
             handleFormHistory(signal, from: tab)

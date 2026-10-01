@@ -28,6 +28,11 @@ struct BrowserWindowScene: View {
         .onAppear {
             window.model.windowOpener = open(isPrivate:)
             window.model.windowDirectory = AppWindowDirectory(app: app, current: spec) { openWindow(value: $0) }
+            let extensions = app.extensions.model
+            window.model.extensionInstaller = { [weak model = window.model] storeID in
+                extensions.requestInstall(storeID)
+                model?.showSettings()
+            }
         }
         .task {
             await app.offerDefaultBrowserIfNeeded(in: window)
