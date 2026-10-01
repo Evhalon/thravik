@@ -39,28 +39,21 @@ public struct LoadingLine: View {
         .task(id: isLoading) { await follow(isLoading) }
     }
 
-    /// Frosted glass tinted by a pale spectrum: the page shows through, a
-    /// specular band catches the top edge, and a hairline keeps it legible
-    /// on a white page.
+    /// An opaque, saturated spectrum: a pale or translucent line vanishes on
+    /// white pages, so the colour itself carries the contrast and the glow
+    /// lifts it off dark ones.
     private var line: some View {
         Capsule()
-            .fill(.ultraThinMaterial)
-            .overlay {
-                LinearGradient(colors: Self.spectrum, startPoint: .leading, endPoint: .trailing)
-                    .opacity(0.75)
-            }
+            .fill(LinearGradient(colors: Self.spectrum, startPoint: .leading, endPoint: .trailing))
             .overlay { specular }
             .overlay { if !reduceMotion { Shimmer() } }
             .clipShape(.capsule)
-            .overlay { Capsule().strokeBorder(.white.opacity(0.45), lineWidth: 0.5) }
-            .shadow(color: Self.spectrum[1].opacity(0.35), radius: 6)
-            .shadow(color: .black.opacity(0.08), radius: 1, y: 0.5)
+            .shadow(color: Self.spectrum[1].opacity(0.55), radius: 5)
     }
 
     private var specular: some View {
-        LinearGradient(colors: [.white.opacity(0.65), .white.opacity(0.05)],
+        LinearGradient(colors: [.white.opacity(0.25), .clear],
                        startPoint: .top, endPoint: .bottom)
-            .blendMode(.plusLighter)
     }
 
     private func advance(to fraction: Double) {
@@ -87,10 +80,10 @@ public struct LoadingLine: View {
     private static let thickness: CGFloat = 3
 
     private static let spectrum: [Color] = [
-        Color(red: 0.55, green: 0.85, blue: 1.00),
-        Color(red: 0.66, green: 0.62, blue: 1.00),
-        Color(red: 0.96, green: 0.64, blue: 0.94),
-        Color(red: 1.00, green: 0.80, blue: 0.72)
+        Color(red: 0.00, green: 0.55, blue: 1.00),
+        Color(red: 0.20, green: 0.38, blue: 1.00),
+        Color(red: 0.48, green: 0.30, blue: 0.98),
+        Color(red: 0.74, green: 0.32, blue: 0.95)
     ]
 }
 
@@ -102,12 +95,11 @@ private struct Shimmer: View {
 
     var body: some View {
         GeometryReader { proxy in
-            LinearGradient(colors: [.clear, .white.opacity(0.55), .clear],
+            LinearGradient(colors: [.clear, .white.opacity(0.35), .clear],
                            startPoint: .leading, endPoint: .trailing)
                 .frame(width: max(proxy.size.width * 0.35, 40))
                 .offset(x: phase * proxy.size.width)
         }
-        .blendMode(.plusLighter)
         .onAppear {
             withAnimation(.linear(duration: 1.1).repeatForever(autoreverses: false)) { phase = 1.2 }
         }

@@ -17,7 +17,8 @@ extension TabController {
         guard !warmer.prerenderer.isPrerendering(url, store: store, options: options) else { return }
         let view = warmer.take(store: store, options: options)
             ?? WebViewFactory.makeWebView(configuration: WebViewFactory.makeConfiguration(
-                store: store, options: options, contentBlocker: contentBlocker
+                store: store, options: options, contentBlocker: contentBlocker,
+                extensions: warmer.extensionController
             ))
         sizeLikeShownPage(view)
         warmer.prerenderer.prerender(url, in: view, store: store, options: options)

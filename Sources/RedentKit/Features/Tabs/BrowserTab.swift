@@ -35,6 +35,8 @@ public protocol BrowserTab: FloatingVideoControlling {
     func printPage()
     func fillCredential(username: String, password: String) async
     func fillOTPCode(_ code: String) async
+    /// Asks the page to report its login, one-time-code and setup fields again.
+    func announcePageSignals() async
     /// Tells the page how many form-history suggestions are showing, so its
     /// arrow keys can walk them. Zero closes the menu.
     func showFormSuggestions(count: Int)
@@ -84,4 +86,5 @@ public extension BrowserTab {
     func visiblePageImage() async -> Data? { nil }
     func showFormSuggestions(count: Int) {}
     func fillFormField(_ value: String) {}
+    func announcePageSignals() async {}
 }

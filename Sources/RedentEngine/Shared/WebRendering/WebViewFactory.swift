@@ -13,10 +13,13 @@ import WebKit
 enum WebViewFactory {
 
     static func makeConfiguration(
-        store: WKWebsiteDataStore, options: PageContentOptions, contentBlocker: ContentBlocker?
+        store: WKWebsiteDataStore, options: PageContentOptions, contentBlocker: ContentBlocker?,
+        extensions: WKWebExtensionController? = nil
     ) -> WKWebViewConfiguration {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = store
+        // Content scripts and `chrome.tabs` only reach pages built with it.
+        config.webExtensionController = extensions
         config.defaultWebpagePreferences.allowsContentJavaScript = true
         config.defaultWebpagePreferences.preferredContentMode = .desktop
         // Safari's autoplay gate is the modern equivalent of the old plugin

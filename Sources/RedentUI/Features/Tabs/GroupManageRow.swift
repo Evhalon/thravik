@@ -14,7 +14,7 @@ struct GroupManageRow: View {
         HStack(spacing: Metric.tightGutter + 4) {
             ChromeOrb(
                 systemImage: "folder.fill",
-                tint: SpacePalette.color(group.colorToken),
+                tint: SpaceTintColor.color(group.colorToken),
                 size: 26
             )
             titles

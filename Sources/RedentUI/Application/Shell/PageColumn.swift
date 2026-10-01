@@ -30,14 +30,17 @@ struct PageColumn<Backdrop: View>: View {
     }
 
     /// Without the rail there is nothing else holding the window buttons, so the
-    /// row starts clear of them. With it, they sit over the rail and the row
-    /// runs to the seam.
+    /// strip starts clear of them. With it, they sit over the rail and the strip
+    /// runs to the seam. `ChromeBar` clears them itself, so its address can be
+    /// centered on the full row.
     private var chrome: some View {
         VStack(spacing: 0) {
-            if usesTopStrip { TopTabStrip(model: model) }
+            if usesTopStrip {
+                TopTabStrip(model: model)
+                    .padding(.leading, model.isSidebarVisible ? 0 : Metric.windowButtonsWidth)
+            }
             ChromeBar(model: model)
         }
-        .padding(.leading, model.isSidebarVisible ? 0 : Metric.windowButtonsWidth)
         .background { TitlebarDragRegion() }
     }
 

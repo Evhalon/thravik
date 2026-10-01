@@ -43,4 +43,13 @@ public struct PinnedTileGeometry: Sendable {
         let row = CGFloat(index / columns)
         return (column * (tileWidth + Self.spacing), row * (tileHeight + Self.spacing))
     }
+
+    /// The cell under a point measured from the grid's top-left, clamped to the
+    /// first `count` cells — where a tab dragged there would land.
+    public func slot(atX x: CGFloat, y: CGFloat, count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        let column = min(Int(max(x, 0) / (tileWidth + Self.spacing)), columns - 1)
+        let row = Int(max(y, 0) / (tileHeight + Self.spacing))
+        return min(row * columns + column, count - 1)
+    }
 }

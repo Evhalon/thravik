@@ -80,7 +80,7 @@ struct WorkspaceSpaceRow: View {
     }
 
     private var tint: Color {
-        SpacePalette.color(
+        SpaceTintColor.color(
             SpaceIdentity.look(id: space.id, icon: space.icon, colorToken: space.colorToken).colorToken
         )
     }

@@ -67,7 +67,8 @@ extension WebTab {
         defer { controller?.warmer.prepare(store: store, options: options, contentBlocker: blocker) }
         if let warm = controller?.warmer.take(store: store, options: options) { return warm }
         return WebViewFactory.makeWebView(configuration: WebViewFactory.makeConfiguration(
-            store: store, options: options, contentBlocker: blocker
+            store: store, options: options, contentBlocker: blocker,
+            extensions: controller?.warmer.extensionController
         ))
     }
 

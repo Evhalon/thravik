@@ -36,7 +36,6 @@ struct EdgeChromeOverlay<Backdrop: View>: View {
 
     private var navigation: some View {
         ChromeBar(model: model)
-            .padding(.leading, Metric.windowButtonsWidth)
             .background { surfaceBackground }
             .clipped()
             .shadow(color: .black.opacity(0.25), radius: 12, y: 4)

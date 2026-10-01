@@ -2,37 +2,50 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// The Space hues as swatches; the picked one wears a check.
+/// The named Space hues as swatches; the picked one wears a check. Picking
+/// one swaps the hue but keeps the vividness already dialed in.
+///
+/// Rows are justified edge to edge so the swatches line up with the hue strip
+/// and wash cards below instead of floating in the middle.
 struct SpaceColorGrid: View {
-    @Binding var selection: String
+    @Binding var tint: SpaceTint
 
-    private let columns = Array(repeating: GridItem(.fixed(34), spacing: 8), count: 7)
+    private static let perRow = 10
+    private static let rows: [[String]] = stride(from: 0, to: SpaceIdentity.pickerTokens.count, by: perRow).map {
+        Array(SpaceIdentity.pickerTokens[$0..<min($0 + perRow, SpaceIdentity.pickerTokens.count)])
+    }
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(SpaceIdentity.pickerTokens, id: \.self) { token in
-                swatch(token)
+        VStack(spacing: 10) {
+            ForEach(Self.rows, id: \.self) { row in
+                HStack(spacing: 0) {
+                    ForEach(Array(row.enumerated()), id: \.element) { index, token in
+                        if index > 0 { Spacer(minLength: 4) }
+                        swatch(token)
+                    }
+                }
             }
         }
     }
 
     private func swatch(_ token: String) -> some View {
-        let isSelected = token == selection
+        let isSelected = tint.base == .named(token)
+        let color = SpacePalette.color(token)
         return Button {
-            withAnimation(.spring(duration: 0.25)) { selection = token }
+            withAnimation(.spring(duration: 0.25)) { tint.base = .named(token) }
         } label: {
             Circle()
-                .fill(SpacePalette.color(token))
+                .fill(color)
                 .overlay { Circle().strokeBorder(.white.opacity(isSelected ? 0.9 : 0.18), lineWidth: isSelected ? 2 : 1) }
                 .overlay {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
                         .opacity(isSelected ? 1 : 0)
                 }
-                .frame(width: 34, height: 34)
-                .scaleEffect(isSelected ? 1.08 : 1)
-                .shadow(color: SpacePalette.color(token).opacity(isSelected ? 0.5 : 0), radius: 6, y: 2)
+                .frame(width: 26, height: 26)
+                .scaleEffect(isSelected ? 1.1 : 1)
+                .shadow(color: color.opacity(0.5), radius: isSelected ? 6 : 0, y: isSelected ? 2 : 0)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(token.capitalized)

@@ -44,4 +44,13 @@ struct SpaceIdentityTests {
         #expect(space.colorToken != SpaceIdentity.unsetToken)
         #expect(space.icon == SpaceIdentity.derived(from: space.id).icon)
     }
+
+    @Test("The picker offers every shelved icon once, starting with the derived set")
+    func pickerIconsUnion() {
+        let picker = SpaceIdentity.pickerIcons
+        #expect(Array(picker.prefix(SpaceIdentity.icons.count)) == SpaceIdentity.icons)
+        #expect(Set(picker).count == picker.count)
+        let shelved = Set(SpaceIconCategory.allCases.flatMap(\.icons))
+        #expect(shelved.isSubset(of: Set(picker)))
+    }
 }

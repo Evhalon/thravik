@@ -35,6 +35,22 @@ struct PinnedTileGeometryTests {
     func empty() {
         #expect(PinnedTileGeometry(count: 0, width: width).height(for: 0) == 0)
     }
+
+    @Test("A dragged tab lands in the cell under the pointer")
+    func slot() {
+        let geometry = PinnedTileGeometry(count: 6, width: width)
+        let step = geometry.tileWidth + PinnedTileGeometry.spacing
+        #expect(geometry.slot(atX: 1, y: 1, count: 6) == 0)
+        #expect(geometry.slot(atX: step * 2 + 1, y: 1, count: 6) == 2)
+        #expect(geometry.slot(atX: step + 1, y: geometry.tileHeight + 7, count: 6) == 5)
+    }
+
+    @Test("A pointer past the last pin lands after it")
+    func slotClamps() {
+        let geometry = PinnedTileGeometry(count: 6, width: width)
+        #expect(geometry.slot(atX: width * 2, y: 500, count: 6) == 5)
+        #expect(geometry.slot(atX: -20, y: -20, count: 6) == 0)
+    }
 }
 
 @Suite("Pinned page and tab names")

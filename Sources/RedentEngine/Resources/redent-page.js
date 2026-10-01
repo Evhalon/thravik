@@ -133,19 +133,26 @@
       el.addEventListener('change', report);
     }
 
+    // `autocomplete` is a token list: Microsoft's sign-in says "username webauthn".
+    function autocompleteTokens(el) {
+      return (el.getAttribute('autocomplete') || '').toLowerCase().split(/\s+/);
+    }
+
+    function asksForIdentity(el) {
+      var type = (el.type || '').toLowerCase();
+      if (type !== 'text' && type !== 'email') return false;
+      var tokens = autocompleteTokens(el);
+      if (tokens.indexOf('username') !== -1 || tokens.indexOf('email') !== -1) return true;
+      var haystack = [el.getAttribute('name'), el.id, el.getAttribute('placeholder'),
+                      el.getAttribute('aria-label')].filter(Boolean).join(' ');
+      return /\b(user(name)?|email|e-mail|login|userid|utente|accedi)\b/i.test(haystack);
+    }
+
+    // The visible match wins: SSO pages keep stale copies of the identity box
+    // hidden in the DOM, and the first one in source order is often one of them.
     function findStandaloneUsernameField() {
-      var inputs = collect('input');
-      for (var i = 0; i < inputs.length; i++) {
-        var el = inputs[i];
-        var type = (el.type || '').toLowerCase();
-        if (type !== 'text' && type !== 'email') continue;
-        var autocomplete = (el.getAttribute('autocomplete') || '').toLowerCase();
-        if (autocomplete === 'username' || autocomplete === 'email') return el;
-        var haystack = [el.getAttribute('name'), el.id, el.getAttribute('placeholder'),
-                        el.getAttribute('aria-label')].filter(Boolean).join(' ');
-        if (/\b(user(name)?|email|e-mail|login|userid|utente|accedi)\b/i.test(haystack)) return el;
-      }
-      return null;
+      var matches = collect('input').filter(asksForIdentity);
+      return matches.filter(isVisibleField)[0] || matches[0] || null;
     }
 
     function fieldHaystack(el) {
@@ -243,12 +250,13 @@
     // sign-in screen.
     function isLoginUsernameField(el) {
       if (!isVisibleField(el) || el.closest('[role="search"]')) return false;
-      var tokens = (el.getAttribute('autocomplete') || '').toLowerCase().split(/\s+/);
+      var tokens = autocompleteTokens(el);
       if (tokens.indexOf('username') !== -1) return true;
       var haystack = [el.getAttribute('name'), el.id, el.getAttribute('placeholder'),
                       el.getAttribute('aria-label')].filter(Boolean).join(' ');
       if (/\b(user(name)?|login|userid|utente)\b/i.test(haystack)) return true;
-      var asksEmail = tokens.indexOf('email') !== -1 || /\b(email|e-mail)\b/i.test(haystack);
+      var asksEmail = tokens.indexOf('email') !== -1 || el.type === 'email'
+        || /\b(email|e-mail)\b/i.test(haystack);
       return asksEmail && looksLikeLoginPage();
     }
 
@@ -433,6 +441,16 @@
     }
 
     // --- Native fill bridge ---------------------------------------------
+
+    // Native forgets what the page said whenever the user switches tabs or the
+    // URL changes, while `state` here still remembers having said it. Without a
+    // way to ask again, a login form already on screen is never offered a fill.
+    window.redentAnnounce = function () {
+      state.loginSignaled = false;
+      state.otpPresent = false;
+      state.setupPresent = false;
+      scan();
+    };
 
     window.redentFillCredential = function (username, password) {
       try {

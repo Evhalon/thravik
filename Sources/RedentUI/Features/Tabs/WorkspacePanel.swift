@@ -7,13 +7,23 @@ public struct WorkspacePanel: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: SpaceDraft?
 
+    /// The sheet's margin. Strips that scroll sideways bleed back out by it so
+    /// they run to the dialog's edge instead of stopping short and clipping.
+    static let contentInset: CGFloat = 20
+    /// One fixed size for the list and every composer step. Sized to its
+    /// content, the sheet jumped between steps and a tall step shoved the
+    /// heading off the top; fixed, the steps fit themselves to it instead.
+    /// `.fitted`, because `sheetCanvas`'s form sizing settles on its 380pt
+    /// minimum and would center this frame, clipping both ends.
+    private static let size = CGSize(width: 420, height: 600)
+
     public init(model: BrowserModel) { self.model = model }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             SheetHeading(title: title, subtitle: subtitle)
             if let draft {
-                SpaceComposer(draft: draft, onCancel: closeComposer, onCommit: commit)
+                SpaceComposer(draft: draft, onCancel: closeComposer, onCommit: commit, onChange: { self.draft = $0 })
                     .transition(.opacity.combined(with: .scale(scale: 0.97)))
             } else {
                 WorkspaceSpaceList(
@@ -25,9 +35,22 @@ public struct WorkspacePanel: View {
                 footer
             }
         }
-        .padding(20)
-        .sheetCanvas(width: 420, height: 460)
+        .padding(Self.contentInset)
+        .frame(width: Self.size.width, height: Self.size.height, alignment: .top)
+        .background(alignment: .top) { draftWash }
+        .presentationSizing(.fitted)
         .presentationBackground(.ultraThinMaterial)
+    }
+
+    /// The window's own wash sits behind this sheet's material, so the dialog
+    /// wears the draft's wash itself; otherwise picking one would show nothing.
+    @ViewBuilder private var draftWash: some View {
+        if let token = draft?.look.colorToken {
+            SpaceWashFill(tint: SpaceTint(token: token), color: SpaceTintColor.color(token), strength: 1.6)
+                .frame(height: 240)
+                .allowsHitTesting(false)
+                .animation(.easeInOut(duration: 0.3), value: token)
+        }
     }
 
     private var title: String {

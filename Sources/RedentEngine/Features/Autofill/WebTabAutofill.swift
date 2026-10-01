@@ -15,6 +15,12 @@ extension WebTab {
         await evaluateFill(function: "redentFillOTP", args: [code])
     }
 
+    /// Re-sends what the page already reported, for a window that has just
+    /// forgotten it. Reads the page; never fills or submits.
+    public func announcePageSignals() async {
+        await evaluateFill(function: "redentAnnounce", args: [])
+    }
+
     /// The visible page as PNG, read locally for the authenticator QR code a
     /// two-factor setup page shows. Never stored, never logged.
     public func visiblePageImage() async -> Data? {

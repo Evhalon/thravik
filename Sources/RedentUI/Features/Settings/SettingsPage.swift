@@ -37,6 +37,15 @@ struct SettingsPage: View {
                 .padding(Metric.gutter + 4)
         }
         .onExitCommand(perform: model.closeSettings)
+        .onChange(of: services.extensions?.wantsReveal, initial: true) { revealExtensionsIfAsked() }
+    }
+
+    private func revealExtensionsIfAsked() {
+        guard let extensions = services.extensions, extensions.wantsReveal else { return }
+        extensions.wantsReveal = false
+        pane = .extensions
+        guard !extensions.storeLinkText.isEmpty else { return }
+        Task { await extensions.addFromStoreLink() }
     }
 
     @ViewBuilder
@@ -57,6 +66,14 @@ struct SettingsPage: View {
                 onOpenPasswords: { model.sheet = .passwords },
                 onOpenAuthenticatorImport: { model.sheet = .importAuthenticator }
             )
+        case .extensions:
+            if let extensions = services.extensions {
+                ExtensionsSettingsPane(
+                    extensions: extensions,
+                    onOpenStore: { model.openExtensionStore() },
+                    onOpenOptions: model.closeSettings
+                )
+            }
         case .updates:
             UpdatesSettingsPane(updates: services.updates)
         }

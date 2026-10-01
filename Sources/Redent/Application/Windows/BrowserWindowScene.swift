@@ -1,3 +1,4 @@
+import RedentEngine
 import RedentUI
 import SwiftUI
 
@@ -16,10 +17,14 @@ struct BrowserWindowScene: View {
 
     var body: some View {
         let window = app.window(for: spec)
-        let settings = SettingsServices(updates: app.updates, defaultBrowser: app.defaultBrowser, passkeys: app.passkeys)
+        let settings = SettingsServices(
+            updates: app.updates, defaultBrowser: app.defaultBrowser,
+            passkeys: app.passkeys, extensions: app.extensions.model
+        )
         return BrowserWindowView(model: window.model, settingsServices: settings) { route in
             SheetRouter(route: route, app: app, window: window)
         }
+        .environment(\.extensionToolbar, extensionToolbar(for: window))
         .onAppear {
             window.model.windowOpener = open(isPrivate:)
             window.model.windowDirectory = AppWindowDirectory(app: app, current: spec) { openWindow(value: $0) }
@@ -31,6 +36,7 @@ struct BrowserWindowScene: View {
         .background {
             WindowReadyProbe { nativeWindow in
                 window.nativeWindow = nativeWindow
+                app.extensions.host.windowBecameReady(window.tabs, nativeWindow: nativeWindow)
                 let openedExternalLinks = app.drainPendingLinks()
                 delegate.windowBecameReady(nativeWindow, openedExternalLinks: openedExternalLinks)
             }
@@ -41,6 +47,16 @@ struct BrowserWindowScene: View {
                 TornOffWindowPlacer(frame: frame.rect).frame(width: 0, height: 0)
             }
         }
+    }
+
+    /// Private windows never run extensions, so they get no buttons for them.
+    private func extensionToolbar(for window: WindowContainer) -> AnyView? {
+        guard !spec.isPrivate else { return nil }
+        let extensions = app.extensions.model
+        return AnyView(ExtensionToolbar(host: app.extensions.host, tabs: window.tabs) {
+            extensions.wantsReveal = true
+            window.model.showSettings()
+        })
     }
 
     private func open(isPrivate: Bool) {

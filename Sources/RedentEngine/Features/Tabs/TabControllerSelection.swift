@@ -55,6 +55,7 @@ extension TabController {
     func changed() {
         syncSelection()
         contexts.sync(webTabs.map(\.snapshot.browsingContext), owner: ObjectIdentifier(self))
+        extensions?.tabsChanged(in: self)
         onChange?()
     }
 
@@ -62,6 +63,7 @@ extension TabController {
     /// context registry to re-count.
     func selectionChanged() {
         syncSelection()
+        extensions?.tabsChanged(in: self)
         onChange?()
     }
 

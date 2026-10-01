@@ -122,6 +122,7 @@ struct SidebarTabList: View {
             onCloseOthers: canCloseOthers(than: tab) ? { model.tabs.closeOthers(than: tab.id) } : nil,
             onUngroup: grouped ? { try? model.tabs.perform(.moveTabToGroup(tabID: tab.id, groupID: nil)) } : nil,
             onReorder: { model.commitTabDrag(tab.id, order: $0) },
+            onPin: { model.pin(tab.id, at: $0) },
             onDetach: model.canDetach(tab.id) ? { model.tearOff(tab.id, into: $0) } : nil
         )
     }

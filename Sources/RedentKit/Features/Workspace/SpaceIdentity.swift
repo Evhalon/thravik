@@ -35,14 +35,13 @@ public enum SpaceIdentity: Sendable {
         "flame.fill", "drop.fill", "star.fill", "bolt.fill"
     ]
 
-    /// The palette the Space composer offers. A superset of `icons`, which
-    /// stays fixed because derived looks index into it.
-    public static let pickerIcons = icons + [
-        "briefcase.fill", "heart.fill", "book.fill", "airplane",
-        "house.fill", "graduationcap.fill", "cart.fill", "gamecontroller.fill",
-        "music.note", "paintbrush.fill", "hammer.fill", "chevron.left.forwardslash.chevron.right",
-        "camera.fill", "globe", "dollarsign.circle.fill", "figure.run"
-    ]
+    /// Everything the Space composer offers, de-duplicated in shelf order. A
+    /// superset of `icons`, which stays fixed because derived looks index into it.
+    public static let pickerIcons: [String] = {
+        var seen = Set<String>()
+        let all = icons + SpaceIconCategory.allCases.flatMap(\.icons)
+        return all.filter { seen.insert($0).inserted }
+    }()
 
     /// A starter Space only wears its preset until the user picks a look.
     public static func look(id: UUID, icon: String, colorToken: String) -> Look {

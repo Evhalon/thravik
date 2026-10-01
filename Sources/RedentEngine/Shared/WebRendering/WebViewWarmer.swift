@@ -19,6 +19,11 @@ final class WebViewWarmer {
     }
 
     private var spare: Spare?
+    /// Set once the window joins the extension host. The spare built before
+    /// then has no extensions, so it is dropped rather than handed out.
+    var extensionController: WKWebExtensionController? {
+        didSet { spare = nil }
+    }
     /// The page return would show for the search being typed.
     let prerenderer = SearchPrerenderer()
     private var isPreparing = false
@@ -86,7 +91,7 @@ final class WebViewWarmer {
         isPreparing = false
         guard spare == nil else { return }
         let configuration = WebViewFactory.makeConfiguration(
-            store: store, options: options, contentBlocker: contentBlocker
+            store: store, options: options, contentBlocker: contentBlocker, extensions: extensionController
         )
         let view = WebViewFactory.makeWebView(configuration: configuration)
         view.evaluateJavaScript("0") { _, _ in }

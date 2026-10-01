@@ -70,6 +70,7 @@ final class WindowContainer {
         }
 
         controller.downloads = app.downloadCoordinator
+        app.extensions.host.attach(controller)
         controller.permissionDecider = { [weak app] key, permission in
             app?.permissions.decision(key, permission) ?? .ask
         }

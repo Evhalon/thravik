@@ -31,5 +31,5 @@ struct NewTabBackdrop: View {
         return SpaceIdentity.look(id: space.id, icon: space.icon, colorToken: space.colorToken).colorToken
     }
 
-    private var ambientColor: Color { SpacePalette.color(colorToken) }
+    private var ambientColor: Color { SpaceTintColor.color(colorToken) }
 }

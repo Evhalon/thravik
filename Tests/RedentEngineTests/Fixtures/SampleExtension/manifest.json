@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Sample Highlighter",
+  "version": "1.4.0",
+  "description": "Outlines every link on example.com.",
+  "permissions": ["storage", "tabs", "tabCapture", "offscreen"],
+  "host_permissions": ["*://*.example.com/*"],
+  "action": { "default_title": "Highlight" },
+  "content_scripts": [{ "matches": ["*://*.example.com/*"], "js": ["content.js"] }]
+}

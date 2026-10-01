@@ -19,7 +19,7 @@ struct PinDropZone: View {
             .scaleEffect(target.isTargeted ? 1.02 : 1)
             .animation(.easeOut(duration: 0.14), value: target.isTargeted)
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
-                target.track(owner, frame: $0)
+                target.track(owner, frame: $0, pins: 0)
             }
             .onDisappear { target.forget(owner) }
             .help("Drag a tab here to pin it")
@@ -27,29 +27,26 @@ struct PinDropZone: View {
     }
 
     private var glyph: some View {
-        Image(systemName: "pin")
-            .font(.system(size: 14, weight: .regular))
-            .overlay(alignment: .topTrailing) {
-                Image(systemName: "plus")
-                    .font(.system(size: 7, weight: .bold))
-                    .offset(x: 6, y: -3)
-            }
-            .foregroundStyle(target.isTargeted ? Palette.chromeText : Palette.chromeSecondaryText)
+        HStack(spacing: 6) {
+            Image(systemName: target.isTargeted ? "pin.fill" : "pin")
+                .font(.system(size: 13, weight: .semibold))
+            Text(target.isTargeted ? "Drop to pin" : "Drag tabs here to pin")
+                .font(.system(size: 12, weight: .medium))
+                .lineLimit(1)
+        }
+        .foregroundStyle(target.isTargeted ? Palette.chromeText : Palette.chromeSecondaryText)
     }
 
-    @ViewBuilder
     private var fill: some View {
-        if target.isTargeted {
-            RoundedRectangle(cornerRadius: Self.corner, style: .continuous)
-                .fill(Palette.liftedChrome)
-        }
+        RoundedRectangle(cornerRadius: Self.corner, style: .continuous)
+            .fill(target.isTargeted ? Palette.liftedChrome : Palette.chromeFill)
     }
 
     private var outline: some View {
         RoundedRectangle(cornerRadius: Self.corner, style: .continuous)
             .strokeBorder(
-                target.isTargeted ? Palette.chromeSecondaryText : Palette.hairline,
-                style: StrokeStyle(lineWidth: 1, dash: [4, 3])
+                target.isTargeted ? Palette.chromeText : Palette.chromeSecondaryText.opacity(0.7),
+                style: StrokeStyle(lineWidth: target.isTargeted ? 1.5 : 1.2, dash: [5, 3])
             )
     }
 }

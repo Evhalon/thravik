@@ -35,5 +35,5 @@ struct SpaceStepBar: View {
         .animation(.spring(duration: 0.28), value: draft.step)
     }
 
-    private var tint: Color { SpacePalette.color(draft.look.colorToken) }
+    private var tint: Color { SpaceTintColor.color(draft.look.colorToken) }
 }

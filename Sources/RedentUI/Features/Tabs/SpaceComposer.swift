@@ -9,29 +9,37 @@ struct SpaceComposer: View {
     @FocusState private var isNameFocused: Bool
     private let onCancel: () -> Void
     private let onCommit: (SpaceDraft) -> Void
+    private let onChange: (SpaceDraft) -> Void
 
-    init(draft: SpaceDraft, onCancel: @escaping () -> Void, onCommit: @escaping (SpaceDraft) -> Void) {
+    init(
+        draft: SpaceDraft,
+        onCancel: @escaping () -> Void,
+        onCommit: @escaping (SpaceDraft) -> Void,
+        onChange: @escaping (SpaceDraft) -> Void
+    ) {
         _draft = State(initialValue: draft)
         self.onCancel = onCancel
         self.onCommit = onCommit
+        self.onChange = onChange
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             SpaceComposerPreview(draft: draft)
             SpaceStepBar(draft: $draft)
             stepContent
-                .frame(maxHeight: .infinity, alignment: .top)
+                .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
                 .animation(.spring(duration: 0.3), value: draft.step)
             navigation
         }
         .onAppear { isNameFocused = true }
+        .onChange(of: draft.look) { onChange(draft) }
     }
 
     @ViewBuilder private var stepContent: some View {
         switch draft.step {
         case .name: nameField.transition(stepTransition)
-        case .color: SpaceColorGrid(selection: colorToken).transition(stepTransition)
+        case .color: SpaceColorStep(token: colorToken).transition(stepTransition)
         case .icon: SpaceIconGrid(selection: icon, tint: tint).transition(stepTransition)
         }
     }
@@ -81,7 +89,7 @@ struct SpaceComposer: View {
         .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)).combined(with: .opacity)
     }
 
-    private var tint: Color { SpacePalette.color(draft.look.colorToken) }
+    private var tint: Color { SpaceTintColor.color(draft.look.colorToken) }
 
     private var colorToken: Binding<String> {
         Binding(

@@ -133,5 +133,6 @@ public final class WebTab: Identifiable, BrowserTab {
     func finishNavigation() {
         attemptedURL = nil
         controller?.contexts.pageDidLoad(in: snapshot.browsingContext)
+        controller?.extensions?.tabDidLoad(self)
     }
 }

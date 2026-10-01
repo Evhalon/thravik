@@ -11,7 +11,7 @@ struct SpaceOrb: View {
     var body: some View {
         ChromeOrb(
             systemImage: look.icon,
-            tint: SpacePalette.color(look.colorToken),
+            tint: SpaceTintColor.color(look.colorToken),
             isSelected: isSelected,
             size: size
         )

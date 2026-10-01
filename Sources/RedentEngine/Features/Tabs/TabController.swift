@@ -33,6 +33,8 @@ public final class TabController: BrowserControlling {
     /// and set by the composition root; nil in tests, where a download is
     /// simply declined.
     @ObservationIgnored public weak var downloads: DownloadCoordinator?
+    /// Shared by every regular window; nil in a private one, which extensions never see.
+    @ObservationIgnored weak var extensions: ExtensionHost?
 
     /// Shared with every other window: one registry per process.
     @ObservationIgnored let contexts: BrowsingContextRegistry
@@ -138,6 +140,7 @@ public final class TabController: BrowserControlling {
     /// the ephemeral store's lifetime tied to the window the user closed, not to
     /// whenever the last view referencing this controller happens to go away.
     public func retire() {
+        extensions?.detach(self)
         for tab in webTabs { tab.hibernate() }
         contexts.release(owner: ObjectIdentifier(self))
         warmer.discard()

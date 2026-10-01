@@ -28,6 +28,17 @@ struct SignInDetectionTests {
         #expect(signals.contains { if case .loginFormDetected = $0 { true } else { false } })
     }
 
+    @Test("Microsoft's email-first screen: token-list autocomplete, Italian labels, decoy password")
+    func microsoftEmailFirst() async throws {
+        let body = """
+        <form><input type='email' name='loginfmt' autocomplete='username webauthn'
+          placeholder='Posta elettronica, telefono o Skype'>
+        <div aria-hidden='true'><input type='password' name='passwd' tabindex='-1'></div></form>
+        """
+        let signals = try await signals(for: body, path: "/tenant/oauth2/authorize")
+        #expect(signals.contains(where: Self.isLoginForm))
+    }
+
     @Test("A card security code is not a one-time code")
     func cardCodeIsNotOTP() async throws {
         let body = "<label for='c'>Card security code</label><input id='c' name='cvc' type='text'>"
@@ -41,7 +52,32 @@ struct SignInDetectionTests {
         #expect(signals.contains { if case .otpFieldAppeared = $0 { true } else { false } })
     }
 
+    @Test("A login form already reported is reported again when the window asks")
+    func reannouncesLoginForm() async throws {
+        let page = try await load("<form><input name='user'><input type='password'></form>", path: "/login")
+        #expect(page.recorder.signals.contains(where: Self.isLoginForm))
+        page.recorder.signals.removeAll()
+
+        await page.tab.announcePageSignals()
+        for _ in 0..<100 where page.recorder.signals.isEmpty {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+
+        #expect(page.recorder.signals.contains(where: Self.isLoginForm))
+        withExtendedLifetime(page.controller) {}
+    }
+
+    private static func isLoginForm(_ signal: PageSignal) -> Bool {
+        if case .loginFormDetected = signal { true } else { false }
+    }
+
     private func signals(for body: String, path: String) async throws -> [PageSignal] {
+        let page = try await load(body, path: path)
+        withExtendedLifetime(page.controller) {}
+        return page.recorder.signals
+    }
+
+    private func load(_ body: String, path: String) async throws -> LoadedPage {
         let recorder = SignalRecorder()
         let controller = TabController(
             session: BrowserSession(tabs: [TabSnapshot()], selectedTabID: nil),
@@ -60,9 +96,15 @@ struct SignInDetectionTests {
             try await Task.sleep(for: .milliseconds(20))
         }
         try await Task.sleep(for: .milliseconds(400))
-        withExtendedLifetime(controller) {}
-        return recorder.signals
+        return LoadedPage(controller: controller, tab: tab, recorder: recorder)
     }
+}
+
+@MainActor
+private struct LoadedPage {
+    let controller: TabController
+    let tab: WebTab
+    let recorder: SignalRecorder
 }
 
 @MainActor

@@ -1,4 +1,5 @@
 import RedentDesign
+import RedentKit
 import SwiftUI
 
 struct BrowserMenu: View {
@@ -6,10 +7,18 @@ struct BrowserMenu: View {
     var symbol = "ellipsis.circle"
     var showsPageActions = false
     @State private var isShowingVolume = false
+    @Environment(\.settingsServices) private var services
 
     var body: some View {
         Menu {
             if showsPageActions { pageActions }
+            if let extensions = services?.extensions, let storeID {
+                Button("Add Extension to Thravik…") {
+                    extensions.requestInstall(storeID)
+                    model.showSettings()
+                }
+                Divider()
+            }
             Button("New Window", action: model.newWindow)
             Button("New Private Window", action: model.newPrivateWindow)
             Divider()
@@ -32,6 +41,12 @@ struct BrowserMenu: View {
         .foregroundStyle(Palette.chromeSecondaryText)
         .accessibilityLabel("Browser menu")
         .popover(isPresented: $isShowingVolume) { TabVolumePopover(model: model) }
+    }
+
+    /// The extension whose Chrome Web Store page is open, if one is.
+    private var storeID: ChromeWebStoreID? {
+        guard let url = model.selectedTab?.url, ChromeWebStoreID.isStorePage(url) else { return nil }
+        return ChromeWebStoreID(url.absoluteString)
     }
 
     @ViewBuilder

@@ -33,6 +33,7 @@ final class AppContainer {
     /// The once-per-release offer to take over web links.
     let defaultBrowser: DefaultBrowserModel
     let passkeys = PasskeyAccessModel(authorizer: SystemPasskeyAuthorization())
+    let extensions = AppExtensions()
     /// One per process, so two windows in the same Container share its cookies.
     let contexts = BrowsingContextRegistry(sessionCookies: KeychainSessionCookieStore(
         service: KeychainNamespace.service("app.redent.session-cookies")
@@ -97,6 +98,7 @@ final class AppContainer {
         coordinator.observer = downloads
         downloads.commands = coordinator
         Task { await permissions.load() }
+        Task { [extensions] in await extensions.host.start() }
         KeychainMigration.run(credentials: credentials, authenticator: authenticator)
         observeWebAppLaunchers()
         startUpdatePolling()

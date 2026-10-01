@@ -26,22 +26,37 @@
     };
     var SKIP = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1, TITLE: 1, SELECT: 1 };
 
-    var state = { query: '', matches: [], index: -1, styled: false, requestID: 0, controlMarks: [] };
+    var state = { query: '', matches: [], index: -1, styledRoots: new WeakSet(), sheet: null, requestID: 0, controlMarks: [] };
 
     function supported() {
       return typeof CSS !== 'undefined' && !!CSS.highlights && typeof Highlight === 'function';
     }
 
     // A constructible sheet rather than a <style> element: no node the page can
-    // trip over, and no inline-style CSP to argue with.
-    function installStyle() {
-      if (state.styled) return;
+    // trip over, and no inline-style CSP to argue with. Highlight rules are
+    // scoped like any other style, so each shadow root needs the sheet too.
+    function installStyle(root) {
+      if (!root || state.styledRoots.has(root)) return;
       try {
-        var sheet = new CSSStyleSheet();
-        sheet.replaceSync(RULES);
-        document.adoptedStyleSheets = document.adoptedStyleSheets.concat(sheet);
-        state.styled = true;
+        if (!state.sheet) {
+          state.sheet = new CSSStyleSheet();
+          state.sheet.replaceSync(RULES);
+        }
+        root.adoptedStyleSheets = root.adoptedStyleSheets.concat(state.sheet);
+        state.styledRoots.add(root);
       } catch (e) {}
+    }
+
+    function rootOf(match) {
+      return (match.control || match.startContainer).getRootNode();
+    }
+
+    // Crosses a shadow boundary the way layout does, so scrolling to a match
+    // inside a web component still finds the page's scroll boxes.
+    function parentOf(node) {
+      if (node.parentElement) return node.parentElement;
+      var root = node.getRootNode ? node.getRootNode() : null;
+      return root && root.host ? root.host : null;
     }
 
     function blockAncestor(element, root) {
@@ -50,53 +65,62 @@
       return node;
     }
 
+    // Rendered is the only test, as in every other browser's find: text that
+    // is aria-hidden, transparent, or in a not-yet-painted content-visibility
+    // region is still text the reader can see or scroll to.
     function visible(element) {
-      if (!element || element.closest('[hidden],[aria-hidden="true"],[inert]')) return false;
+      if (!element) return false;
       if (element.checkVisibility) {
-        return element.checkVisibility({ contentVisibilityAuto: true, opacityProperty: true, visibilityProperty: true });
+        if (element.checkVisibility({ visibilityProperty: true })) return true;
+        // `display: contents` generates no box of its own, so it answers
+        // "invisible" even while its children render.
+        var style = window.getComputedStyle(element);
+        return style.display === 'contents' && visible(parentOf(element));
       }
-      var style = window.getComputedStyle(element);
-      return (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0')
+      var fallback = window.getComputedStyle(element);
+      if (fallback.display === 'contents') return visible(parentOf(element));
+      return fallback.display !== 'none' && fallback.visibility !== 'hidden'
         && (!!element.offsetParent || element.nodeName === 'BODY');
     }
 
-    function omitted(parent, root) {
-      for (var node = parent; node && node !== root; node = node.parentElement) {
-        if (SKIP[node.nodeName]) return true;
+    // The rendered tree rather than the light DOM: open shadow roots replace
+    // their host's children, and a slot shows the nodes assigned to it.
+    function walkRendered(node, page) {
+      if (node.nodeType === Node.TEXT_NODE) return addText(node, page);
+      if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return;
+      if (SKIP[node.nodeName]) return;
+      if (node.shadowRoot) {
+        page.roots.push(node.shadowRoot);
+        return walkRendered(node.shadowRoot, page);
       }
-      return false;
+      var children = node.nodeName === 'SLOT' ? node.assignedNodes({ flatten: true }) : node.childNodes;
+      for (var index = 0; index < children.length; index++) walkRendered(children[index], page);
+    }
+
+    function addText(node, page) {
+      var parent = node.parentElement;
+      if (!node.data || !parent) return;
+      // Decided once per element: a paragraph is dozens of text nodes, and
+      // asking each one's visibility again forces a style pass apiece.
+      var verdict = page.verdicts.get(parent);
+      if (verdict === undefined) {
+        verdict = visible(parent);
+        page.verdicts.set(parent, verdict);
+      }
+      if (!verdict) return;
+      var block = blockAncestor(parent, null);
+      if (page.lastBlock && block !== page.lastBlock) page.text += '\n';
+      page.lastBlock = block;
+      page.segments.push({ node: node, start: page.text.length });
+      page.text += node.data;
     }
 
     // The page's visible text as one string, with a map back to the nodes it
     // came from, so a match may span the <em> in the middle of a sentence.
     function readPage(root) {
-      var segments = [];
-      var text = '';
-      var lastBlock = null;
-      if (!root) return { segments: segments, text: text };
-      // Decided once per element: a paragraph is dozens of text nodes, and
-      // asking each one's visibility again forces a style pass apiece.
-      var verdicts = new Map();
-      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-        acceptNode: function (node) {
-          var parent = node.parentElement;
-          if (!node.data || !parent) return NodeFilter.FILTER_REJECT;
-          var verdict = verdicts.get(parent);
-          if (verdict === undefined) {
-            verdict = !omitted(parent, root) && visible(parent);
-            verdicts.set(parent, verdict);
-          }
-          return verdict ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-        }
-      });
-      for (var node = walker.nextNode(); node; node = walker.nextNode()) {
-        var block = blockAncestor(node.parentElement, root);
-        if (lastBlock && block !== lastBlock) text += '\n';
-        lastBlock = block;
-        segments.push({ node: node, start: text.length });
-        text += node.data;
-      }
-      return { segments: segments, text: text };
+      var page = { segments: [], text: '', lastBlock: null, verdicts: new Map(), roots: [] };
+      if (root) walkRendered(root, page);
+      return page;
     }
 
     function segmentAt(segments, offset) {
@@ -161,8 +185,7 @@
       return Number.MAX_SAFE_INTEGER;
     }
 
-    function rangeMatches(query, root) {
-      var page = readPage(root);
+    function rangeMatches(query, page) {
       if (!page.segments.length) return [];
       // A case-insensitive RegExp over the original text, never a lower-cased
       // copy: case folding can change a string's length and slide every offset.
@@ -187,10 +210,11 @@
       return element.value;
     }
 
-    function controlMatches(query, root) {
-      var selector = 'input,textarea,select';
-      var controls = Array.prototype.slice.call(root.querySelectorAll(selector));
-      if (root.matches && root.matches(selector)) controls.unshift(root);
+    function controlMatches(query, roots) {
+      var controls = [];
+      roots.forEach(function (root) {
+        controls = controls.concat(Array.prototype.slice.call(root.querySelectorAll('input,textarea,select')));
+      });
       var pattern = new RegExp(escapeForRegExp(query), 'gi');
       var matches = [];
       for (var index = 0; index < controls.length; index++) {
@@ -206,8 +230,10 @@
     }
 
     function findMatches(query) {
-      var ranges = rangeMatches(query, document.body);
-      var controls = controlMatches(query, document.body);
+      if (!document.body) return [];
+      var page = readPage(document.body);
+      var ranges = rangeMatches(query, page);
+      var controls = controlMatches(query, [document.body].concat(page.roots));
       // The walk already yields text matches in document order; only form
       // values need interleaving, and sorting thousands of ranges is not free.
       if (!controls.length) return ranges;
@@ -239,12 +265,13 @@
 
     function paint() {
       if (!state.matches.length) return clearHighlights();
-      installStyle();
+      installStyle(document);
       var all = new Highlight();
       var active = state.matches[state.index];
       clearControlMarks();
       for (var i = 0; i < state.matches.length; i++) {
         var match = state.matches[i];
+        installStyle(rootOf(match));
         if (match.control) markControl(match.control, CONTROL_ALL);
         else all.add(match);
       }
@@ -318,7 +345,7 @@
     function scrollContainers(element) {
       var containers = [];
       var root = document.scrollingElement || document.documentElement;
-      for (var node = element.parentElement; node && node !== root; node = node.parentElement) {
+      for (var node = parentOf(element); node && node !== root; node = parentOf(node)) {
         if (node === document.body || node.scrollHeight <= node.clientHeight) continue;
         if (scrollsForReader(window.getComputedStyle(node))) containers.push(node);
       }

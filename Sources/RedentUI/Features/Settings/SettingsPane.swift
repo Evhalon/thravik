@@ -3,6 +3,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case general = "General"
     case appearance = "Appearance"
     case privacy = "Privacy"
+    case extensions = "Extensions"
     case updates = "Updates"
 
     var id: String { rawValue }
@@ -12,6 +13,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: "gearshape"
         case .appearance: "paintbrush"
         case .privacy: "hand.raised"
+        case .extensions: "puzzlepiece.extension"
         case .updates: "arrow.triangle.2.circlepath"
         }
     }

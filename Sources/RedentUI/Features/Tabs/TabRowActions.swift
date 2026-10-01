@@ -14,6 +14,8 @@ struct TabRowActions {
     var onUngroup: (() -> Void)?
     /// Visual order after a live drag. Nil for rows that cannot reorder.
     var onReorder: (([UUID]) -> Void)?
+    /// Pins the tab at this cell of the pinned grid when a drag ends there.
+    var onPin: ((Int) -> Void)?
     /// Moves the tab into a window of its own, at this frame in screen points,
     /// when a drag ends outside this one.
     var onDetach: ((CGRect) -> Void)?

@@ -3,7 +3,11 @@
 # cdhash, which changes on every build, so each rebuild re-prompts for the
 # vault and the authenticator. A certificate-backed signature keeps a stable
 # designated requirement, so "Always Allow" is asked once and then sticks.
-# Local builds pick the Apple Development identity when one is installed;
+# Local builds sign with the Developer ID identity: the Keychain partitions
+# file-based items by Team ID, and only a Team ID survives a rebuild — a
+# self-signed certificate still partitions by cdhash and re-prompts. The
+# Apple Development key needs Keychain UI to sign (errSecInternalComponent),
+# so it is skipped. "Redent Development" is the last resort before ad-hoc.
 # CODESIGN_IDENTITY=- forces ad-hoc. Release builds set REQUIRE_SIGNING=1 with
 # a Developer ID identity, and notarization rejects any nested binary that is
 # not signed by that same identity — so helpers are signed before the app.
@@ -43,8 +47,10 @@ identity_sign() {
 }
 
 local_identity() {
-	security find-identity -v -p codesigning 2>/dev/null \
-		| sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' | head -n 1
+	team_identity=$(security find-identity -v -p codesigning 2>/dev/null \
+		| sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n 1)
+	if [ -n "$team_identity" ]; then echo "$team_identity"; return; fi
+	sh "$SCRIPT_DIR/ensure-dev-identity.sh" >/dev/null 2>&1 && echo "Redent Development"
 }
 
 identity="${CODESIGN_IDENTITY:-$(local_identity)}"

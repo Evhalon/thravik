@@ -1,32 +1,53 @@
 import Observation
+import RedentKit
 import SwiftUI
 
-/// Where a tab dragged out of the sidebar list is pinned on release: the empty
-/// pinned area above the list.
+/// Where a tab dragged out of the sidebar list is pinned on release: the
+/// pinned area above the list, at the cell under the pointer.
 ///
-/// The zone and the rows live in different coordinate spaces — the rows' is
+/// The area and the rows live in different coordinate spaces — the rows' is
 /// inside the scroll view — so both sides meet in `.global`.
 @MainActor
 @Observable
 final class PinDropTarget {
-    /// True while a dragged tab hovers the zone, so it can light up.
-    private(set) var isTargeted = false
+    private struct Area {
+        let frame: CGRect
+        let pins: Int
+    }
+
+    /// The cell a release would pin into, so the tiles can open a gap there.
+    /// Nil while no dragged tab hovers the pinned area.
+    private(set) var slot: Int?
     /// Keyed by the reporting view, not the Space: the pager rebuilds pages as
     /// it turns, and an old page's `onDisappear` can land after the new one
     /// reported the same Space.
-    @ObservationIgnored private var frames: [UUID: CGRect] = [:]
+    @ObservationIgnored private var areas: [UUID: Area] = [:]
 
-    func track(_ owner: UUID, frame: CGRect) { frames[owner] = frame }
+    var isTargeted: Bool { slot != nil }
 
-    func forget(_ owner: UUID) { frames.removeValue(forKey: owner) }
-
-    /// Returns whether a release at `pointer`, in `.global`, would pin.
-    @discardableResult
-    func refresh(pointer: CGPoint) -> Bool {
-        let over = frames.values.contains { $0.contains(pointer) }
-        if over != isTargeted { isTargeted = over }
-        return over
+    /// - Parameter pins: the tiles drawn there, not counting an open gap.
+    func track(_ owner: UUID, frame: CGRect, pins: Int) {
+        areas[owner] = Area(frame: frame, pins: pins)
     }
 
-    func end() { isTargeted = false }
+    func forget(_ owner: UUID) { areas.removeValue(forKey: owner) }
+
+    /// Returns the cell a release at `pointer`, in `.global`, would pin into.
+    @discardableResult
+    func refresh(pointer: CGPoint) -> Int? {
+        let next = areas.values.lazy.compactMap { Self.slot(in: $0, at: pointer) }.first
+        if next != slot { slot = next }
+        return next
+    }
+
+    func end() { slot = nil }
+
+    private static func slot(in area: Area, at pointer: CGPoint) -> Int? {
+        // A little slack above and below: the tiles are short targets.
+        guard area.frame.insetBy(dx: 0, dy: -6).contains(pointer) else { return nil }
+        let cells = area.pins + 1
+        return PinnedTileGeometry(count: cells, width: area.frame.width).slot(
+            atX: pointer.x - area.frame.minX, y: pointer.y - area.frame.minY, count: cells
+        )
+    }
 }

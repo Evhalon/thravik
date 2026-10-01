@@ -73,7 +73,7 @@ private struct TabDragging: ViewModifier {
             }
             .onEnded { value in
                 let landing = actions.onDetach == nil ? nil : TabDetachZone.landingFrame()
-                let pins = landing == nil && pinDrop?.refresh(pointer: inWindow(value.location)) == true
+                let pinSlot = landing == nil ? pinDrop?.refresh(pointer: inWindow(value.location)) : nil
                 let staysInStrip = drag.contains(value.location)
                 pinDrop?.end()
                 tearOff.hide()
@@ -84,8 +84,8 @@ private struct TabDragging: ViewModifier {
                     let order = drag.drop()
                     if let landing, let detach = actions.onDetach {
                         detach(landing)
-                    } else if pins {
-                        actions.onTogglePin()
+                    } else if let pinSlot, let pin = actions.onPin {
+                        pin(pinSlot)
                     } else if staysInStrip, let order {
                         actions.onReorder?(order)
                     }

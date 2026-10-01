@@ -112,6 +112,7 @@ public final class BrowserModel {
         otp.pageChanged()
         twoFactor.pageChanged()
         dismissFormSuggestions()
+        Task { [weak self] in await self?.selectedTab?.announcePageSignals() }
     }
 
     /// One timer for the whole window, per AGENTS.md §4 — not one per code.
