@@ -43,6 +43,44 @@ struct PinnedCloseTests {
         #expect(tab.snapshot.faviconData == nil)
         #expect(tab.snapshot.pinnedPageElsewhere == nil)
     }
+
+    @Test("Closing a pin with only pins remaining clears selection", arguments: [1, 2])
+    func closeWithOnlyPins(count: Int) throws {
+        let pins = (0..<count).map { _ in TabSnapshot(url: home, isPinned: true) }
+        let selected = try #require(pins.first?.id)
+        let browser = TabController(
+            session: BrowserSession(tabs: pins, selectedTabID: selected),
+            settings: BrowserSettings(), logger: SilentLogger()
+        )
+        browser.close(selected)
+        #expect(browser.selectedID == nil)
+        #expect(browser.selectedTab == nil)
+        #expect(browser.session.selectedTabID == nil)
+        #expect(browser.tabs.count == count)
+        #expect(browser.tabs.allSatisfy { $0.isPinned })
+        browser.select(selected)
+        #expect(browser.selectedID == selected)
+        browser.close(selected)
+        #expect(browser.selectedID == nil)
+    }
+
+    @Test("Closing the last normal tab does not select a saved pin")
+    func closeLastNormalTab() {
+        let (browser, pinned, other) = controller()
+        browser.select(other)
+        browser.close(other)
+        #expect(browser.selectedID == nil)
+        #expect(browser.tabs.map(\.id) == [pinned])
+    }
+
+    @Test("Closing an unselected pin preserves the selected pin")
+    func closeUnselectedPin() {
+        let (browser, pinned, other) = controller()
+        browser.togglePin(other)
+        browser.close(other)
+        #expect(browser.selectedID == pinned)
+        #expect(browser.tabs.count == 2)
+    }
 }
 
 private struct SilentLogger: EventLogging {

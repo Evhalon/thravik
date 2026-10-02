@@ -14,11 +14,7 @@ extension TabController {
         return webTabs.firstIndex(where: { $0.id == id }).map { $0 + 1 } ?? webTabs.count
     }
 
-    func selectionAfterClosing(_ id: UUID) -> UUID? {
-        TabCloseSelection.afterClosing(id, in: visualTabIDs)
-    }
-
-    private var visualTabIDs: [UUID] {
+    var visualTabIDs: [UUID] {
         SidebarOutline(
             tabs: webTabs.map(\.snapshot),
             groups: workspace.groups,
