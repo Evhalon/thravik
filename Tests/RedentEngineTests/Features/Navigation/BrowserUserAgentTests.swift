@@ -7,7 +7,7 @@ import WebKit
 @Suite("Browser user agent")
 @MainActor
 struct BrowserUserAgentTests {
-    @Test("Every page uses the system WebKit identity, not a Chrome label")
+    @Test("Public pages use the system WebKit identity")
     func everyPageUsesSafariIdentity() throws {
         let github = try #require(URL(string: "https://github.com"))
         let video = try #require(URL(string: "https://example.com/watch"))
@@ -50,6 +50,43 @@ struct BrowserUserAgentTests {
         view.customUserAgent = "Mozilla/5.0 Chrome/152.0.0.0"
         let any = try #require(URL(string: "https://example.com"))
         BrowserUserAgent.apply(to: view, for: any)
+        #expect(BrowserUserAgent.normalized(view.customUserAgent) == nil)
+    }
+
+    @Test("Octane uses Chrome identity on HTTP and HTTPS")
+    func octaneUsesChromeIdentity() throws {
+        for address in [
+            "http://octane.gbm.lan:8080/ui/?p=2001/1003#entity-navigation",
+            "https://OCTANE.GBM.LAN/ui/"
+        ] {
+            let url = try #require(URL(string: address))
+            let agent = try #require(BrowserUserAgent.string(for: url))
+            #expect(agent.contains("Chrome/"))
+        }
+    }
+
+    @Test("Octane exception excludes lookalikes, subdomains and other schemes")
+    func octaneExceptionIsExact() throws {
+        for address in [
+            "http://evil-octane.gbm.lan:8080/ui/",
+            "http://octane.gbm.lan.example.com/ui/",
+            "http://child.octane.gbm.lan/ui/",
+            "ftp://octane.gbm.lan/ui/"
+        ] {
+            let url = try #require(URL(string: address))
+            #expect(BrowserUserAgent.string(for: url) == nil)
+        }
+        #expect(BrowserUserAgent.string(for: nil) == nil)
+    }
+
+    @Test("Leaving Octane restores Safari identity on the same web view")
+    func leavingOctaneRestoresSafari() throws {
+        let view = WKWebView()
+        let octane = try #require(URL(string: "http://octane.gbm.lan:8080/ui/"))
+        BrowserUserAgent.apply(to: view, for: octane)
+        #expect(view.customUserAgent?.contains("Chrome/") == true)
+        let other = try #require(URL(string: "https://example.com"))
+        BrowserUserAgent.apply(to: view, for: other)
         #expect(BrowserUserAgent.normalized(view.customUserAgent) == nil)
     }
 
