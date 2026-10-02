@@ -14,13 +14,22 @@ public final class PageChromeModel {
     public var isBookmarked = false
 
     public var isFindBarVisible = false
-    public var findQuery = ""
+    public internal(set) var isCapturingFindSelection = false
+    public var findQuery = "" {
+        didSet {
+            if findQuery != oldValue {
+                findMatches = nil
+                isCapturingFindSelection = false
+            }
+        }
+    }
     /// What the page answered for the query on screen — `nil` until it has
     /// answered at all, so the field never flashes red mid-keystroke.
     public var findMatches: FindMatches?
     /// The search the page has not answered yet. Held so a caller can tell
     /// whether the count on screen belongs to the query in the field.
-    @ObservationIgnored public var findInFlight: Task<Void, Never>?
+    public var findInFlight: Task<Void, Never>? { findSession.task }
+    @ObservationIgnored let findSession = FindSession()
     /// The last search matched nothing — the field turns red rather than
     /// silently doing nothing.
     public var findFailed: Bool { findMatches?.isEmpty == true }
@@ -40,6 +49,8 @@ public final class PageChromeModel {
     }
 
     public func hideFindBar() {
+        findSession.invalidate()
+        isCapturingFindSelection = false
         isFindBarVisible = false
         findMatches = nil
     }

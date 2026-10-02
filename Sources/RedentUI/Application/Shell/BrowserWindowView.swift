@@ -42,6 +42,7 @@ public struct BrowserWindowView<Sheets: View>: View {
             model.address.sync(with: model.selectedTab)
         }
         .task(id: model.selectedTab?.url) { await model.refreshBookmarkState() }
+        .onChange(of: model.selectedTab?.isLoading) { _, _ in model.findPageContextChanged() }
         .onChange(of: model.tabs.selectedID) { _, _ in
             model.closeSettings()
             model.pageContextChanged()

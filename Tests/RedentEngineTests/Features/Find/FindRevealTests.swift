@@ -59,4 +59,47 @@ struct FindRevealTests {
         ) as? Double
         #expect((scrolled ?? 0) > 3000)
     }
+
+    @Test("A match clipped by a small panel is revealed even inside the page viewport")
+    func revealsNestedClippingInsideViewport() async throws {
+        let tab = try await FindTestPage.saying("""
+        <div id="panel"><div style="height:180px"></div><p>needle</p></div>
+        """, head: "<style>#panel{height:100px;overflow:auto}</style>")
+        _ = await tab.findInPage("needle", forward: true)
+        let top = try await tab.webView?.callAsyncJavaScript(
+            "return document.getElementById('panel').scrollTop",
+            in: nil, contentWorld: PageScripts.contentWorld
+        ) as? Int
+        #expect((top ?? 0) > 0)
+    }
+
+    @Test("A horizontal scrolling panel reveals a match past its right edge")
+    func revealsHorizontalPanel() async throws {
+        let tab = try await FindTestPage.saying("""
+        <div id="panel"><div style="width:1600px"><span style="margin-left:1400px">needle</span></div></div>
+        """, head: "<style>#panel{width:200px;overflow:auto;white-space:nowrap}</style>")
+        _ = await tab.findInPage("needle", forward: true)
+        let left = try await tab.webView?.callAsyncJavaScript(
+            "return document.getElementById('panel').scrollLeft",
+            in: nil, contentWorld: PageScripts.contentWorld
+        ) as? Int
+        #expect((left ?? 0) > 1000)
+    }
+
+
+    @Test("A scrolling text container can reveal its own text nodes")
+    func revealsDirectTextInsideScrollingParent() async throws {
+        let lines = String(repeating: "line\n", count: 100)
+        let tab = try await FindTestPage.saying(
+            "<div id=panel>\(lines)needle</div>",
+            head: "<style>#panel{height:100px;overflow:auto;white-space:pre}</style>"
+        )
+        _ = await tab.findInPage("needle", forward: true)
+        let top = try await tab.webView?.callAsyncJavaScript(
+            "return document.getElementById('panel').scrollTop",
+            in: nil, contentWorld: PageScripts.contentWorld
+        ) as? Int
+        #expect((top ?? 0) > 1000)
+    }
+
 }

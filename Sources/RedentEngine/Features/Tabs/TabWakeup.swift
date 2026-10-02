@@ -83,6 +83,9 @@ extension WebTab {
         view.configuration.userContentController.add(
             router, contentWorld: PageScripts.contentWorld, name: PageScripts.messageHandlerName
         )
+        view.configuration.userContentController.addScriptMessageHandler(
+            pageFinder.frames, contentWorld: PageScripts.contentWorld, name: FindFrameRegistry.handlerName
+        )
         signalRouter = router
 
         view.pageZoom = zoom

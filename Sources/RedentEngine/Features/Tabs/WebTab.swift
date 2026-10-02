@@ -65,7 +65,7 @@ public final class WebTab: Identifiable, BrowserTab {
     @ObservationIgnored var videoAspectRatio = 16.0 / 9.0
     @ObservationIgnored var floatingVideoRequestID: UInt = 0
     @ObservationIgnored var floatingVideoOpening = false
-    @ObservationIgnored var findRequestID: UInt = 0
+    @ObservationIgnored let pageFinder = WebPageFinder()
     /// Chrome's DevTools docked under the page, while open. It keeps the tab
     /// awake, and closes with the web view it inspects.
     var devToolsPanel: DevToolsPanel?

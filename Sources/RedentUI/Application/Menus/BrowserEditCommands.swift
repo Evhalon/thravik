@@ -13,10 +13,13 @@ struct BrowserEditCommands: Commands {
                 .disabled(!(model?.hasPage ?? false))
             Button("Find Next") { model?.findNext(forward: true) }
                 .keyboardShortcut("g")
-                .disabled(!(model?.chrome.isFindBarVisible ?? false))
+                .disabled(!(model?.canFindNext ?? false))
             Button("Find Previous") { model?.findNext(forward: false) }
                 .keyboardShortcut("g", modifiers: [.command, .shift])
-                .disabled(!(model?.chrome.isFindBarVisible ?? false))
+                .disabled(!(model?.canFindNext ?? false))
+            Button("Close Find on Page") { model?.closeFindBar() }
+                .keyboardShortcut(.escape, modifiers: [])
+                .disabled(!canCloseFind)
             Divider()
             Button("Fill Login") { model?.fillLogin() }
                 .keyboardShortcut("\\", modifiers: .command)
@@ -34,5 +37,11 @@ struct BrowserEditCommands: Commands {
                 .keyboardShortcut("p")
                 .disabled(!(model?.hasPage ?? false))
         }
+    }
+
+    private var canCloseFind: Bool {
+        guard let model, model.chrome.isFindBarVisible else { return false }
+        guard !model.address.isEditing, model.formHistory.menu == nil else { return false }
+        return !model.showsCommandBar && !model.showsFloatingNewTab && model.sheet == nil && !model.showsSettings
     }
 }

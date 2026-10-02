@@ -108,6 +108,7 @@ public final class BrowserModel {
     }
 
     public func pageContextChanged() {
+        findPageContextChanged()
         autofill.pageChanged()
         otp.pageChanged()
         twoFactor.pageChanged()

@@ -31,6 +31,8 @@ public protocol BrowserTab: FloatingVideoControlling {
     func findInPage(_ query: String, forward: Bool) async -> FindMatches
     /// Drops the highlights `findInPage` left behind.
     func clearFindHighlight()
+    func focusPage()
+    func selectedPageText() async -> String?
     /// Puts the page on the system print panel.
     func printPage()
     func fillCredential(username: String, password: String) async
@@ -74,6 +76,8 @@ public extension BrowserTab {
     func reloadIgnoringCache() { reload() }
     func findInPage(_ query: String, forward: Bool) async -> FindMatches { .empty }
     func clearFindHighlight() {}
+    func focusPage() {}
+    func selectedPageText() async -> String? { nil }
     func printPage() {}
     var isPlayingAudio: Bool { false }
     var isMuted: Bool { false }

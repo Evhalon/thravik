@@ -58,56 +58,6 @@ extension BrowserModel {
         }
     }
 
-    public func showFindBar() {
-        guard hasPage else { return }
-        let wasHidden = !chrome.isFindBarVisible
-        chrome.showFindBar()
-        // Reopening over the query still in the field lights the page back up
-        // instead of waiting for a keystroke. ⌘F on an open bar only takes the
-        // caret back — it must not step to the next match.
-        if wasHidden, !chrome.findQuery.isEmpty { findNext() }
-    }
-
-    public func closeFindBar() {
-        chrome.hideFindBar()
-        selectedTab?.clearFindHighlight()
-    }
-
-    /// - Parameter forward: ⌘G searches on, ⇧⌘G searches back.
-    public func findNext(forward: Bool = true) {
-        search(chrome.findQuery, forward: forward, after: nil)
-    }
-
-    /// Typing asks the page once per pause, not once per letter: every search
-    /// reads the page's whole text, and a burst of them queues up on the page
-    /// and lags behind the field. Return still searches at once.
-    public func findQueryChanged() {
-        let query = chrome.findQuery
-        search(query, forward: true, after: query.count == 1 ? .milliseconds(350) : .milliseconds(150))
-    }
-
-    private func search(_ query: String, forward: Bool, after pause: Duration?) {
-        chrome.findInFlight?.cancel()
-        guard let tab = selectedTab else { return }
-        guard !query.isEmpty else { return clearFindMatches(on: tab) }
-        chrome.findInFlight = Task {
-            if let pause {
-                try? await Task.sleep(for: pause)
-                guard !Task.isCancelled else { return }
-            }
-            let matches = await tab.findInPage(query, forward: forward)
-            // Typing outruns the page: a stale answer must not overwrite the
-            // count for the query the reader has since typed.
-            guard chrome.findQuery == query else { return }
-            chrome.findMatches = matches
-        }
-    }
-
-    private func clearFindMatches(on tab: any BrowserTab) {
-        chrome.findMatches = nil
-        tab.clearFindHighlight()
-    }
-
     /// ⌘1…⌘8 pick a tab in the current Space; ⌘9 is always the last one.
     /// With the Command Bar open they run its first nine rows.
     public func selectTab(at index: Int) {

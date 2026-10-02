@@ -21,7 +21,7 @@ enum PageScripts {
     /// A missing resource is a no-op, never a crash — a bundle resource must
     /// never be force-unwrapped.
     static func install(into controller: WKUserContentController, quiets: Bool) {
-        for name in ["redent-page", "redent-find"] {
+        for name in ["redent-page", "redent-find", "redent-find-frames"] {
             add(loadSource(named: name), at: .atDocumentEnd, to: controller)
         }
         // At document start: a page that autoplays on load must already be heard.

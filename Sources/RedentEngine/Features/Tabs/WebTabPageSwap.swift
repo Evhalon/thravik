@@ -46,9 +46,14 @@ extension WebTab {
         canFloatVideo = false
         isVideoPlaying = false
         closeDevTools()
+        pageFinder.clear(in: view)
+        pageFinder.frames.reset()
         teardownObservers()
         view.configuration.userContentController.removeScriptMessageHandler(
             forName: PageScripts.messageHandlerName, contentWorld: PageScripts.contentWorld
+        )
+        view.configuration.userContentController.removeScriptMessageHandler(
+            forName: FindFrameRegistry.handlerName, contentWorld: PageScripts.contentWorld
         )
         signalRouter = nil
         view.navigationDelegate = nil

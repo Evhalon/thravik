@@ -4,6 +4,7 @@ import RedentKit
 /// When the workspace is written to disk, and on which thread.
 extension BrowserModel {
     func tabsChanged() {
+        findPageContextChanged()
         if split.isSplit { split.validate(against: Set(tabs.tabs.map(\.id))) }
         hasUnsavedChanges = true
         refreshCommandContext()

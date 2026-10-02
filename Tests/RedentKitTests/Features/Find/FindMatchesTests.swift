@@ -21,4 +21,12 @@ struct FindMatchesTests {
     func rejectsNegativeTotals() {
         #expect(FindMatches(total: -4, current: 1).isEmpty)
     }
+
+    @Test("Native matches never pretend to expose an exact count")
+    func nativeMatchCountIsUnknown() {
+        #expect(!FindMatches.foundWithoutCount.isEmpty)
+        #expect(!FindMatches.foundWithoutCount.isCountExact)
+        #expect(FindMatches.empty.isCountExact)
+        #expect(FindMatches(total: 12, current: 3).isCountExact)
+    }
 }

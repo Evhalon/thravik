@@ -40,4 +40,16 @@ struct FindReachTests {
 
         #expect(await tab.findInPage("xiao", forward: true) == FindMatches(total: 3, current: 1))
     }
+
+    @Test("Direct text children of a shadow root are searchable")
+    func findsDirectShadowRootText() async throws {
+        let tab = try await FindTestPage.saying("""
+        <x-card></x-card>
+        <script>
+        document.querySelector('x-card').attachShadow({mode:'open'}).textContent = 'needle shadow';
+        </script>
+        """)
+        #expect(await tab.findInPage("needle", forward: true) == FindMatches(total: 1, current: 1))
+    }
+
 }

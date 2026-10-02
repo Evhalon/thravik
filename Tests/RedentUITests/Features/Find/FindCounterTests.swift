@@ -88,6 +88,7 @@ struct FindCounterTests {
     func typingAsksOncePerPause() async {
         let (model, tab) = windowOnAPage()
         tab.findResult = FindMatches(total: 2, current: 1)
+        model.showFindBar()
         for query in ["q", "qu", "qui", "quick"] {
             model.chrome.findQuery = query
             model.findQueryChanged()
@@ -102,6 +103,8 @@ struct FindCounterTests {
     func returnSkipsThePause() async {
         let (model, tab) = windowOnAPage()
         tab.findResult = FindMatches(total: 1, current: 1)
+        model.showFindBar()
+        await model.chrome.findInFlight?.value
         model.chrome.findQuery = "quick"
         model.findQueryChanged()
 
