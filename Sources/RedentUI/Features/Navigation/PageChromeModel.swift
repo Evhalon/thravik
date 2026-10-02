@@ -38,10 +38,16 @@ public final class PageChromeModel {
     public var findFocusEpoch: UInt = 0
     /// Bumped to send the caret to the address bar (⌘L).
     public var addressFocusEpoch: UInt = 0
+    /// The corner notice for the link just put on the pasteboard.
+    public var copiedLink: CopiedLinkNotice?
 
     public init() {}
 
     public func focusAddress() { addressFocusEpoch &+= 1 }
+
+    public func announceCopiedLink(removedTracking: Bool) {
+        copiedLink = CopiedLinkNotice(removedTracking: removedTracking)
+    }
 
     public func showFindBar() {
         isFindBarVisible = true

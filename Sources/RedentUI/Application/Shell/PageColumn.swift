@@ -8,6 +8,7 @@ import SwiftUI
 struct PageColumn<Backdrop: View>: View {
     @Bindable var model: BrowserModel
     let usesTopStrip: Bool
+    let overlaidChromeHeight: CGFloat
     let backdrop: Backdrop
     @Environment(\.settingsServices) private var settingsServices
 
@@ -27,6 +28,13 @@ struct PageColumn<Backdrop: View>: View {
             }
         }
         .pageCard(isInset: !model.isFocusMode && !model.usesEdgeReveal && !isShowingNewTab) { backdrop }
+        .overlay(alignment: .topLeading) {
+            if !model.showsNavigationBar, let tab = model.selectedTab {
+                ChromeLoadingBar(progress: tab.progress, isLoading: tab.isLoading)
+                    .id(tab.id)
+            }
+        }
+        .overlay(alignment: .topTrailing) { copiedLinkToast }
     }
 
     /// Without the rail there is nothing else holding the window buttons, so the
@@ -42,6 +50,19 @@ struct PageColumn<Backdrop: View>: View {
             ChromeBar(model: model)
         }
         .background { TitlebarDragRegion() }
+    }
+
+    /// Pinned to the page rather than the window, so it sits under whichever
+    /// bar is showing and follows the revealed one in and out.
+    @ViewBuilder
+    private var copiedLinkToast: some View {
+        if let notice = model.chrome.copiedLink {
+            CopiedLinkToast(chrome: model.chrome, notice: notice)
+                .padding(.top, Metric.gutter + overlaidChromeHeight)
+                .padding(.trailing, Metric.gutter)
+                .animation(.spring(duration: 0.26, bounce: 0), value: overlaidChromeHeight)
+                .transition(.move(edge: .top).combined(with: .opacity))
+        }
     }
 
     /// The sliver the page owes the window buttons while focus mode has put

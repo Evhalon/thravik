@@ -24,6 +24,7 @@ struct DockedDevToolsView: View {
             .overlay {
                 if let panel = tab.devToolsPanel {
                     DevToolsFrontendHost(frontend: panel.frontend)
+                        .id(tab.id)
                 }
             }
             .overlay(alignment: .topLeading) {

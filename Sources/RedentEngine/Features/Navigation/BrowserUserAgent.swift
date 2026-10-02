@@ -2,10 +2,8 @@ import Foundation
 import RedentKit
 import WebKit
 
-/// WebKit is not Chrome. A Chrome label makes a site serve a Blink player —
-/// YouTube dies, Netflix paints black, any `<video>` can. The honest Safari
-/// identity is therefore the default for every page. The content blocker's own
-/// step-aside for media properties lives in `MediaRuleExceptions`.
+/// Safari remains the default because Chrome-specific players can require Blink.
+/// The internal Octane installation gets a narrowly scoped compatibility label.
 @MainActor
 enum BrowserUserAgent {
 
@@ -19,8 +17,13 @@ enum BrowserUserAgent {
         return "Version/\(os.majorVersion).\(os.minorVersion) Safari/605.1.15"
     }
 
-    /// Always `nil`: WebKit's own Safari string, which tracks the OS.
-    static func string(for _: URL?) -> String? { nil }
+    static func string(for url: URL?) -> String? {
+        guard let url,
+              ["http", "https"].contains(url.scheme?.lowercased()),
+              url.host?.lowercased() == "octane.gbm.lan" else { return nil }
+        return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36"
+    }
 
     static func apply(to webView: WKWebView, for url: URL?) {
         webView.customUserAgent = string(for: url)

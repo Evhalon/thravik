@@ -17,6 +17,8 @@ struct PasskeySigningTests {
         #expect(signed["com.apple.application-identifier"] as? String == "TESTTEAM1.app.redent.browser")
         #expect(signed["com.apple.developer.team-identifier"] as? String == "TESTTEAM1")
         #expect(signed["com.apple.security.network.client"] as? Bool == true)
+        #expect(signed["com.apple.security.device.camera"] as? Bool == true)
+        #expect(signed["com.apple.security.device.audio-input"] as? Bool == true)
         #expect(try String(contentsOf: fixture.log, encoding: .utf8).contains("--verify --strict"))
     }
 
@@ -57,6 +59,18 @@ struct PasskeySigningTests {
         ) as? [String: Any])
         #expect(signed[PasskeySigningFixture.entitlement] == nil)
         #expect(signed["com.apple.security.network.client"] as? Bool == true)
+        #expect(signed["com.apple.security.device.camera"] as? Bool == true)
+        #expect(signed["com.apple.security.device.audio-input"] as? Bool == true)
+    }
+
+    @Test("The app explains camera and microphone access to macOS")
+    func mediaCaptureUsageDescriptions() throws {
+        let data = try Data(contentsOf: URL(fileURLWithPath: "Resources/Info.plist"))
+        let plist = try #require(PropertyListSerialization.propertyList(
+            from: data, format: nil
+        ) as? [String: Any])
+        #expect((plist["NSCameraUsageDescription"] as? String)?.isEmpty == false)
+        #expect((plist["NSMicrophoneUsageDescription"] as? String)?.isEmpty == false)
     }
 
     @Test("An explicitly required passkey build fails without a profile or signing identity")

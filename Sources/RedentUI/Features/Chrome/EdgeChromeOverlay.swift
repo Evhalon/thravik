@@ -40,6 +40,7 @@ struct EdgeChromeOverlay<Backdrop: View>: View {
             .clipped()
             .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
             .contentShape(.rect)
+            .onGeometryChange(for: CGFloat.self, of: \.size.height) { reveal.navigationHeight = $0 }
             .onHover { reveal.hover(.navigation, isInside: $0) }
             .onDisappear { reveal.hover(.navigation, isInside: false) }
             .transition(reduceMotion ? .identity : .move(edge: .top).combined(with: .opacity))

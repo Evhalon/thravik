@@ -53,7 +53,8 @@ local_identity() {
 	sh "$SCRIPT_DIR/ensure-dev-identity.sh" >/dev/null 2>&1 && echo "Redent Development"
 }
 
-identity="${CODESIGN_IDENTITY:-$(local_identity)}"
+# Under set -e a failed lookup would end the script silently; ad-hoc is the fallback.
+identity="${CODESIGN_IDENTITY:-$(local_identity || true)}"
 identity="${identity:--}"
 if [ -n "${PROVISIONING_PROFILE:-}" ]; then
 	if [ "$identity" = "-" ]; then

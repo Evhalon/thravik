@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import RedentKit
+import SwiftUI
 
 /// The page commands every browser is expected to have: reload, stop, home,
 /// find, print, and the address itself.
@@ -38,10 +39,11 @@ extension BrowserModel {
     }
 
     public func copyLink(_ url: URL) {
-        let shared = settings.stripsTrackingParameters ? TrackingParameters.stripped(url) ?? url : url
+        let cleaned = settings.stripsTrackingParameters ? TrackingParameters.stripped(url) : nil
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(shared.absoluteString, forType: .string)
+        pasteboard.setString((cleaned ?? url).absoluteString, forType: .string)
+        withAnimation(.snappy(duration: 0.22)) { chrome.announceCopiedLink(removedTracking: cleaned != nil) }
     }
 
     /// ⌘L. A new tab has no address bar of its own, so the caret goes to the

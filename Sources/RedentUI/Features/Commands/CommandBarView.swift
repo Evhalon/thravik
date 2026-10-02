@@ -1,32 +1,51 @@
 import RedentDesign
+import RedentKit
 import SwiftUI
 
 /// A keyboard-first command palette. Execution is delegated to the injected
 /// model handler so this view has no browser or WebKit dependency.
 public struct CommandBarView: View {
     @Bindable private var model: CommandBarModel
+    private let space: BrowserSpace?
+    private let dismissRequest: Int
     private let onDismiss: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var isFocused: Bool
+    @State private var appeared = false
+    @State private var isClosing = false
 
-    public init(model: CommandBarModel, onDismiss: @escaping () -> Void) {
+    /// - Parameter dismissRequest: bumped by a click outside the panel.
+    public init(
+        model: CommandBarModel, space: BrowserSpace? = nil,
+        dismissRequest: Int = 0, onDismiss: @escaping () -> Void
+    ) {
         _model = Bindable(model)
+        self.space = space
+        self.dismissRequest = dismissRequest
         self.onDismiss = onDismiss
     }
 
     public var body: some View {
         VStack(spacing: 0) {
             searchField
-            Divider().opacity(0.35)
-            results
+            if appeared && !isClosing {
+                Rectangle().fill(Palette.hairline).frame(height: Metric.hairWidth)
+                CommandBarResults(model: model, onRun: { row in run { await model.execute(row) } })
+                    .transition(.opacity)
+            }
         }
-        .frame(width: 600)
+        .frame(width: 620)
         .animation(.snappy(duration: 0.14), value: model.rows.count)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: .black.opacity(0.28), radius: 24, y: 10)
+        .background { FloatingPanelSurface(space: space) }
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: .black.opacity(0.32), radius: 32, y: 16)
+        .modifier(FloatingPanelMotion(revealed: appeared, isClosing: isClosing, reduceMotion: reduceMotion))
+        .padding(.horizontal, 20)
         .defaultFocus($isFocused, true)
-        .task { await Task.yield(); isFocused = true }
-        .onExitCommand(perform: onDismiss)
+        .task(appear)
+        .task(id: isClosing, finishClosing)
+        .onChange(of: dismissRequest) { _, _ in dismissAnimated() }
+        .onExitCommand(perform: dismissAnimated)
         .onChange(of: model.selectedIndex) { _, _ in announceSelection() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Command Center")
@@ -34,86 +53,35 @@ public struct CommandBarView: View {
     }
 
     private var searchField: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Palette.chromeSecondaryText)
                 .accessibilityHidden(true)
             TextField("Search tabs, websites, actions…", text: $model.query)
                 .textFieldStyle(.plain)
-                .font(.system(size: 17))
+                .font(.system(size: 16))
+                .foregroundStyle(Palette.chromeText)
                 .focused($isFocused)
                 .accessibilityLabel("Search tabs, websites, and actions")
-                .onSubmit { execute() }
+                .onSubmit { run { await model.executeSelected() } }
                 .onKeyPress(.downArrow) { model.moveSelection(by: 1); return .handled }
                 .onKeyPress(.upArrow) { model.moveSelection(by: -1); return .handled }
-                .onKeyPress(.escape) { onDismiss(); return .handled }
+                .onKeyPress(.escape) { dismissAnimated(); return .handled }
+            Button { run { await model.executeSelected() } } label: {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Palette.chromeText)
+                    .frame(width: 32, height: 32)
+                    .background(Palette.chromeFill, in: RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(PressScaleStyle())
+            .accessibilityLabel("Run selection")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 17)
+        .frame(height: FloatingNewTabView.fieldHeight)
         .contentShape(Rectangle())
         .onTapGesture { isFocused = true }
-    }
-
-    @ViewBuilder
-    private var results: some View {
-        if model.rows.isEmpty {
-            Text("No matching tabs, pages, or actions")
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, minHeight: 58)
-                .transition(.opacity)
-        } else {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 2) {
-                        ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, row in
-                            item(row, at: index)
-                        }
-                    }
-                    .padding(8)
-                }
-                .frame(height: resultsHeight)
-                .onChange(of: model.selectedIndex) { _, index in
-                    guard let index, model.rows.indices.contains(index) else { return }
-                    withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo(model.rows[index].id) }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func item(_ row: CommandBarResult, at index: Int) -> some View {
-        if let section = sectionTitle(at: index) {
-            CommandSectionHeader(title: section)
-        }
-        CommandBarRow(row: row, query: model.query, isSelected: model.selectedIndex == index,
-                      shortcutNumber: index < 9 ? index + 1 : nil)
-            .id(row.id)
-            .contentShape(Rectangle())
-            .onTapGesture { run { await model.execute(row) } }
-            .accessibilityAction { run { await model.execute(row) } }
-    }
-
-    /// Headings only while nothing is typed. Once the user types, rows are in
-    /// best-guess order, and headings would chop that order into pieces.
-    private func sectionTitle(at index: Int) -> String? {
-        guard model.query.isEmpty else { return nil }
-        let section = model.rows[index].source.section
-        guard index == 0 || model.rows[index - 1].source.section != section else { return nil }
-        return section
-    }
-
-    /// The panel hugs its results: a two-row answer should not sit in a
-    /// panel sized for twenty.
-    private var resultsHeight: CGFloat {
-        let visible = min(model.rows.count, 9)
-        let headers = (0..<visible).filter { sectionTitle(at: $0) != nil }.count
-        let rows = CGFloat(visible)
-        return rows * CommandBarRow.height + max(rows - 1, 0) * 2 + 16
-            + CGFloat(headers) * CommandSectionHeader.height
-    }
-
-    private func execute() {
-        run { await model.executeSelected() }
     }
 
     /// Runs a row, and closes the bar unless the row only filled the field.
@@ -121,6 +89,27 @@ public struct CommandBarView: View {
         Task {
             if await body() { onDismiss() } else { isFocused = true }
         }
+    }
+
+    private func dismissAnimated() {
+        guard !isClosing else { return }
+        guard !reduceMotion else { onDismiss(); return }
+        withAnimation(.easeIn(duration: 0.16)) { isClosing = true }
+    }
+
+    /// Tied to the view's lifetime, so a bar already gone never closes the next one.
+    private func finishClosing() async {
+        guard isClosing else { return }
+        try? await Task.sleep(for: .milliseconds(160))
+        guard !Task.isCancelled else { return }
+        onDismiss()
+    }
+
+    private func appear() async {
+        if reduceMotion { appeared = true }
+        else { withAnimation(.easeOut(duration: 0.20)) { appeared = true } }
+        await Task.yield()
+        isFocused = true
     }
 
     private func announceSelection() {

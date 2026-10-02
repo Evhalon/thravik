@@ -22,6 +22,12 @@ struct ChromeBar: View {
         .padding(.vertical, Metric.tightGutter)
         .frame(maxWidth: .infinity)
         .background { TitlebarDragRegion() }
+        .overlay(alignment: .bottomLeading) {
+            if let tab = model.selectedTab {
+                ChromeLoadingBar(progress: tab.progress, isLoading: tab.isLoading)
+                    .id(tab.id)
+            }
+        }
     }
 
     /// Without the rail nothing else holds the window buttons, so the row

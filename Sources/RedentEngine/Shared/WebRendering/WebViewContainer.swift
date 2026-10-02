@@ -39,9 +39,9 @@ final class WebViewContainer: NSView {
             guard mayAdopt(webView) else { return }
             parkHostedView()
             let host = WebViewHost.containing(webView) ?? WebViewHost(webView: webView)
-            host.isHidden = false
             addSubview(host)
             fillHostedView()
+            host.isHidden = false
             return
         }
         parkHostedView()
@@ -83,6 +83,8 @@ final class WebViewContainer: NSView {
     }
 
     private func fillHostedView() {
+        // Keep parked pages at their rendered size until replacement panes finish layout.
+        guard bounds.width > 0, bounds.height > 0 else { return }
         guard let hosted = hostedView, hosted.frame != bounds else { return }
         hosted.frame = bounds
     }

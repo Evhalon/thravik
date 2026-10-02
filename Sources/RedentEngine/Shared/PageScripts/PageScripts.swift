@@ -30,7 +30,7 @@ enum PageScripts {
         add(media, at: .atDocumentStart, to: controller)
         add(loadSource(named: "redent-media-rescue"), at: .atDocumentStart, to: controller)
         add(loadSource(named: "redent-reader"), at: .atDocumentEnd, mainFrameOnly: true, to: controller)
-        for name in ["redent-video-affordance", "redent-floating-video", "redent-form-history"] {
+        for name in ["redent-video-affordance", "redent-floating-video", "redent-form-history", "redent-store-install"] {
             add(loadSource(named: name), at: .atDocumentEnd, mainFrameOnly: true, to: controller)
         }
         if quiets { add(quietSource, at: .atDocumentStart, to: controller) }

@@ -20,7 +20,7 @@ struct FloatingVideoModelTests {
     @Test("The overlay never keeps a closed tab alive")
     func weakPlayerOwnership() {
         var player: VideoPlayerSpy? = VideoPlayerSpy()
-        weak let weakPlayer = player
+        weak var weakPlayer = player
         let model = FloatingVideoModel(player: player ?? VideoPlayerSpy())
         player = nil
         #expect(weakPlayer == nil)

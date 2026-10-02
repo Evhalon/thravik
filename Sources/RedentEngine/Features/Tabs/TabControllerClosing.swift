@@ -2,6 +2,13 @@ import Foundation
 import RedentKit
 
 extension TabController {
+    func selectionAfterClosing(_ id: UUID) -> UUID? {
+        // Saved pins remain available without reopening a page during close.
+        let pinnedIDs = Set(webTabs.filter(\.isPinned).map(\.id))
+        let order = visualTabIDs.filter { $0 == id || !pinnedIDs.contains($0) }
+        return TabCloseSelection.afterClosing(id, in: order)
+    }
+
     /// Closing a pin closes its page, never the pin: the tile stays, asleep,
     /// and wakes on its pinned page next time it is chosen.
     func releasePinned(_ tab: WebTab) {

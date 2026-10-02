@@ -15,7 +15,10 @@ openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 3650 \
 	-addext "extendedKeyUsage=codeSigning" \
 	-addext "keyUsage=critical,digitalSignature" \
 	-keyout "$tmp/key.pem" -out "$tmp/cert.pem"
+# OpenSSL 3 defaults to AES + SHA-256 MACs, which `security import` rejects
+# as a wrong password; the SHA-1/3DES pair is what the Keychain still reads.
 openssl pkcs12 -export \
+	-keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1 \
 	-inkey "$tmp/key.pem" -in "$tmp/cert.pem" \
 	-out "$tmp/cert.p12" -passout pass:redent \
 	-name "$CERT_NAME"

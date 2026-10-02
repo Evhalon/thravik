@@ -31,6 +31,32 @@ struct WebViewHostTests {
         #expect(webView.frame == host.bounds)
     }
 
+    @Test("Switching tabs reuses their hosts and keeps both in the browser window")
+    func tabSwitchReusesHosts() throws {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 700),
+            styleMask: [.titled], backing: .buffered, defer: false
+        )
+        let container = WebViewContainer(frame: window.contentView?.bounds ?? .zero)
+        window.contentView?.addSubview(container)
+        let first = makeView()
+        let second = makeView()
+        container.attach(first)
+        let firstHost = try #require(WebViewHost.containing(first))
+        container.attach(second)
+        let secondHost = try #require(WebViewHost.containing(second))
+        container.attach(first)
+
+        #expect(first.window === window)
+        #expect(second.window === window)
+        #expect(WebViewHost.containing(first) === firstHost)
+        #expect(WebViewHost.containing(second) === secondHost)
+        #expect(firstHost.superview === container)
+        #expect(!firstHost.isHidden)
+        #expect(secondHost.isHidden)
+        #expect(first.frame == container.bounds)
+    }
+
     private func makeView() -> WKWebView {
         WebViewFactory.makeWebView(configuration: WebViewFactory.makeConfiguration(
             store: .nonPersistent(), options: PageContentOptions(blocksTrackers: false), contentBlocker: nil

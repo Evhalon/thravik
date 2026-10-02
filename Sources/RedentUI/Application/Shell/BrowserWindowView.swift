@@ -62,33 +62,8 @@ public struct BrowserWindowView<Sheets: View>: View {
     @ViewBuilder
     private var floatingInput: some View {
         if model.showsCommandBar || model.showsFloatingNewTab {
-            ZStack {
-                Color.black.opacity(0.18).onTapGesture {
-                    model.dismissCommands()
-                    model.dismissFloatingNewTab()
-                }
-                if model.showsCommandBar {
-                    VStack {
-                        CommandBarView(model: model.commandBar, onDismiss: model.dismissCommands)
-                            .padding(.top, 72)
-                        Spacer()
-                    }
-                } else {
-                    GeometryReader { geometry in
-                        FloatingNewTabView(model: model)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, max(20, (geometry.size.height - FloatingNewTabView.expandedHeight) / 2))
-                            .padding(.leading, pageLeadingInset)
-                    }
-                }
-            }
+            FloatingInputLayer(model: model)
         }
-    }
-
-    /// The panel belongs to the page, so it centers on the page column rather
-    /// than on a window that also holds the rail.
-    private var pageLeadingInset: CGFloat {
-        model.isSidebarVisible ? model.settings.sidebarWidth : 0
     }
 
     @ViewBuilder

@@ -45,6 +45,8 @@ public final class BrowserModel {
     @ObservationIgnored public var windowOpener: (@MainActor (_ isPrivate: Bool) -> Void)?
     /// The app's other windows. Set by the composition root; nil in tests.
     @ObservationIgnored public var windowDirectory: (any BrowserWindowDirectory)?
+    /// Takes a Chrome Web Store extension to its review. Set by the composition root.
+    @ObservationIgnored public var extensionInstaller: (@MainActor (ChromeWebStoreID) -> Void)?
     /// Sites kept as apps, newest list from `webAppStore`.
     public internal(set) var webApps: [WebApp] = []
     let webAppStore: (any WebAppStoring)?

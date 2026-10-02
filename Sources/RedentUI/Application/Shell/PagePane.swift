@@ -33,7 +33,8 @@ struct PagePane: View {
         } else if let tab, tab.isVideoFloating {
             FloatingVideoPlaceholder(tab: tab)
         } else if let tab, tab.url != nil {
-            model.content(tab.id).id(tab.id)
+            // Stable pane identity lets AppKit swap tabs without rebuilding the page container.
+            model.content(tab.id)
         } else if pane == 0 {
             NewTabPage(model: model)
                 .id(tab?.id)

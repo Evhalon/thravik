@@ -108,6 +108,23 @@ struct WebViewContainerTests {
         #expect(webView.frame.size == CGSize(width: 450, height: 300))
     }
 
+    @Test("A replacement pane preserves the rendered size until SwiftUI lays it out")
+    func replacementPaneDoesNotCollapsePage() {
+        let first = WebViewContainer(frame: NSRect(x: 0, y: 0, width: 900, height: 700))
+        let webView = makeView()
+        first.attach(webView)
+        let originalHost = webView.superview
+        let replacement = WebViewContainer()
+
+        replacement.attach(webView)
+        replacement.layout()
+
+        #expect(webView.superview === originalHost)
+        #expect(webView.frame.size == CGSize(width: 900, height: 700))
+        replacement.setFrameSize(NSSize(width: 800, height: 600))
+        #expect(webView.frame.size == CGSize(width: 800, height: 600))
+    }
+
     private func makeWindow() -> NSWindow {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct FloatingNewTabPanelMotion: ViewModifier {
+struct FloatingPanelMotion: ViewModifier {
     let revealed: Bool
     let isClosing: Bool
     let reduceMotion: Bool

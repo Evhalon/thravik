@@ -24,6 +24,7 @@ public struct WebContentView: View {
         // Without it, WKWebView's document width becomes the floor.
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .onAppear { tab.wakeIfNeeded() }
+        .onChange(of: tab.id) { _, _ in tab.wakeIfNeeded() }
     }
 }
 

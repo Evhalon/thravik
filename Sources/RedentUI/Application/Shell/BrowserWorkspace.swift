@@ -15,7 +15,8 @@ struct BrowserWorkspace<Backdrop: View>: View {
                     .transition(.opacity)
                     .zIndex(1)
             }
-            PageColumn(model: model, usesTopStrip: usesTopStrip, backdrop: backdrop)
+            PageColumn(model: model, usesTopStrip: usesTopStrip,
+                       overlaidChromeHeight: overlaidChromeHeight, backdrop: backdrop)
                 .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
                 .layoutPriority(1)
                 .zIndex(0)
@@ -48,6 +49,11 @@ struct BrowserWorkspace<Backdrop: View>: View {
         .allowsHitTesting(model.isSidebarVisible)
         .accessibilityHidden(!model.isSidebarVisible)
         .zIndex(2)
+    }
+
+    /// The edge-revealed bar floats over the page instead of pushing it down.
+    private var overlaidChromeHeight: CGFloat {
+        model.usesEdgeReveal && reveal.surface == .navigation ? reveal.navigationHeight : 0
     }
 
     private var usesTopStrip: Bool { model.showsTabStrip && model.settings.tabLayout == .top }

@@ -16,7 +16,9 @@
     <key>NSHighResolutionCapable</key>          <true/>
     <key>NSSupportsAutomaticGraphicsSwitching</key> <true/>
     <key>NSCameraUsageDescription</key>
-    <string>Thravik uses the camera only to scan the QR code you export from Google Authenticator. Nothing is recorded or sent anywhere.</string>
+    <string>Thravik uses the camera when you scan an authenticator QR code or allow a website to capture video.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Thravik uses the microphone when you allow a website to capture audio.</string>
     <key>NSAppTransportSecurity</key>
     <dict><key>NSAllowsArbitraryLoads</key><true/></dict>
     <key>LSApplicationCategoryType</key>            <string>public.app-category.productivity</string>
