@@ -32,8 +32,10 @@ struct SpaceComposer: View {
             SpaceStepBar(draft: $draft)
             stepContent
                 .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
+                .clipped()
                 .animation(.spring(duration: 0.3), value: draft.step)
             navigation
+                .zIndex(1)
         }
         .onAppear { isNameFocused = true }
         .onChange(of: draft.look) { onChange(draft) }
@@ -71,15 +73,8 @@ struct SpaceComposer: View {
                 .foregroundStyle(Palette.chromeSecondaryText)
                 .keyboardShortcut(.cancelAction)
             Spacer()
-            Button(primaryTitle, action: forward)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(height: Metric.controlHeight)
-                .background(Capsule().fill(tint.opacity(draft.trimmedName == nil ? 0.3 : 0.9)))
-                .buttonStyle(PressScaleStyle())
-                .disabled(draft.trimmedName == nil)
-                .keyboardShortcut(.defaultAction)
+            SpaceComposerPrimaryButton(title: primaryTitle, enabled: draft.trimmedName != nil,
+                                       tint: tint, action: forward)
         }
     }
 
@@ -114,6 +109,8 @@ struct SpaceComposer: View {
     }
 
     private func forward() {
+        // A focused name field swallows the first click. Drop it before the step moves.
+        isNameFocused = false
         guard draft.isLastStep else { return withAnimation { draft.advance() } }
         onCommit(draft)
     }

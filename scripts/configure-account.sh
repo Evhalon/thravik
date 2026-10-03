@@ -3,6 +3,14 @@ set -eu
 
 # Only public project configuration belongs in the application bundle.
 plist=$1
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+# Public project values only. Absent file leaves the build without an account.
+if [ -z "${REDENT_SUPABASE_URL:-}" ] && [ -f "$root/config/account.release.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . "$root/config/account.release.env"
+  set +a
+fi
 if [ -n "${REDENT_ICLOUD_ACCESS_GROUP:-}" ]; then
   plutil -replace RedentICloudAccessGroup -string "$REDENT_ICLOUD_ACCESS_GROUP" "$plist"
 fi
