@@ -9,8 +9,8 @@ final class AppPasswordStorage {
     let router: PasswordStorageRouter
     let model: PasswordStorageModel
     var devices: DeviceMembershipModel? { cloud?.syncDevices }
-    private let account: AppAccount
-    private let cloud: AppCloudPasswords?
+    let account: AppAccount
+    let cloud: AppCloudPasswords?
     private var cloudStore: CloudCredentialStore?
     private var accountID: UUID?
     private var cloudTask: Task<Bool, any Error>?
@@ -19,6 +19,7 @@ final class AppPasswordStorage {
     var afterSync: (() async -> Void)?
     var onAccount: ((AccountSession?) -> Void)?
     var onVaultReady: (() -> Void)?
+    var prepareBookmarks: (() async throws -> Void)?
 
     init(local: any CredentialStoring, account: AppAccount) {
         self.account = account
@@ -91,6 +92,7 @@ final class AppPasswordStorage {
             cloudStore = store
         }
         model.setAvailable(.redentCloud, available: true)
+        try await prepareBookmarks?()
         onVaultReady?()
         model.scheduleSynchronization()
     }
@@ -129,16 +131,5 @@ final class AppPasswordStorage {
         let result = try await cloudStore.synchronize(session: session)
         if result.uploaded > 0 || result.downloaded > 0 { model.onProviderChanged?() }
         return result.hasMore
-    }
-}
-
-extension AppPasswordStorage {
-    func connect(_ workspace: AppWorkspaceSync) {
-        guard let cloud else { return }
-        workspace.attach(cloud: cloud, turnstile: turnstile)
-        workspace.refreshSession = { [weak account] in await account?.refreshIfNeeded() }
-        afterSync = { [weak workspace] in await workspace?.flush() }
-        onAccount = { [weak workspace] session in workspace?.accountChanged(session) }
-        onVaultReady = { [weak workspace] in workspace?.schedule(forced: true) }
     }
 }

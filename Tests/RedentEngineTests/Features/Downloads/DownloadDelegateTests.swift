@@ -31,6 +31,13 @@ struct DownloadDelegateTests {
         #expect(delegate().responds(to: NSSelectorFromString("_webView:contextMenuDidCreateDownload:")))
     }
 
+    @Test("PDF toolbar and context-menu saves reach the delegate")
+    func respondsToPDFSaveHook() {
+        #expect(delegate().responds(to: NSSelectorFromString(
+            "_webView:saveDataToFile:suggestedFilename:mimeType:originatingURL:"
+        )))
+    }
+
     @Test("A response the page cannot render is offered a policy")
     func respondsToResponsePolicy() {
         #expect(delegate().responds(

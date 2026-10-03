@@ -19,7 +19,10 @@ struct SpaceComposerPrimaryButton: View {
             .frame(height: Metric.controlHeight)
             .background(Capsule().fill(tint.opacity(enabled ? 0.9 : 0.3)))
             .contentShape(Capsule())
-            .overlay { ComposerClickCatcher(enabled: enabled, action: action) }
+            .overlay {
+                ComposerClickCatcher(enabled: enabled, action: action)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
             .background { returnKey }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(title)
@@ -62,8 +65,11 @@ private final class ComposerClickView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    // Default hitTest converts into this view's bounds. Comparing `point` to
+    // `bounds` directly uses the superview's coordinates, so the click missed.
     override func hitTest(_ point: NSPoint) -> NSView? {
-        enabled && bounds.contains(point) ? self : nil
+        guard enabled, let superview else { return nil }
+        return bounds.contains(convert(point, from: superview)) ? self : nil
     }
 
     override func mouseDown(with event: NSEvent) {

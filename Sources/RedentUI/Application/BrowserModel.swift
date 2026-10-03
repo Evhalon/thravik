@@ -25,6 +25,8 @@ public final class BrowserModel {
     public var showsSettings = false
     public var showsCommandBar = false
     public var showsFloatingNewTab = false
+    /// Address bar, floating new tab, or the home search field. Nil on a web page.
+    var pasteAndGoField: PasteAndGoField?
     public var actionError: String?
     /// The temporary tab whose deadline passed while the user was reading it.
     public var expiredTabID: UUID?

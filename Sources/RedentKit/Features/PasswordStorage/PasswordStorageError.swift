@@ -5,4 +5,7 @@ public enum PasswordStorageError: Error, Sendable, Equatable {
     case providerChanged
     case locked
     case conflictingCredentials
+    case invalidSyncPassword
+    case weakSyncPassword
+    case invalidRecoveryCode
 }

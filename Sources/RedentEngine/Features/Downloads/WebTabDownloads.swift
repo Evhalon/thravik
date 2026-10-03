@@ -51,6 +51,18 @@ extension WebTabNavigationDelegate {
         adopt(download, from: download.originalRequest?.url)
     }
 
+    // PDF toolbar and PDF context-menu saves deliver cached bytes, not WKDownload.
+    @objc(_webView:saveDataToFile:suggestedFilename:mimeType:originatingURL:)
+    func webView(
+        _ webView: WKWebView,
+        saveDataToFile data: Data,
+        suggestedFilename: String,
+        mimeType: String,
+        originatingURL: URL
+    ) {
+        tab?.controller?.downloads?.save(data, filename: suggestedFilename, from: originatingURL)
+    }
+
     private func adopt(_ download: WKDownload, from url: URL?) {
         guard let tab, let controller = tab.controller,
               let coordinator = controller.downloads else { return }

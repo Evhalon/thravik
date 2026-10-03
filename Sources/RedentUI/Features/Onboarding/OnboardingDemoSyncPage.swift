@@ -7,7 +7,7 @@ struct OnboardingDemoSyncPage: View {
         VStack(alignment: .leading, spacing: 20) {
             Image(systemName: "lock.shield").font(.system(size: 44, weight: .light)).foregroundStyle(.orange)
             Text("Your spaces. Everywhere.").font(.system(size: 30, weight: .medium, design: .rounded))
-            Text("Sign in on another Mac and unlock encrypted sync with your recovery code.")
+            Text("Sign in on another Mac and unlock encrypted sync with your sync password.")
                 .foregroundStyle(.secondary)
             Label("Profile, Spaces, groups and pins", systemImage: "checkmark.circle")
             Label("Encrypted vault", systemImage: "checkmark.circle")

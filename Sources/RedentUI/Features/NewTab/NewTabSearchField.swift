@@ -31,9 +31,7 @@ struct NewTabSearchField: View {
                     guard isFocused else { return }
                     model.queryChanged(value, from: .newTab)
                 }
-                .onChange(of: isFocused) { _, focused in
-                    if !focused { model.suggestions.close(from: .newTab) }
-                }
+                .onChange(of: isFocused, initial: true) { _, focused in focusChanged(focused) }
                 .suggestionFieldBehavior(model, source: .newTab, isFocused: isFocused)
                 .onExitCommand { model.suggestions.close(from: .newTab) }
 
@@ -66,6 +64,15 @@ struct NewTabSearchField: View {
         }
         .padding(.horizontal, 40)
         .zIndex(3)
+    }
+
+    private func focusChanged(_ focused: Bool) {
+        if focused {
+            model.beginPasteAndGoEditing(.newTabPage)
+        } else {
+            model.endPasteAndGoEditing(.newTabPage)
+            model.suggestions.close(from: .newTab)
+        }
     }
 
     @ViewBuilder

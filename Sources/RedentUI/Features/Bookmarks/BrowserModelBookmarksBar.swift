@@ -4,7 +4,12 @@ import RedentKit
 extension BrowserModel {
     public var showsBookmarksBar: Bool { settings.showsBookmarksBar && !isFocusMode }
 
-    public func toggleBookmarksBar() {
+    public func toggleBookmarksBar() async {
+        guard let spaceID = currentSpaceID else { return }
+        async let pages = bookmarks.all(in: spaceID)
+        async let folders = bookmarks.folders(in: spaceID)
+        let items = await BookmarksBarCatalog.items(bookmarks: pages, folders: folders, spaceID: spaceID)
+        guard currentSpaceID == spaceID, !Task.isCancelled, !items.isEmpty else { return }
         settings.showsBookmarksBar.toggle()
     }
 

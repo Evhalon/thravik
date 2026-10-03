@@ -6,7 +6,7 @@ import RedentVault
 
 @MainActor
 final class AppCloudPasswords {
-    let access: CloudVaultAccess
+    let access: CloudPasswordVaultAccess
     let syncDevices: DeviceMembershipModel
     private let configuration: SupabaseConfiguration
     private let sessions: any AccountSessionStoring
@@ -23,9 +23,11 @@ final class AppCloudPasswords {
         let coordinator = SyncDeviceCoordinator(sessions: sessions, rootKeys: keys,
                                                 deviceKeys: deviceKeys, directory: directory)
         syncDevices = DeviceMembershipModel(manager: coordinator)
-        access = CloudVaultAccess(configuration: .init(keys: keys, sessions: sessions,
-            envelopes: SupabaseRecoveryEnvelopeStore(configuration: configuration),
-            claims: RecoveryClaimPublisher(directory: directory)))
+        let recovery = SupabaseRecoveryEnvelopeStore(configuration: configuration)
+        let underlying = CloudVaultAccess(configuration: .init(keys: keys, sessions: sessions,
+            envelopes: recovery, claims: RecoveryClaimPublisher(directory: directory)))
+        access = CloudPasswordVaultAccess(underlying: underlying, sessions: sessions,
+            envelopes: SupabasePasswordEnvelopeStore(configuration: configuration), recovery: recovery)
     }
 
     func prepareDevice() async throws { try await syncDevices.prepareForSync() }
@@ -44,6 +46,12 @@ final class AppCloudPasswords {
         WorkspaceSyncStore(accountID: accountID, dependencies: .init(
             replica: replica(accountID: accountID), keys: keys, deviceKeys: deviceKeys,
             transport: signedTransport(accountID: accountID), sessions: sessions))
+    }
+
+    func makeBookmarkStore(accountID: UUID, bookmarks: any BookmarkStoring) -> BookmarkSyncStore {
+        BookmarkSyncStore(accountID: accountID, dependencies: .init(
+            replica: replica(accountID: accountID), keys: keys, deviceKeys: deviceKeys,
+            transport: signedTransport(accountID: accountID), sessions: sessions), bookmarks: bookmarks)
     }
 
     func discardReplica(accountID: UUID) { replicas[accountID] = nil }

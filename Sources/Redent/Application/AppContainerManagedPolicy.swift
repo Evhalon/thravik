@@ -5,6 +5,7 @@ extension AppContainer {
     func wireManagedPolicy() {
         managedPolicy.onChange = { [weak self] in self?.refreshManagedPolicyOnAllWindows() }
         workspace.syncAllowed = managedPolicy.accountSyncAllowed
+        bookmarkSync.syncAllowed = managedPolicy.accountSyncAllowed
         extensions.model.allowsExtensionInstall = { [managedPolicy] id in
             ManagedExtensionInstallPolicy.allowsInstall(storeID: id, policy: managedPolicy.policy)
         }
@@ -29,6 +30,7 @@ extension AppContainer {
 
     func refreshManagedPolicyOnAllWindows() {
         workspace.syncAllowed = managedPolicy.accountSyncAllowed
+        bookmarkSync.syncAllowed = managedPolicy.accountSyncAllowed
         for window in windows.values { applyManagedPolicy(to: window) }
     }
 

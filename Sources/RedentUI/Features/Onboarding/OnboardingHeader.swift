@@ -19,11 +19,11 @@ struct OnboardingHeader: View {
                     .overlay(alignment: .leading) {
                         Capsule().fill(LinearGradient(colors: [.orange, .pink, .purple],
                                                       startPoint: .leading, endPoint: .trailing))
-                            .frame(width: geometry.size.width * CGFloat(model.step.rawValue + 1) / CGFloat(OnboardingModel.Step.allCases.count))
+                            .frame(width: geometry.size.width * CGFloat(model.stepNumber) / CGFloat(OnboardingModel.Step.allCases.count))
                     }
             }
             .frame(height: 3)
-            .accessibilityLabel("Setup step \(model.step.rawValue + 1) of \(OnboardingModel.Step.allCases.count)")
+            .accessibilityLabel("Setup step \(model.stepNumber) of \(OnboardingModel.Step.allCases.count)")
         }
     }
 

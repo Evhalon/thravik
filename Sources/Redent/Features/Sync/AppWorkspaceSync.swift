@@ -37,6 +37,7 @@ final class AppWorkspaceSync {
         prepared = false
         pending = nil
         model.replace([])
+        model.recordSyncedProfile(nil)
         model.note(nil)
         if session != nil { schedule(forced: true) }
     }

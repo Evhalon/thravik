@@ -16,7 +16,13 @@ if [ -n "${REDENT_ICLOUD_ACCESS_GROUP:-}" ]; then
 fi
 endpoint=${REDENT_SUPABASE_URL:-}
 publishable_key=${REDENT_SUPABASE_PUBLISHABLE_KEY:-}
-if [ -z "$endpoint" ] && [ -z "$publishable_key" ]; then exit 0; fi
+if [ -z "$endpoint" ] && [ -z "$publishable_key" ]; then
+  if [ "${REQUIRE_ACCOUNT_CONFIG:-0}" = "1" ]; then
+    echo "error: release requires account configuration" >&2
+    exit 1
+  fi
+  exit 0
+fi
 case "$endpoint" in
   https://*) ;;
   *) echo "error: REDENT_SUPABASE_URL must use HTTPS" >&2; exit 1 ;;

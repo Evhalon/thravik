@@ -18,7 +18,8 @@ final class AppContainer {
     let generator: any TOTPGenerating
     let importer: any OTPAuthImporting
     let history: any HistoryStoring
-    let bookmarks: any BookmarkStoring
+    let bookmarkSync = AppBookmarkSync()
+    var bookmarks: any BookmarkStoring { bookmarkSync.bookmarks }
     let webApps: any WebAppStoring = JSONWebAppStore()
     let formHistory: any FormHistoryStoring = JSONFormHistoryStore()
     let webAppInstaller: any WebAppInstalling
@@ -87,7 +88,6 @@ final class AppContainer {
         self.generator = SystemTOTPGenerator()
         self.importer = OTPAuthImporter()
         self.history = SQLiteHistoryStore()
-        self.bookmarks = BroadcastingBookmarkStore(JSONBookmarkStore())
         self.browserImporter = ChromiumImporter()
 
         let permissions = SitePermissionLedger(store: JSONSitePolicyStore())
@@ -109,7 +109,7 @@ final class AppContainer {
         KeychainMigration.run(credentials: credentials, authenticator: authenticator)
         observeWebAppLaunchers()
         startUpdatePolling()
-        passwords.connect(workspace)
+        passwords.connect(workspace, bookmarks: bookmarkSync)
         workspace.apply = { [weak self] snapshot in self?.applyWorkspace(snapshot) }
         wireManagedPolicy()
     }

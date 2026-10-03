@@ -12,7 +12,7 @@ struct BrowserViewCommands: Commands {
             Button(tabStripTitle) { model?.toggleTabStrip() }
                 .shortcut(.toggleTabStrip, bindings: bindings)
                 .disabled(model == nil)
-            Button(bookmarksBarTitle) { model?.toggleBookmarksBar() }
+            Button(bookmarksBarTitle) { Task { await model?.toggleBookmarksBar() } }
                 .shortcut(.showBookmarksBar, bindings: bindings)
                 .disabled(model == nil)
             Button(sidebarTitle) { model?.toggleSidebar() }

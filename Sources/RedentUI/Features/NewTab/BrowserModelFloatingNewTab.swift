@@ -3,6 +3,7 @@ import RedentKit
 
 extension BrowserModel {
     public func dismissFloatingNewTab() {
+        endPasteAndGoEditing(.floatingNewTab)
         showsFloatingNewTab = false
         suggestions.close(from: .newTab)
     }

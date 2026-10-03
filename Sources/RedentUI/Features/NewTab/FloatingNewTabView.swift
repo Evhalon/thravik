@@ -20,7 +20,9 @@ struct FloatingNewTabView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            searchField
+            FloatingNewTabField(model: model, query: $query, isFocused: $isFocused,
+                                input: FloatingNewTabFieldInput(submit: submitSelected,
+                                    dismiss: dismissAnimated, move: moveSelection))
             if appeared && !isClosing {
                 Rectangle().fill(Palette.hairline).frame(height: Metric.hairWidth)
                 FloatingNewTabResults(items: items, showsSections: query.isEmpty,
@@ -37,6 +39,12 @@ struct FloatingNewTabView: View {
         .padding(.horizontal, 20)
         .task(appear)
         .task(id: model.currentSpaceID, loadHome)
+        .onChange(of: isFocused, initial: true) { _, focused in
+            if focused { model.beginPasteAndGoEditing(.floatingNewTab) }
+            else { model.endPasteAndGoEditing(.floatingNewTab) }
+        }
+        .onDisappear { model.endPasteAndGoEditing(.floatingNewTab) }
+        .onChange(of: query) { _, _ in selectedIndex = 0 }
         .onChange(of: model.suggestions.rows.map(\.id)) { _, _ in selectedIndex = 0 }
         .onChange(of: dismissRequest) { _, _ in dismissAnimated() }
         .onExitCommand(perform: dismissAnimated)
@@ -56,43 +64,6 @@ struct FloatingNewTabView: View {
             return model.suggestions.rows.map(FloatingNewTabItem.suggestion)
         }
         return FloatingNewTabItem.preview(text, routing: model.settings.searchRouting).map { [$0] } ?? []
-    }
-
-    private var searchField: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Palette.chromeSecondaryText)
-                .accessibilityHidden(true)
-            TextField("Search or enter an address", text: $query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 16))
-                .foregroundStyle(Palette.chromeText)
-                .focused($isFocused)
-                .onSubmit(submitSelected)
-                .onChange(of: query) { _, text in
-                    selectedIndex = 0
-                    if isFocused { model.queryChanged(text, from: .newTab) }
-                }
-                .onChange(of: model.suggestions.completion) { _, completion in
-                    guard isFocused, model.suggestions.isOpen(for: .newTab), let completion else { return }
-                    FieldEditor.show(completion)
-                }
-                .onKeyPress(.downArrow) { moveSelection(1) }
-                .onKeyPress(.upArrow) { moveSelection(-1) }
-                .onKeyPress(.escape) { dismissAnimated(); return .handled }
-            Button(action: submitSelected) {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Palette.chromeText)
-                    .frame(width: 32, height: 32)
-                    .background(Palette.chromeFill, in: RoundedRectangle(cornerRadius: 10))
-            }
-            .buttonStyle(PressScaleStyle())
-            .accessibilityLabel("Open selection")
-        }
-        .padding(.horizontal, 17)
-        .frame(height: Self.fieldHeight)
     }
 
     private func moveSelection(_ offset: Int) -> KeyPress.Result {

@@ -74,6 +74,31 @@ struct BookmarksBarModelTests {
         #expect(await store.bookmarks.isEmpty)
     }
 
+    @Test("Toggle ignores a Space with no bar items", arguments: [false, true])
+    @MainActor
+    func ignoresEmptySpace(initiallyShown: Bool) async throws {
+        let elsewhere = Bookmark(
+            url: try url("https://personal.example"), title: "Personal",
+            spaceID: BrowserSpace.personalID
+        )
+        let model = makeTestBrowserModel(bookmarks: BarStoreFake(bookmarks: [elsewhere]))
+        model.settings.showsBookmarksBar = initiallyShown
+        await model.toggleBookmarksBar()
+        #expect(model.settings.showsBookmarksBar == initiallyShown)
+    }
+
+    @Test("Toggle shows and hides a populated Space")
+    @MainActor
+    func togglesPopulatedSpace() async throws {
+        let page = Bookmark(url: try url("https://work.example"), title: "Work", spaceID: BrowserSpace.workID)
+        let model = makeTestBrowserModel(bookmarks: BarStoreFake(bookmarks: [page]))
+        model.settings.showsBookmarksBar = false
+        await model.toggleBookmarksBar()
+        #expect(model.showsBookmarksBar)
+        await model.toggleBookmarksBar()
+        #expect(!model.showsBookmarksBar)
+    }
+
     private func url(_ text: String) throws -> URL { try #require(URL(string: text)) }
 }
 

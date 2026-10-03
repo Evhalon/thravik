@@ -4,6 +4,24 @@ import Testing
 
 @MainActor
 struct OnboardingRealRestartTests {
+    @Test func completedSetupSurvivesRelaunchAndInterruptedDemo() throws {
+        let suite = "OnboardingCompletion.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let onboarding = AppOnboarding(defaults: defaults)
+        onboarding.model.sound = nil
+        #expect(!onboarding.model.isComplete)
+
+        onboarding.model.finish()
+
+        let relaunchedDefaults = try #require(UserDefaults(suiteName: suite))
+        let relaunched = AppOnboarding(defaults: relaunchedDefaults)
+        #expect(relaunched.model.isComplete)
+        relaunched.model.startDemo()
+        #expect(!relaunched.model.isComplete)
+        #expect(AppOnboarding(defaults: relaunchedDefaults).model.isComplete)
+    }
+
     @Test func realRestartDiscardsDemoAndPersistsUnfinishedSetup() throws {
         let suite = "OnboardingRealRestart.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))

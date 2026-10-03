@@ -35,6 +35,7 @@ enum FieldEditor {
     }
 
     private static var focusedEditor: NSTextView? {
-        NSApp.keyWindow?.firstResponder as? NSTextView
+        // `NSApp` traps when the shared application does not exist yet.
+        NSApplication.shared.keyWindow?.firstResponder as? NSTextView
     }
 }

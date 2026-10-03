@@ -52,7 +52,7 @@ struct AddressEntryField: View {
     private func handleFocus(_ focused: Bool) {
         blurCommit?.cancel()
         guard focused else {
-            FieldEditor.detachPasteAndGo()
+            model.endPasteAndGoEditing(.address)
             blurCommit = Task { await commitBlur() }
             return
         }
@@ -63,11 +63,7 @@ struct AddressEntryField: View {
             await Task.yield()
             guard hasFocus else { return }
             FieldEditor.selectAll()
-            FieldEditor.attachPasteAndGo(
-                title: { model.pasteAndGoTitle },
-                isEnabled: { model.canPasteAndGo },
-                perform: { model.pasteAndGo() }
-            )
+            model.beginPasteAndGoEditing(.address)
         }
     }
 
@@ -82,7 +78,7 @@ struct AddressEntryField: View {
     /// "being typed", so the compact host never came back.
     private func endEditing() {
         blurCommit?.cancel()
-        FieldEditor.detachPasteAndGo()
+        model.endPasteAndGoEditing(.address)
         model.suggestions.close(from: .addressBar)
         model.address.cancelEditing(restoringFrom: model.selectedTab)
     }

@@ -12,7 +12,7 @@ struct OnboardingSyncPage: View {
                 .font(.system(size: 30, weight: .medium, design: .rounded))
             Text("Unlock encrypted sync for your profile, Spaces, groups and pins. Other Macs’ tabs appear in Account settings.")
                 .foregroundStyle(Palette.chromeSecondaryText)
-            Text("On another Mac, sign in and use your recovery code. Keep it somewhere safe.")
+            Text("On each Mac, sign in and enter your master sync password. Keep your recovery code as a backup in case you forget it.")
                 .font(.callout)
             CloudPasswordVaultPane(model: passwords)
                 .disabled(passwords.isBusy)

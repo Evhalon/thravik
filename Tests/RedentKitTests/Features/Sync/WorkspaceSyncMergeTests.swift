@@ -37,7 +37,7 @@ struct WorkspaceSyncMergeTests {
     @Test func retiredSpaceMovesItsTabsInsteadOfDroppingThem() throws {
         let retiredID = UUID(uuid: (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5))
         let url = try #require(URL(string: "https://kept.example/page"))
-        var retired = BrowserSpace(id: retiredID, name: "Old")
+        let retired = BrowserSpace(id: retiredID, name: "Old")
         var tab = TabSnapshot(url: url, title: "Kept")
         tab.spaceID = retiredID
         let local = BrowserSession(tabs: [tab], spaces: BrowserSpace.starterSpaces + [retired], selectedSpaceID: retiredID)

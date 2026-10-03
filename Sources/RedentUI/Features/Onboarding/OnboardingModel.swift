@@ -4,7 +4,9 @@ import RedentKit
 
 @MainActor @Observable
 public final class OnboardingModel {
-    public enum Step: Int, CaseIterable { case welcome, profile, space, importData, account, sync, defaultBrowser }
+    public enum Step: Int, CaseIterable {
+        case welcome = 0, account = 4, sync = 5, profile = 1, space = 2, importData = 3, defaultBrowser = 6
+    }
     public enum DefaultBrowserChoice { case useThravik, keepCurrent, decideLater }
 
     public private(set) var step: Step = .welcome
@@ -24,37 +26,40 @@ public final class OnboardingModel {
     @ObservationIgnored public var onImportBrowser: (() -> Void)?
     @ObservationIgnored public var onFinish: (() -> Void)?
     @ObservationIgnored private var demoAccountFactory: (() -> AccountModel)?
+    private var hasExistingProfile = false
 
     public init(isComplete: Bool) { self.isComplete = isComplete }
-
     public func configureDemoAccountFactory(_ factory: @escaping () -> AccountModel) {
         demoAccountFactory = factory
     }
-
     public var canContinue: Bool {
         !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-
-    public func resume(profile: BrowserProfile?) {
-        guard !isComplete, !isDemo, step == .welcome, let profile else { return }
+    public var stepNumber: Int { (Step.allCases.firstIndex(of: step) ?? 0) + 1 }
+    public func restoreSyncedProfile(_ profile: BrowserProfile?) {
+        guard !isComplete, !isDemo, !hasExistingProfile,
+              (step == .welcome || step == .sync || step == .profile || step == .space),
+              let profile else { return }
         displayName = profile.displayName
         purpose = profile.purpose
-        step = .account
+        hasExistingProfile = true
+        if step == .profile || step == .space { step = .importData }
     }
-
     public func advance() {
-        guard step != .profile || canContinue,
-              let next = Step(rawValue: step.rawValue + 1) else { return }
-        step = next
+        guard step != .profile || canContinue else { return }
+        let steps = Step.allCases
+        guard let index = steps.firstIndex(of: step), index + 1 < steps.count else { return }
+        let nextIndex = index + 1
+        step = hasExistingProfile && steps[nextIndex] == .profile ? .importData : steps[nextIndex]
         playSound(.advance)
     }
-
     public func back() {
-        guard let previous = Step(rawValue: step.rawValue - 1) else { return }
-        step = previous
+        let steps = Step.allCases
+        guard let index = steps.firstIndex(of: step), index > 0 else { return }
+        let previousIndex = index - 1
+        step = hasExistingProfile && steps[previousIndex] == .space ? .sync : steps[previousIndex]
         playSound(.back)
     }
-
     public var profile: BrowserProfile {
         BrowserProfile(displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines), purpose: purpose)
     }
@@ -66,10 +71,10 @@ public final class OnboardingModel {
         purpose = "Personal"
         demoAccount = demoAccountFactory?()
         didFinishDefaultBrowserChoice = false
+        hasExistingProfile = false
         isDemo = true
         isComplete = false
     }
-
     public func startReal() {
         step = .welcome
         displayName = ""
@@ -78,6 +83,7 @@ public final class OnboardingModel {
         isDemo = false
         lastCompletionWasDemo = false
         didFinishDefaultBrowserChoice = false
+        hasExistingProfile = false
         isComplete = false
     }
 

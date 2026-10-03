@@ -42,6 +42,9 @@ public struct OnboardingView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { model.startSound() } else { model.stopSound() }
         }
+        .onChange(of: services.workspace.syncedProfile, initial: true) { _, profile in
+            model.restoreSyncedProfile(profile)
+        }
     }
 
     private func card(wide: Bool) -> some View {

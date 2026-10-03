@@ -25,7 +25,7 @@ struct OnboardingSoundModelTests {
         #expect(model.soundUnavailable)
         #expect(await sound.events == ["mute:false", "start", "mute:true"])
         model.advance()
-        #expect(model.step == .profile)
+        #expect(model.step == .account)
         model.finish()
         #expect(model.isComplete)
         await model.soundTask?.value

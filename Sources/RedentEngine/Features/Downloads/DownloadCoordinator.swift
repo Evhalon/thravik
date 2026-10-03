@@ -14,6 +14,7 @@ public final class DownloadCoordinator: DownloadCommanding {
     public weak var observer: (any DownloadObserving)?
 
     private var sessions: [UUID: DownloadSession] = [:]
+    private var dataSessions: [UUID: DownloadDataSession] = [:]
     private let logger: any EventLogging
 
     public init(logger: any EventLogging) {
@@ -32,11 +33,13 @@ public final class DownloadCoordinator: DownloadCommanding {
 
     public func cancelDownload(_ id: UUID) {
         sessions[id]?.cancel()
+        dataSessions[id]?.cancel()
     }
 
     /// The list dropped a finished row. A still-running fetch is cancelled
     /// first, so nothing keeps writing to a file nobody is watching.
     public func forgetDownload(_ id: UUID) {
+        if let session = dataSessions[id] { session.cancel() }
         guard let session = sessions[id] else { return }
         if session.item.isActive { session.cancel() }
         sessions[id] = nil
@@ -44,11 +47,19 @@ public final class DownloadCoordinator: DownloadCommanding {
 
     func sessionEnded(_ id: UUID) {
         sessions[id] = nil
+        dataSessions[id] = nil
+    }
+
+    func save(_ data: Data, filename: String, from url: URL?) {
+        let session = DownloadDataSession(filename: filename, host: url?.host(), coordinator: self)
+        dataSessions[session.id] = session
+        logger.notice("downloadStarted")
+        session.start(data)
     }
 
     /// Whether anything is still fetching — the quit path asks before letting
     /// the app go.
     public var hasActiveDownloads: Bool {
-        sessions.values.contains { $0.item.isActive }
+        sessions.values.contains { $0.item.isActive } || !dataSessions.isEmpty
     }
 }

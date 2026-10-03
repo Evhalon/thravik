@@ -9,6 +9,14 @@ import Foundation
 /// staging folder, and this app — which does have access — moves the finished
 /// file across itself.
 enum DownloadDestination {
+    static func save(_ data: Data, filename: String) throws -> URL {
+        let staged = try stagingURL(for: filename)
+        defer { discardStaging(staged) }
+        try data.write(to: staged, options: .atomic)
+        try Task.checkCancellation()
+        return try moveToDownloads(staged)
+    }
+
     static var downloadsDirectory: URL {
         FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
             ?? FileManager.default.homeDirectoryForCurrentUser

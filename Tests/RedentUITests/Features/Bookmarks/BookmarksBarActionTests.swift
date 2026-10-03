@@ -73,7 +73,7 @@ struct BookmarksBarActionTests {
     func broadcastsWrites() async throws {
         let base = BarStoreFake(bookmarks: [])
         let store = BroadcastingBookmarkStore(base)
-        var changes = NotificationCenter.default.notifications(named: .bookmarksDidChange).makeAsyncIterator()
+        let changes = NotificationCenter.default.notifications(named: .bookmarksDidChange).makeAsyncIterator()
         await store.save(Bookmark(url: try #require(URL(string: "https://example.com"))))
         #expect(await changes.next() != nil)
         #expect(await base.bookmarks.count == 1)

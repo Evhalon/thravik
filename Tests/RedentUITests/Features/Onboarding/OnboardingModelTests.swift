@@ -4,9 +4,14 @@ import Testing
 
 @MainActor
 struct OnboardingModelTests {
-    @Test func profileRequiresNameAndTrimsIt() {
+    @Test func loginAndSyncPrecedeProfileAndSpace() {
         let model = OnboardingModel(isComplete: false)
         model.advance()
+        #expect(model.step == .account)
+        model.advance()
+        #expect(model.step == .sync)
+        model.advance()
+        #expect(model.step == .profile)
         model.displayName = "   "
         model.advance()
         #expect(model.step == .profile)
@@ -17,16 +22,20 @@ struct OnboardingModelTests {
         #expect(model.profile == BrowserProfile(displayName: "Ada", purpose: "Study"))
     }
 
-    @Test func restartAfterSpaceResumesAccountWithoutDuplicatingSpace() {
+    @Test func existingProfileSkipsProfileAndSpaceAfterSync() {
         let model = OnboardingModel(isComplete: false)
-        model.resume(profile: BrowserProfile(displayName: "Ada", purpose: "Work"))
+        model.advance()
         #expect(model.step == .account)
-        #expect(model.displayName == "Ada")
         model.advance()
         #expect(model.step == .sync)
-        model.resume(profile: BrowserProfile(displayName: "Another", purpose: "Study"))
+        model.restoreSyncedProfile(BrowserProfile(displayName: "Ada", purpose: "Work"))
+        model.restoreSyncedProfile(BrowserProfile(displayName: "Another", purpose: "Study"))
         #expect(model.step == .sync)
         #expect(model.displayName == "Ada")
+        model.advance()
+        #expect(model.step == .importData)
+        model.back()
+        #expect(model.step == .sync)
     }
 
     @Test func finishPersistsOnceAndCanContinueWithoutAccount() {
@@ -47,18 +56,20 @@ struct OnboardingModelTests {
         #expect(model.isDemo)
         #expect(!model.isComplete)
         #expect(model.step == .welcome)
-        model.resume(profile: BrowserProfile(displayName: "Real profile", purpose: "Work"))
+        model.restoreSyncedProfile(BrowserProfile(displayName: "Real profile", purpose: "Work"))
         #expect(model.step == .welcome)
         #expect(model.displayName.isEmpty)
-        model.advance()
-        model.displayName = "Demo visitor"
-        model.advance()
-        model.advance()
-        #expect(model.step == .importData)
         model.advance()
         #expect(model.step == .account)
         model.advance()
         #expect(model.step == .sync)
+        model.advance()
+        #expect(model.step == .profile)
+        model.displayName = "Demo visitor"
+        model.advance()
+        #expect(model.step == .space)
+        model.advance()
+        #expect(model.step == .importData)
         model.advance()
         #expect(model.step == .defaultBrowser)
         model.finish()
@@ -75,26 +86,35 @@ struct OnboardingModelTests {
         let model = OnboardingModel(isComplete: false)
         model.advance()
         model.startDemo()
-        #expect(model.step == .profile)
+        #expect(model.step == .account)
         #expect(!model.isDemo)
     }
 
     @Test func completedSetupDoesNotResume() {
         let model = OnboardingModel(isComplete: true)
-        model.resume(profile: BrowserProfile(displayName: "Ada", purpose: "Work"))
+        model.restoreSyncedProfile(BrowserProfile(displayName: "Ada", purpose: "Work"))
         #expect(model.isComplete)
         #expect(model.step == .welcome)
     }
 
-    @Test func realFlowEndsAtDefaultBrowserChoice() {
+    @Test func stepRawValuesRemainCompatible() {
+        #expect(OnboardingModel.Step.profile.rawValue == 1)
+        #expect(OnboardingModel.Step.space.rawValue == 2)
+        #expect(OnboardingModel.Step.importData.rawValue == 3)
+        #expect(OnboardingModel.Step.account.rawValue == 4)
+        #expect(OnboardingModel.Step.sync.rawValue == 5)
+    }
+
+    @Test func localFlowEndsAtDefaultBrowserChoice() {
         let model = OnboardingModel(isComplete: false)
+        model.advance()
+        model.advance()
         model.advance()
         model.displayName = "Ada"
         model.advance()
+        #expect(model.step == .space)
         model.advance()
-        model.advance()
-        model.advance()
-        #expect(model.step == .sync)
+        #expect(model.step == .importData)
         model.advance()
         #expect(model.step == .defaultBrowser)
     }

@@ -11,7 +11,7 @@ struct WorkspaceSyncPublisherTests {
         let key = SyncCryptography().makeRootKey()
         let device = UUID(uuid: (8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8))
         let spaceID = UUID(uuid: (9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9))
-        var space = BrowserSpace(id: spaceID, name: "Studio")
+        let space = BrowserSpace(id: spaceID, name: "Studio")
         let url = try #require(URL(string: "https://studio.example/home"))
         var tab = TabSnapshot(url: url, title: "Home")
         tab.spaceID = spaceID

@@ -37,7 +37,6 @@ struct FirstRunPresenter: ViewModifier {
             app.onboarding.model.onImportBrowser = { [weak model = window.model] in
                 model?.sheet = .importBrowser
             }
-            app.onboarding.model.resume(profile: window.model.durableSession().profile)
         }
         await app.account.model.restore()
         if app.onboarding.model.isComplete, !app.onboarding.model.lastCompletionWasDemo,

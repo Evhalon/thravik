@@ -21,6 +21,7 @@ build:
 
 test:
 	swift test $(TEST_FLAGS)
+	python3 scripts/test-account-configuration.py
 
 ## Bundle the SPM executable into a signed .app.
 ## Keep the .app path so Launch Services / TCC see the same app. Local
@@ -65,6 +66,7 @@ dev:
 run-dev:
 	@$(MAKE) run $(DEV_FLAGS)
 
+release: export REQUIRE_ACCOUNT_CONFIG = 1
 release: verify app
 	@sh scripts/package-release.sh "$(APP_DIR)" dist/Thravik-macOS.dmg
 

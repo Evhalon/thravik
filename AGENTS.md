@@ -135,7 +135,8 @@ Run `make verify` before declaring completion. If it fails, you are not done.
 - Password providers: local Keychain, Redent E2EE cloud, iCloud synchronizable
   Keychain. One selected provider; copying is explicit and retains source.
 - Cloud root keys/token/local vault/outbox are isolated by bundle and account.
-  Login alone cannot recover secrets: random recovery code unlocks root key.
+  Login alone cannot recover secrets: a master sync password unlocks the root
+  key on any Mac; the random recovery code remains the backup and reset proof.
 - Cloud password Keychain snapshots preserve distinct record IDs; never dedupe
   different remote records by login and silently discard a password.
 - iCloud availability requires signed Keychain access group; no local fallback.
@@ -149,3 +150,11 @@ Run `make verify` before declaring completion. If it fails, you are not done.
   a total from a partial DOM scan. Isolated scripts register frames, preserve
   clipped containers while native find scrolls, and clear native selections.
   Pending native work must finish before cleanup.
+
+## 10. PDF downloads
+
+- Native PDF toolbar/context-menu saves deliver cached bytes through
+  `_webView:saveDataToFile:suggestedFilename:mimeType:originatingURL:`.
+  Handle this separately from `WKDownload`, preserving original document bytes.
+- Cached saves share download-list states, filename sanitization, staging and
+  collision handling with network downloads. Disk writes run off-main.

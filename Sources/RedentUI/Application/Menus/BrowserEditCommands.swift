@@ -33,11 +33,11 @@ struct BrowserEditCommands: Commands {
             Button("Copy Address") { model?.copyAddress() }
                 .shortcut(.copyURL, bindings: bindings)
                 .disabled(!(model?.hasPage ?? false))
-            // Web apps bind ⌘⇧V to plain-text paste; outside the address bar the
-            // key must reach the page instead of navigating away from it.
+            // Web apps bind ⌘⇧V to plain-text paste. The key navigates only while
+            // a browser search field is focused, not while the page has the caret.
             Button(model?.pasteAndGoTitle ?? "Paste and Go") { model?.pasteAndGo() }
                 .shortcut(.pasteAndGo, bindings: bindings)
-                .disabled(!(model?.address.isEditing ?? false))
+                .disabled(model?.pasteAndGoField == nil)
         }
         CommandGroup(replacing: .printItem) {
             Button("Print…") { model?.printPage() }

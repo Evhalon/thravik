@@ -27,7 +27,8 @@ final class InertTab: BrowserTab {
     private(set) var pageFocusRequests = 0
 
     func setZoom(_ level: Double) { zoom = PageZoom.clamped(level) }
-    func load(_ url: URL) {}
+    private(set) var loadedURLs: [URL] = []
+    func load(_ url: URL) { loadedURLs.append(url) }
     func goBack() {}
     func goForward() {}
     func reload() {}

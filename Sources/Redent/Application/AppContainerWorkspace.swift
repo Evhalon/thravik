@@ -21,5 +21,6 @@ extension AppContainer {
             try? sessionStore.saveRecoverable(application.session)
         }
         workspace.model.replace(application.remoteTabs)
+        if let catalog = snapshot.catalog { workspace.model.recordSyncedProfile(catalog.profile) }
     }
 }

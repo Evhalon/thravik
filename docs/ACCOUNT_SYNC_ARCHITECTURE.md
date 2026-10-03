@@ -24,10 +24,11 @@ Nessun accesso WebKit nella sync, nessun accesso concreto Keychain nella UI/rete
 - Primo avvio: intro a tutto schermo con frasi successive e portale animato
   derivato dal logo, reveal testo con supporto
   Reduce Motion, ambient audio sintetizzato e segnali sonori disattivabili,
-  nome/focus, funnel Space esistente, import opzionale tramite il selettore
-  browser esistente (profili, cronologia, bookmark, password), login e setup/recovery del
-  vault cifrato. Completamento locale persistito; setup interrotto dopo lo Space
-  riprende dal login. Percorso locale disponibile anche con rete/auth assenti.
+  login e sblocco sync prima di nome/focus, Space e import opzionale tramite il
+  selettore browser esistente (profili, cronologia, bookmark, password).
+  Il profilo arrivato dal pull cloud salta nome e Space; il solo profilo locale
+  non viene trattato come account ripristinato. Completamento locale persistito.
+  Percorso locale disponibile anche con rete/auth assenti.
   Profilo opzionale nel catalogo cifrato, compatibile con sessioni/cataloghi
   precedenti. Undo delle schede conserva il profilo corrente.
 - Settings → Testing consente di riavviare il setup reale con account/import
@@ -101,10 +102,22 @@ Impostazioni → Account → Password storage seleziona una modalità per volta.
 - Redent cloud: Keychain separato per account + outbox SQLite cifrata + Supabase.
   Journal cifrato precede scrittura Keychain; replay ripara interruzioni/crash.
   Sync all'avvio/foreground e debounce sugli accessi, pagine da 100, senza polling.
-  Root key casuale locale: login da solo non sblocca un nuovo Mac. Creazione
-  esplicita, conferma codice salvato, recupero account-bound su altro Mac.
+  Root key casuale locale: login + password principale di sync sbloccano un nuovo
+  Mac senza dispositivi già collegati. Creazione esplicita, conferma backup del
+  codice di recupero; codice necessario solo per recupero/reset o migrazione dei
+  vault precedenti. La password di autenticazione e quella di sync sono distinte.
   Envelope recovery immutabile sul server; CAS conserva varianti in conflitto.
   UI propone tenere locale oppure scartare locale e usare cloud.
+- Password principale: PBKDF2-HMAC-SHA256 a 600.000 iterazioni, salt casuale di
+  32 byte, AES-256-GCM vincolato all'account. L'envelope contiene solo il codice
+  di recupero cifrato; password, codice e root key non raggiungono il backend.
+  Schema/KDF sono versionati e validati prima della derivazione. Il cambio/reset
+  richiede il codice esistente e una prova claim separata dalla chiave di cifratura;
+  CAS impedisce di sostituire un envelope modificato da un altro client.
+- Bookmark e cartelle: record cifrati con ID stabili, journal/outbox durabile,
+  tombstone e proiezione per account. Il pull preserva le modifiche locali in coda.
+  I bookmark locali preesistenti si copiano esplicitamente; logout ripristina il
+  profilo locale senza cancellare le copie dei diversi account.
 - iCloud: record per password nel Keychain data-protection synchronizable,
   access group verificato dalla firma; nessun fallback a storage locale.
   Sincronizzazione gestita da macOS e dall'Apple Account. Non equivale a importare
@@ -133,6 +146,9 @@ make dev
 scripts/configure-account.sh aggiunge Info.plist keys; SupabaseConfiguration
 valida URL HTTPS e tipo chiave. Senza variabili, navigazione locale invariata.
 La scheda Account è presente ma disabilitata.
+`make release` richiede configurazione account (`REQUIRE_ACCOUNT_CONFIG=1`):
+una build locale senza account resta consentita, una release senza config fallisce.
+`make test` verifica anche il packaging della configurazione pubblica.
 
 Configurazione server necessaria:
 

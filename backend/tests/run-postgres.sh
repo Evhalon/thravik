@@ -20,5 +20,6 @@ done
 docker exec -i "$container" psql -U postgres -v ON_ERROR_STOP=1 < tests/sync_foundation.sql
 docker exec -i "$container" psql -U postgres -v ON_ERROR_STOP=1 < tests/vault_recovery.sql
 docker exec -i "$container" psql -U postgres -v ON_ERROR_STOP=1 < tests/device_membership.sql
+docker exec -i "$container" psql -U postgres -v ON_ERROR_STOP=1 < tests/vault_password.sql
 
 python3 tests/concurrency.py "$container"

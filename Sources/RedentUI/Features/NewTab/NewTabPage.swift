@@ -44,6 +44,7 @@ struct NewTabPage: View {
         }
         .task(id: model.currentSpaceID) { await loadFavorites() }
         .onAppear { isSearchFocused = true }
+        .onDisappear { model.endPasteAndGoEditing(.newTabPage) }
         .task(id: model.centerSearchFocusEpoch) { await claimSearchFocus() }
     }
 

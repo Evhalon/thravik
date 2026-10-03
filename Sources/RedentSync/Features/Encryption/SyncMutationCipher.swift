@@ -43,7 +43,7 @@ public struct SyncMutationCipher: SyncMutationCiphering {
             return try crypto.deriveVaultKey(rootKey: rootKey)
         }
         let workspaceCollections = ["workspace", "spaces", "groups", "pins", "device_tabs",
-                                    "bookmarks", "settings", "history"]
+                                    "bookmarks", "bookmark_folders", "settings", "history"]
         guard workspaceCollections.contains(collection) else { throw SyncError.invalidMutation }
         return try crypto.deriveWorkspaceKey(rootKey: rootKey)
     }
