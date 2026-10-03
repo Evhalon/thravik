@@ -20,20 +20,7 @@ struct AppearanceSettingsPane: View {
                     }
                 }
             }
-            SettingsSection("CHROME") {
-                SettingsToggleRow(
-                    "Floating new tab search",
-                    caption: "⌘T opens a search above the current page. Press Return to open a tab.",
-                    isOn: $settings.opensFloatingNewTab
-                )
-                SettingsToggleRow(
-                    "Hide top navigation bar",
-                    caption: "Collapse with ⌘B for a full-height page. Hover the left or top edge to reveal controls.",
-                    isOn: hiddenNavigationSelection
-                )
-                SettingsToggleRow("Show tab strip", caption: "Toggle with ⌘\\.", isOn: $settings.isTabStripVisible)
-                sidebarWidthSlider
-            }
+            chromeSection
             SettingsSection("TAB GROUPS") {
                 SettingsToggleRow(
                     "Name groups with Apple Intelligence",
@@ -42,6 +29,38 @@ struct AppearanceSettingsPane: View {
                 )
             }
         }
+    }
+
+    private var chromeSection: some View {
+        SettingsSection("CHROME") {
+            SettingsToggleRow(
+                "Floating new tab search",
+                caption: "\(key(.newTab)) opens a search above the current page. Press Return to open a tab.",
+                isOn: $settings.opensFloatingNewTab
+            )
+            SettingsToggleRow(
+                "Hide top navigation bar",
+                caption: "Collapse with \(key(.toggleSidebar)) for a full-height page. "
+                    + "Hover the left or top edge to reveal controls.",
+                isOn: hiddenNavigationSelection
+            )
+            SettingsToggleRow(
+                "Show tab strip",
+                caption: "Toggle with \(key(.toggleTabStrip)).",
+                isOn: $settings.isTabStripVisible
+            )
+            SettingsToggleRow(
+                "Show bookmarks bar",
+                caption: "Toggle with \(key(.showBookmarksBar)). Hidden in Focus Mode.",
+                isOn: $settings.showsBookmarksBar
+            )
+            sidebarWidthSlider
+        }
+    }
+
+    /// The bound key, or the command's name once the user has cleared it.
+    private func key(_ id: ShortcutID) -> String {
+        settings.shortcutBindings.chord(for: id)?.displayString ?? id.title
     }
 
     private var hiddenNavigationSelection: Binding<Bool> {

@@ -11,11 +11,17 @@ enum CommandIntentParser {
     static func intents(
         for query: String, in context: CommandBarContext, searchEngine: SearchEngine
     ) -> [CommandBarResult] {
+        intents(for: query, in: context, routing: SearchRouting(engine: searchEngine))
+    }
+
+    static func intents(
+        for query: String, in context: CommandBarContext, routing: SearchRouting
+    ) -> [CommandBarResult] {
         let phrase = CommandPhrase(query)
         guard !phrase.text.isEmpty else { return [] }
         return CloseIntents.parse(phrase, in: context)
             + MoveIntents.parse(phrase, in: context)
-            + BrowserIntents.parse(phrase, in: context, searchEngine: searchEngine)
+            + BrowserIntents.parse(phrase, in: context, routing: routing)
             + ResumeIntents.parse(phrase, in: context)
     }
 

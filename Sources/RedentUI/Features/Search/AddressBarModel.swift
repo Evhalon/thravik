@@ -54,8 +54,12 @@ public final class AddressBarModel {
 
     /// - Returns: the URL to load, or `nil` if the input was empty.
     public func commit(using engine: SearchEngine) -> URL? {
+        commit(using: SearchRouting(engine: engine))
+    }
+
+    public func commit(using routing: SearchRouting) -> URL? {
         isEditing = false
-        return AddressResolver.resolve(text, using: engine)
+        return AddressResolver.resolve(text, using: routing)
     }
 
     /// Ends editing without changing the text — used when a dropdown row is

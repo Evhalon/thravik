@@ -28,9 +28,16 @@ struct FloatingVideoGestureTests {
         surface.scrollWheel(with: try scroll(phase: 0, deltaX: -30, momentum: 2))
         #expect(panel.frame.origin == movedOrigin)
         surface.scrollWheel(with: try scroll(phase: 4, deltaX: 0))
-        try await Task.sleep(for: .milliseconds(850))
+        // The throw keeps coasting after the gesture ends. Wait for it to
+        // actually move instead of a fixed delay, which loses the race when
+        // the whole suite runs in parallel.
         if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            #expect(panel.frame.origin != movedOrigin)
+            var coasted = panel.frame.origin != movedOrigin
+            for _ in 0..<30 where !coasted {
+                try await Task.sleep(for: .milliseconds(100))
+                coasted = panel.frame.origin != movedOrigin
+            }
+            #expect(coasted)
         }
         surface.stopMotion()
     }

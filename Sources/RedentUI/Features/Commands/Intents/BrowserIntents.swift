@@ -14,9 +14,10 @@ enum BrowserIntents {
     ]
 
     static func parse(
-        _ phrase: CommandPhrase, in context: CommandBarContext, searchEngine: SearchEngine
+        _ phrase: CommandPhrase, in context: CommandBarContext, routing: SearchRouting
     ) -> [CommandBarResult] {
-        screen(phrase) + window(phrase, context) + newTab(phrase, searchEngine) + tabs(phrase, context)
+        screen(phrase) + window(phrase, context) + newTab(phrase, routing)
+            + tabs(phrase, context) + recentlyClosed(phrase, context)
     }
 
     private static func screen(_ phrase: CommandPhrase) -> [CommandBarResult] {
@@ -39,16 +40,17 @@ enum BrowserIntents {
     }
 
     /// "new tab <anything>" opens that address, or searches for it.
-    private static func newTab(_ phrase: CommandPhrase, _ searchEngine: SearchEngine) -> [CommandBarResult] {
+    private static func newTab(_ phrase: CommandPhrase, _ routing: SearchRouting) -> [CommandBarResult] {
         let inNewTab = phrase.text.hasSuffix(" in new tab") || phrase.text.hasSuffix(" in a new tab")
         let lowered = inNewTab
             ? phrase.text.trimming(prefix: "open ").trimming(suffix: " in new tab").trimming(suffix: " in a new tab")
             : phrase.remainder(after: ["new tab", "open new tab", "open a new tab"]) ?? ""
         let query = phrase.preservingCase(lowered)
-        guard !query.isEmpty, let url = AddressResolver.resolve(query, using: searchEngine) else { return [] }
-        let isSearch = url == searchEngine.searchURL(for: query)
+        guard !query.isEmpty, let url = AddressResolver.resolve(query, using: routing) else { return [] }
+        let match = SearchKeywordResolver.match(in: query, engines: routing.customEngines)
+        let isSearch = match != nil || url == routing.searchURL(for: query)
         return [CommandIntentParser.row("Open “\(query)” in New Tab",
-                                        subtitle: isSearch ? "Search \(searchEngine.label)" : url.absoluteString,
+                                        subtitle: isSearch ? "Search \(match?.engine.name ?? routing.label)" : url.absoluteString,
                                         action: .newTab(url))]
     }
 
@@ -61,5 +63,28 @@ enum BrowserIntents {
                       "undo close tab", "restore tab", "restore closed tab", "reopen"]
         guard context.canReopenLastClosed, phrase.isOne(of: reopen) else { return [] }
         return [CommandIntentParser.row("Reopen Last Closed Tab", subtitle: "Tab", action: .reopenLastClosed)]
+    }
+
+    /// "closed", "recently closed github": the words after the key narrow the
+    /// list by title or host, so "enclosed" or "closed captions" stay searches.
+    private static func recentlyClosed(_ phrase: CommandPhrase, _ context: CommandBarContext) -> [CommandBarResult] {
+        let keys = ["closed", "reopen closed", "restore closed", "recently closed"]
+        guard !context.recentlyClosed.isEmpty, let rest = phrase.remainder(after: keys) else { return [] }
+        let filter = ["tab", "tabs", "group", "groups"].contains(rest) ? "" : rest
+        let entries = context.recentlyClosed.filter { entry in
+            filter.isEmpty || entry.title.lowercased().contains(filter) || (entry.host?.contains(filter) ?? false)
+        }
+        return entries.map { entry in
+            let subtitle: String
+            switch entry.kind {
+            case .tab: subtitle = entry.host ?? "Closed tab"
+            case .group(let count): subtitle = "\(count) tabs · Closed group"
+            }
+            return CommandIntentParser.row(
+                "Reopen “\(entry.title)”",
+                subtitle: subtitle,
+                action: .reopenClosed(entry.id)
+            )
+        }
     }
 }

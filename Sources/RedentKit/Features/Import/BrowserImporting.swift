@@ -19,7 +19,7 @@ public struct ImportableBrowser: Identifiable, Hashable, Sendable {
 
 /// What one import run produced. Counts only — never the data itself, so this
 /// is safe to log and to show.
-public struct ImportSummary: Sendable, Hashable {
+public struct ImportSummary: Codable, Sendable, Hashable {
     public var history: Int
     public var bookmarks: Int
     public var passwords: Int

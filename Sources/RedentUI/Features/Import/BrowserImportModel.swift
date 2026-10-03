@@ -2,8 +2,7 @@ import Foundation
 import Observation
 import RedentKit
 
-/// Runs an import from one or more other browser profiles and reports what
-/// came across. Profiles are imported in turn, and counted as one result.
+/// Imports browser profiles independently and reports their combined counts.
 @MainActor @Observable
 public final class BrowserImportModel {
     public private(set) var browsers: [ImportableBrowser] = []
@@ -15,12 +14,17 @@ public final class BrowserImportModel {
     public private(set) var summary: ImportSummary?
     /// Set when part of the import failed. The rest still went through.
     public private(set) var problem: String?
+    @ObservationIgnored public var onComplete: (@MainActor (BrowserImportReceipt) -> Void)?
 
-    /// Which Space receives the bookmarks and logins.
+    /// Bookmarks are scoped; history and password access remain global.
     public var destination: ImportDestination
+    public var createsSpacePerProfile = true
+    @ObservationIgnored public var createSpace: (@MainActor (String) async throws -> UUID)?
 
     private let importer: any BrowserImporting
     private let run: BrowserImportRun
+    private var profileSpaceIDs: [String: UUID] = [:]
+    private var didFailSpaceCreation = false
 
     public init(
         importer: any BrowserImporting,
@@ -73,7 +77,7 @@ public final class BrowserImportModel {
 
     public func run() async {
         let targets = selectedBrowsers
-        guard !targets.isEmpty, !isRunning else { return }
+        guard !targets.isEmpty, !kinds.isEmpty, !isRunning else { return }
         isRunning = true
         problem = nil
         summary = nil
@@ -86,16 +90,24 @@ public final class BrowserImportModel {
         var failures: [String] = []
         for browser in targets {
             runningBrowserName = browser.name
-            let outcome = await run.perform(on: browser, kinds: kinds, spaceID: destination.spaceID)
+            guard let spaceID = await destinationID(for: browser) else {
+                if didFailSpaceCreation { failures.append("space-create") }
+                continue
+            }
+            let outcome = await run.perform(on: browser, kinds: kinds, spaceID: spaceID)
             total.add(outcome.summary)
             failures.append(contentsOf: outcome.failures)
         }
 
         summary = total
         problem = failures.isEmpty ? nil : Self.message(for: failures)
+        onComplete?(BrowserImportReceipt(summary: total, profileNames: targets.map(\.name), problem: problem))
     }
 
     static func message(for failures: [String]) -> String {
+        if failures.contains("space-create") {
+            return "Could not create a Space for one or more profiles. Those profiles were skipped; other profiles continued."
+        }
         if failures.contains("passwords-key") {
             return "Passwords need permission: macOS must allow Thravik to read the other browser's encryption key. Try again and choose Always Allow to retain that permission."
         }
@@ -103,7 +115,7 @@ public final class BrowserImportModel {
             return "Passwords were read but could not be saved to the Keychain."
         }
         if failures.contains("passwords-locked") {
-            return "Could not open the password file. Quit the other browser and try again."
+            return "Some password archives could not be read. Successfully imported data is kept. Close the source browser and retry, or import passwords separately."
         }
         if failures.contains("passwords") {
             return "Could not read passwords from the other browser."
@@ -111,5 +123,23 @@ public final class BrowserImportModel {
         var seen: Set<String> = []
         let kinds = failures.filter { seen.insert($0).inserted }
         return "Could not read: \(kinds.joined(separator: ", ")). The other browser may be running — quit it and try again."
+    }
+
+    private func destinationID(for browser: ImportableBrowser) async -> UUID? {
+        didFailSpaceCreation = false
+        guard createsSpacePerProfile else { return destination.spaceID }
+        if let existing = profileSpaceIDs[browser.id] { return existing }
+        guard let createSpace else {
+            didFailSpaceCreation = true
+            return nil
+        }
+        do {
+            let created = try await createSpace(browser.name)
+            profileSpaceIDs[browser.id] = created
+            return created
+        } catch {
+            didFailSpaceCreation = true
+            return nil
+        }
     }
 }

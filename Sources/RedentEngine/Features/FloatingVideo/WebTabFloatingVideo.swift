@@ -38,6 +38,16 @@ extension WebTab {
         return isVideoFloating && floatingVideoPanel === panel
     }
 
+    @discardableResult
+    func floatVideoAutomatically() async -> Bool {
+        guard !isVideoFloating, !floatingVideoOpening else { return isVideoFloating }
+        // Set before the panel animates in, so a quick return still restores it.
+        didAutoFloatVideo = true
+        let opened = await toggleFloatingVideo()
+        if !opened { didAutoFloatVideo = false }
+        return opened
+    }
+
     public func returnVideoToTab() {
         guard let panel = floatingVideoPanel else { return }
         panel.focusSource()
@@ -67,6 +77,7 @@ extension WebTab {
         guard let panel = floatingVideoPanel else { return }
         floatingVideoPanel = nil
         isVideoFloating = false
+        didAutoFloatVideo = false
         if controller?.videoPresentation.activeTab === self { controller?.videoPresentation.activeTab = nil }
         panel.restore()
         webView?.evaluateJavaScript(

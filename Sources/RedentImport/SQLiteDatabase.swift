@@ -35,7 +35,12 @@ final class SQLiteDatabase {
         defer { sqlite3_finalize(statementHandle) }
 
         let statement = Statement(handle: statementHandle)
-        while sqlite3_step(statementHandle) == SQLITE_ROW {
+        while true {
+            let status = sqlite3_step(statementHandle)
+            guard status == SQLITE_ROW || status == SQLITE_DONE else {
+                throw ImportError.databaseUnreadable("read failed")
+            }
+            if status == SQLITE_DONE { return }
             try row(statement)
         }
     }

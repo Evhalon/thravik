@@ -19,7 +19,8 @@ struct PasswordSaveBar: View {
                     Text(title(for: request.kind))
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(Palette.chromeText)
-                    Text("\(request.candidate.username) · \(request.candidate.origin.displayHost)")
+                    Text(model.autofill.saveErrorMessage ??
+                         "\(request.candidate.username) · \(request.candidate.origin.displayHost)")
                         .font(.system(size: 11))
                         .foregroundStyle(Palette.chromeSecondaryText)
                 }
@@ -32,6 +33,7 @@ struct PasswordSaveBar: View {
                 Button(request.kind == .new ? "Save" : "Update") {
                     Task { await model.autofill.confirmPendingSave() }
                 }
+                .disabled(model.autofill.isSavingPassword)
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
             }

@@ -14,6 +14,8 @@ public enum WorkspaceAction: Sendable, Hashable, Codable {
     case setPinned(id: UUID, isPinned: Bool)
     /// Nil or blank restores the page's own title.
     case renameTab(id: UUID, title: String?)
+    /// Nil clears a user-chosen emoji icon. Invalid values are ignored.
+    case setCustomEmoji(id: UUID, emoji: String?)
     case setPinnedURL(id: UUID, url: URL?)
     case createGroup(spaceID: UUID, name: String)
     case createGroupWithTabs(spaceID: UUID, name: String, tabIDs: [UUID])

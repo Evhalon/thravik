@@ -95,5 +95,50 @@ struct DownloadsModelTests {
         list.downloadChanged(item)
         #expect(list.arrivals == 1)
         #expect(list.completions == 1)
+        #expect(list.arrivalCue?.kind == .flight)
+    }
+
+    @Test("A restored download does not count as an arrival or a finish")
+    func restoredSkipsAnimation() {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let list = DownloadsModel(sessionStartedAt: start)
+        var item = DownloadItem(
+            filename: "old.zip",
+            state: .finished,
+            startedAt: start.addingTimeInterval(-60)
+        )
+        list.downloadChanged(item)
+        #expect(list.arrivals == 0)
+        #expect(list.completions == 0)
+        #expect(!list.hasUnseenCompletion)
+        item.state = .finished
+        list.downloadChanged(item)
+        #expect(list.completions == 0)
+    }
+
+    @Test("A burst of new downloads becomes one flight, then a coalesced follow-up")
+    func coalescesBurst() {
+        let clock = ManualDownloadClock()
+        let list = clock.makeModel()
+        for index in 0..<5 {
+            list.downloadChanged(DownloadItem(filename: "\(index).zip"))
+        }
+        #expect(list.arrivals == 1)
+        #expect(list.arrivalCue?.count == 1)
+        list.drainArrivals(at: clock.now.addingTimeInterval(0.3))
+        #expect(list.arrivals == 2)
+        #expect(list.arrivalCue?.count == 4)
+    }
+
+    @Test("A held burst lands on its own, with no window driving the drain")
+    func heldBurstDrainsItself() async throws {
+        let list = ManualDownloadClock().makeModel()
+        list.downloadChanged(DownloadItem(filename: "a.zip"))
+        list.downloadChanged(DownloadItem(filename: "b.zip"))
+        #expect(list.arrivals == 1)
+        let wake = try #require(list.drainTask)
+        await wake.value
+        #expect(list.arrivals == 2)
+        #expect(list.arrivalCue?.filename == "b.zip")
     }
 }

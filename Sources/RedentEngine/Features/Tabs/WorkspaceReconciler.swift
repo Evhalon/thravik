@@ -6,7 +6,7 @@ extension TabController {
         var blank = TabSnapshot()
         blank.spaceID = BrowserSpace.workID
         blank.containerID = SpaceIdentity.containerID(for: BrowserSpace.workID)
-        closedStack.removeAll()
+        closedStack = RecentlyClosedStack()
         undoHistory.clear()
         reconcile(BrowserSession(tabs: [blank], selectedTabID: blank.id))
     }
@@ -34,6 +34,7 @@ extension TabController {
     /// The tab list is untouched by a selection change, so only the selection
     /// itself moves.
     private func applySelection(_ state: BrowserSession) {
+        let leavingID = selectedID
         touchActivity(of: selectedID)
         workspace.spaces = state.spaces
         workspace.selectedSpaceID = state.selectedSpaceID
@@ -41,6 +42,7 @@ extension TabController {
         updateSelectedID(state.selectedTabID)
         touchActivity(of: selectedID)
         onChange?()
+        if let selectedID, selectedID != leavingID { mediaSelectionMoved(from: leavingID, to: selectedID) }
     }
 
     public func undo() { rewind(undoHistory.pop()) }
@@ -80,5 +82,10 @@ extension TabController {
         workspace = state
         updateSelectedID(state.selectedTabID)
         changed()
+    }
+
+    public func importSyncedWorkspace(_ session: BrowserSession) {
+        guard session != self.session else { return }
+        reconcile(session)
     }
 }

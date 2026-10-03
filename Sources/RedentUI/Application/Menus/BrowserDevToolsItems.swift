@@ -1,3 +1,4 @@
+import RedentKit
 import SwiftUI
 
 /// The Browser menu's developer item: Chrome's DevTools under the page in
@@ -5,15 +6,16 @@ import SwiftUI
 /// its own, which a full menu bar hides behind the camera housing.
 struct BrowserDevToolsItems: View {
     let model: BrowserModel?
+    let bindings: ShortcutBindings
 
     var body: some View {
         Button((model?.isShowingDevTools ?? false) ? "Hide Developer Tools" : "Show Developer Tools") {
             model?.toggleDevTools()
         }
-        .keyboardShortcut("i", modifiers: [.command, .option])
+        .shortcut(.toggleDevTools, bindings: bindings)
         .disabled(!(model?.canToggleDevTools ?? false))
         Button("JavaScript Console") { model?.toggleConsole() }
-            .keyboardShortcut("j", modifiers: [.command, .option])
+            .shortcut(.toggleConsole, bindings: bindings)
             .disabled(!(model?.canToggleDevTools ?? false))
     }
 }

@@ -50,6 +50,7 @@ final class WindowContainer {
         services.updates = app.updates
         services.webAppInstaller = app.webAppInstaller
         services.groupNaming = OnDeviceGroupNamer()
+        services.calendar = app.calendar
         let features = BrowserFeatures(
             autofill: AutofillCoordinator(
                 store: app.credentials, logger: app.logger, isEnabled: settings.offersPasswordSave
@@ -69,6 +70,10 @@ final class WindowContainer {
             AnyView(BrowserPageView(controller: controller, tabID: id))
         }
 
+        controller.onScreenTabIDs = { [weak model = self.model] in
+            guard let model else { return [] }
+            return model.split.visibleTabIDs(primary: model.tabs.selectedID)
+        }
         controller.downloads = app.downloadCoordinator
         app.extensions.host.attach(controller)
         controller.permissionDecider = { [weak app] key, permission in

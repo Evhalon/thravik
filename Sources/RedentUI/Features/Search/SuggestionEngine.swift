@@ -37,7 +37,7 @@ public struct SuggestionEngine: Sendable {
             ? InlineCompletionFinder.completion(for: text, candidates: known.map(\.url))
             : nil
 
-        var list = SuggestionRows(query: text, searchEngine: context.searchEngine, limit: limit)
+        var list = SuggestionRows(query: text, routing: context.routing, limit: limit)
         list.lead(with: completion, known: known)
         list.add(openTabs: context.openTabs)
         // Saved pages rank above visited ones: bookmarking is an explicit

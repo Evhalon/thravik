@@ -16,6 +16,7 @@ struct SidebarTabList: View {
 
     @State private var collapsed = Set<UUID>()
     @State private var drag = TabDragCoordinator(axis: .vertical)
+    @State private var foldedArchiveIDs = Set<UUID>()
 
     var body: some View {
         ScrollView {
@@ -39,6 +40,27 @@ struct SidebarTabList: View {
         .animation(.spring(duration: 0.3), value: model.tabs.selectedID)
         .animation(.spring(duration: 0.3), value: model.split.tabIDs)
         .onChange(of: model.tabs.selectedID) { _, id in expand(containing: id) }
+        .onChange(of: archivedGroupIDs, initial: true) { _, ids in foldNewArchives(ids) }
+    }
+
+    @ViewBuilder
+    private func clusterBlock(_ cluster: SidebarNode.Cluster) -> some View {
+        SidebarClusterHeader(model: model, cluster: cluster, collapsed: $collapsed, drag: drag, tab: tab)
+        if !collapsed.contains(cluster.id) {
+            ForEach(cluster.memberIDs, id: \.self) { id in
+                if let tab = tab(id) { row(tab, indent: Metric.gutter) }
+            }
+        }
+    }
+
+    private var archivedGroupIDs: Set<UUID> {
+        Set(model.tabs.session.groups.filter { TidyTabsArchive.isArchivedGroupName($0.name) }.map(\.id))
+    }
+
+    /// Folds an archive once, when it first appears; one the user opened stays open.
+    private func foldNewArchives(_ ids: Set<UUID>) {
+        collapsed.formUnion(ids.subtracting(foldedArchiveIDs))
+        foldedArchiveIDs = ids
     }
 
     private var outline: SidebarOutline {
@@ -47,43 +69,6 @@ struct SidebarTabList: View {
             groups: model.tabs.session.groups,
             spaceID: spaceID
         )
-    }
-
-    @ViewBuilder
-    private func clusterBlock(_ cluster: SidebarNode.Cluster) -> some View {
-        let folded = collapsed.contains(cluster.id)
-        let naming = model.settings.namesGroupsOnDevice
-        SidebarGroupHeader(
-            title: model.groupNames.displayName(for: cluster, isEnabled: naming),
-            siteName: cluster.name,
-            iconTab: tab(cluster.memberIDs.first),
-            isCollapsed: folded,
-            actions: .init(
-                onToggle: { collapsed.formSymmetricDifference([cluster.id]) },
-                onClose: { model.tabs.closeTabs(Set(cluster.memberIDs)) }
-            )
-        )
-        .task(id: naming ? Set(cluster.memberIDs) : []) {
-            await model.groupNames.resolve(cluster, isEnabled: naming) { pages(of: cluster) }
-        }
-        // A header the drag does not know about is a dead band the pointer has
-        // to cross blind, so it joins the geometry like any other row.
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.dragSpace)) } action: {
-            drag.track(.header(cluster.id), drawing: folded ? cluster.memberIDs : [], frame: $0)
-        }
-        .onDisappear { drag.forget(.header(cluster.id)) }
-        .offset(drag.offset(for: .header(cluster.id)))
-        if !folded {
-            ForEach(cluster.memberIDs, id: \.self) { id in
-                if let tab = tab(id) { row(tab, indent: Metric.gutter) }
-            }
-        }
-    }
-
-    private func pages(of cluster: SidebarNode.Cluster) -> [TabGroupPage] {
-        cluster.memberIDs.compactMap { tab($0) }.map {
-            TabGroupPage(title: $0.snapshot.displayTitle, host: $0.origin?.displayHost ?? "")
-        }
     }
 
     /// A split is one entry, drawn where its first tab sits; its other tabs

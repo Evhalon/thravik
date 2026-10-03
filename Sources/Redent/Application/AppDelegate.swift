@@ -112,15 +112,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func receive(_ urls: [URL]) {
-        guard !urls.isEmpty else { return }
+        let links = urls.filter { url in
+            guard url.scheme == "redent", url.host == "account" else { return true }
+            _ = container?.account.acceptCallback(url)
+            return false
+        }
+        guard !links.isEmpty else { return }
         awaitsWindowForExternalLink = true
         guard let container else {
-            pendingLinks.append(contentsOf: urls)
+            pendingLinks.append(contentsOf: links)
             requestWindow()
             presentWindow(nil)
             return
         }
-        container.openExternal(urls)
+        container.openExternal(links)
         // Teams can use either URL delivery path. Presentation belongs here or
         // its new tab can stay hidden behind the source app.
         let window = NSApp.keyWindow ?? NSApp.mainWindow

@@ -13,6 +13,7 @@ struct TopTabItem: View {
     let drag: TabDragCoordinator
 
     @State private var isHovering = false
+    @State private var showsEmojiPicker = false
 
     private var width: CGFloat? { tab.isPinned ? Metric.tabRowHeight + 6 : 184 }
 
@@ -40,7 +41,12 @@ struct TopTabItem: View {
     var body: some View {
         HStack(spacing: 4) {
             if tab.isPinned {
-                FaviconView(data: tab.snapshot.faviconData, host: tab.origin?.displayHost, size: 15)
+                FaviconView(
+                    data: tab.snapshot.faviconData,
+                    host: tab.origin?.displayHost,
+                    size: 15,
+                    emoji: tab.snapshot.customEmoji
+                )
                     .opacity(tab.isHibernated ? 0.55 : 1)
             } else {
                 TabRowLabel(tab: tab, isSelected: isSelected)
@@ -60,6 +66,7 @@ struct TopTabItem: View {
             withAnimation(.easeOut(duration: 0.12)) { isHovering = hovering }
         }
         .tabDragging(tab: tab, actions: actions, drag: drag, space: TopTabStrip.dragSpace)
-        .contextMenu { TabRowMenu(tab: tab, actions: actions) }
+        .contextMenu { TabRowMenu(tab: tab, actions: actions, onSetEmojiIcon: { showsEmojiPicker = true }) }
+        .tabEmojiPicker(for: tab, isPresented: $showsEmojiPicker)
     }
 }

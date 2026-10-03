@@ -16,6 +16,7 @@ extension TabController {
         snapshot.groupID = source.groupID
         snapshot.lifespan = source.lifespan
         snapshot.zoom = source.zoom
+        snapshot.customEmoji = source.customEmoji
         let tab = WebTab(snapshot: snapshot, controller: self)
         webTabs.insert(tab, at: index + 1)
         updateSelectedID(tab.id)

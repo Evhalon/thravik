@@ -35,6 +35,12 @@ enum PageCommandDescriptors {
         CommandDescriptor(id: "reader", title: "Toggle Reader", keywords: ["read", "article", "clean"], symbol: "text.page") { _, _ in .toggleReader },
         CommandDescriptor(id: "mute", title: "Mute or Unmute Tab", keywords: ["sound", "audio", "silence"], symbol: "speaker.slash") { _, _ in .toggleMute },
         CommandDescriptor(id: "print", title: "Print Page", keywords: ["pdf", "paper"], symbol: "printer") { _, _ in .printPage },
+        CommandDescriptor(id: "paste-and-go", title: "Paste and Go", keywords: ["paste and search", "clipboard"], symbol: "clipboard") { context, _ in
+            if case .go = context.clipboardPaste { .pasteAndGo } else { nil }
+        },
+        CommandDescriptor(id: "paste-and-search", title: "Paste and Search", keywords: ["paste and go", "clipboard"], symbol: "clipboard") { context, _ in
+            if case .search = context.clipboardPaste { .pasteAndGo } else { nil }
+        },
         CommandDescriptor(id: "site-data", title: "Clear Current Site's Data…", keywords: ["cookies", "storage", "forget", "privacy"], symbol: "hand.raised") { context, _ in
             hasPage(context) ? .showScreen(.siteData) : nil
         },

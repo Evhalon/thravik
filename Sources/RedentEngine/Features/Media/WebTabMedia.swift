@@ -30,13 +30,16 @@ extension WebTab {
         } else {
             audibleFrames.remove(frame)
         }
+        let wasPlaying = isPlayingAudio
         isPlayingAudio = !audibleFrames.isEmpty
+        if isPlayingAudio && !wasPlaying { markMediaActivity() }
     }
 
     /// Called as a new main-frame document starts: the old page's frames are gone.
     func resetMediaFrames() {
         audibleFrames.removeAll()
         isPlayingAudio = false
+        clearMediaSession()
         if isAdjusted { applyAudio() }
     }
 

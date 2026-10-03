@@ -24,6 +24,8 @@ public protocol BrowserControlling: AnyObject {
     /// Restores starter Spaces with one blank tab and drops transient undo state.
     func resetWorkspace()
     @discardableResult func newTab(url: URL?) -> any BrowserTab
+    /// Opens a tab in the current Space without selecting it.
+    @discardableResult func newBackgroundTab(url: URL) -> any BrowserTab
     /// Opens a tab in the temporary role: excluded from history, session
     /// restore, and the reopen stack, with its own ephemeral storage.
     @discardableResult func newTemporaryTab(url: URL?, expiresAt: Date?) -> any BrowserTab
@@ -49,6 +51,12 @@ public protocol BrowserControlling: AnyObject {
     func applyOrder(_ ids: [UUID])
     func togglePin(_ id: UUID)
     func reopenLastClosed()
+    /// Recently closed tabs and tab groups, newest first. Empty in private windows.
+    var recentlyClosed: [RecentlyClosedEntry] { get }
+    /// Restores one stack entry by id and removes only that record.
+    func reopenClosed(_ entryID: UUID)
+    /// Closes every tab in a user group as one reopenable group entry.
+    func closeGroup(_ groupID: UUID)
     /// Drops every reopen and undo record that would bring a forgotten site
     /// back into the window.
     /// - Returns: how many closed-tab records were discarded.
@@ -65,6 +73,10 @@ public protocol BrowserControlling: AnyObject {
     /// Opens DevTools on the Console, or closes them if they are open.
     func toggleConsole(_ id: UUID)
     func isShowingDevTools(_ id: UUID) -> Bool
+    /// Replaces shared Spaces, groups, and pins. Existing web views stay put.
+    func importSyncedWorkspace(_ session: BrowserSession)
+    /// Backdates idle tabs in a Space for Tidy Tabs demos in Settings → Testing.
+    func backdateInactiveTabsForTidyDemo(spaceID: UUID?, lastActiveAt: Date)
 }
 
 extension BrowserControlling {
@@ -73,4 +85,16 @@ extension BrowserControlling {
     public func toggleDevTools(_ id: UUID) {}
     public func toggleConsole(_ id: UUID) {}
     public func isShowingDevTools(_ id: UUID) -> Bool { false }
+    public func importSyncedWorkspace(_ session: BrowserSession) {}
+    public var recentlyClosed: [RecentlyClosedEntry] { [] }
+    public func reopenClosed(_ entryID: UUID) {}
+    public func closeGroup(_ groupID: UUID) {}
+    public func backdateInactiveTabsForTidyDemo(spaceID: UUID?, lastActiveAt: Date) {}
+
+    @discardableResult
+    public func newBackgroundTab(url: URL) -> any BrowserTab {
+        let current = selectedID
+        defer { selectedID = current }
+        return newTab(url: url)
+    }
 }

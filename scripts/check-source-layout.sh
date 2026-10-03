@@ -11,10 +11,10 @@ check_layout() {
     done
 }
 
-for target in Redent RedentKit RedentEngine RedentUI RedentVault; do
+for target in Redent RedentKit RedentEngine RedentUI RedentVault RedentSync; do
     check_layout "Sources/$target"
 done
-for target in RedentAppTests RedentKitTests RedentEngineTests RedentUITests RedentVaultTests; do
+for target in RedentAppTests RedentKitTests RedentEngineTests RedentUITests RedentVaultTests RedentSyncTests; do
     check_layout "Tests/$target"
 done
 echo "OK: feature and shared source layout holds"

@@ -28,7 +28,7 @@ extension BrowserModel {
             openFloatingNewTabSuggestion(row)
             return
         }
-        let url = AddressResolver.resolve(text, using: settings.searchEngine)
+        let url = AddressResolver.resolve(text, using: settings.searchRouting)
         dismissFloatingNewTab()
         tabs.newTab(url: url)
         if url == nil { requestCenterSearchFocus() }

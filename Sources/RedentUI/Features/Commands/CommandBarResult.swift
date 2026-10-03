@@ -56,6 +56,8 @@ public struct CommandBarResult: Identifiable, Hashable, Sendable {
     public internal(set) var faviconData: Data?
     /// The host the favicon stands for, used when the page has none.
     public internal(set) var faviconHost: String?
+    /// A user-chosen emoji drawn instead of the site favicon.
+    public internal(set) var customEmoji: String?
 
     public init(
         id: String,

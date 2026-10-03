@@ -77,6 +77,11 @@ final class FakeBrowser: BrowserControlling {
         openedURLs.append(url)
         return InertTab()
     }
+    private(set) var backgroundURLs: [URL] = []
+    func newBackgroundTab(url: URL) -> any BrowserTab {
+        backgroundURLs.append(url)
+        return InertTab()
+    }
     func newTemporaryTab(url: URL?, expiresAt: Date?) -> any BrowserTab { InertTab() }
     func keepTab(_ id: UUID) {}
     func sweepExpiredTabs(now: Date) -> UUID? { nil }

@@ -12,6 +12,7 @@ struct PinnedTile: View {
     @State private var isHovering = false
     @State private var isRenaming = false
     @State private var draftName = ""
+    @State private var showsEmojiPicker = false
 
     private static let corner: CGFloat = 11
 
@@ -26,7 +27,13 @@ struct PinnedTile: View {
                 withAnimation(.easeOut(duration: 0.14)) { isHovering = hovering }
             }
             .help(tab.snapshot.displayTitle)
-            .contextMenu { PinnedTileMenu(tab: tab, actions: actions, onRename: beginRename) }
+            .contextMenu {
+                PinnedTileMenu(
+                    tab: tab, actions: actions, onRename: beginRename,
+                    onSetEmojiIcon: { showsEmojiPicker = true }
+                )
+            }
+            .tabEmojiPicker(for: tab, isPresented: $showsEmojiPicker)
             .alert("Rename Tab", isPresented: $isRenaming) {
                 TextField(tab.snapshot.title, text: $draftName)
                 Button("Rename") { actions.onRename(draftName) }
@@ -40,7 +47,12 @@ struct PinnedTile: View {
         ZStack {
             // Pins are launchers: a sleeping pin keeps its full colour, so the
             // grid stays recognisable by icon alone.
-            FaviconView(data: tab.snapshot.faviconData, host: tab.origin?.displayHost, size: 20)
+            FaviconView(
+                data: tab.snapshot.faviconData,
+                host: tab.origin?.displayHost,
+                size: 20,
+                emoji: tab.snapshot.customEmoji
+            )
             if tab.isLoading {
                 CountdownRing(fraction: max(0.06, tab.progress), lineWidth: 1.6, tint: Palette.accent)
                     .frame(width: 25, height: 25)

@@ -10,26 +10,37 @@ public struct FaviconView: View {
     private let data: Data?
     private let host: String?
     private let size: CGFloat
+    private let emoji: String?
 
-    public init(data: Data?, host: String?, size: CGFloat = 16) {
+    public init(data: Data?, host: String?, size: CGFloat = 16, emoji: String? = nil) {
         self.data = data
         self.host = host
         self.size = size
+        self.emoji = emoji
     }
 
     public var body: some View {
         Group {
-            if let image = decodedImage {
+            if let emoji {
+                Text(emoji)
+                    .font(.system(size: size * 0.9))
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                    .frame(width: size, height: size)
+            } else if let image = decodedImage {
                 Image(nsImage: image)
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
             } else {
                 fallbackTile
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
     }
 
     private var decodedImage: NSImage? {

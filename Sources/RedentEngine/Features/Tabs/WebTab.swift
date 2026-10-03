@@ -31,6 +31,11 @@ public final class WebTab: Identifiable, BrowserTab {
     public internal(set) var canFloatVideo = false
     public internal(set) var isVideoFloating = false
     public internal(set) var isVideoPlaying = false
+    public internal(set) var didAutoFloatVideo = false
+    public internal(set) var mediaSessionTitle: String?
+    public internal(set) var mediaSessionArtist: String?
+    public internal(set) var mediaSessionArtworkURL: URL?
+    public internal(set) var lastMediaActivityAt: Date?
     public internal(set) var videoPlayback = FloatingVideoPlayback()
     public internal(set) var quietReceipt = QuietReceipt()
 
@@ -88,6 +93,10 @@ public final class WebTab: Identifiable, BrowserTab {
     }
 
     public func load(_ url: URL) {
+        if controller?.managedURLBlocker?(url) == true {
+            blockOrganizationPolicy(for: url)
+            return
+        }
         beginNavigation(to: url)
         if adoptPrerendered(url) { return }
         if let webView { navigate(url, in: webView) } else { wake(loading: url) }

@@ -7,12 +7,19 @@ public enum AddressResolver {
     ]
 
     public static func resolve(_ input: String, using engine: SearchEngine) -> URL? {
+        resolve(input, using: SearchRouting(engine: engine))
+    }
+
+    public static func resolve(_ input: String, using routing: SearchRouting) -> URL? {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
-
+        if let match = SearchKeywordResolver.match(in: text, engines: routing.customEngines),
+           let url = match.engine.searchURL(for: match.query) {
+            return url
+        }
         if let url = explicitURL(from: text) { return url }
         if looksLikeHost(text), let url = URL(string: "https://\(text)") { return url }
-        return engine.searchURL(for: text)
+        return routing.searchURL(for: text)
     }
 
     private static func explicitURL(from text: String) -> URL? {

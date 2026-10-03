@@ -5,6 +5,7 @@ import SwiftUI
 /// things done to the one in front.
 struct BrowserTabCommands: Commands {
     let model: BrowserModel?
+    let bindings: ShortcutBindings
 
     var body: some Commands {
         CommandMenu("Tab") {
@@ -13,18 +14,21 @@ struct BrowserTabCommands: Commands {
             numberedTabs
             Divider()
             Button(pinTitle) { model.flatMap { $0.tabs.selectedID.map($0.tabs.togglePin) } }
-                .keyboardShortcut("p", modifiers: [.command, .shift])
+                .shortcut(.pinTab, bindings: bindings)
                 .disabled(model?.tabs.selectedID == nil)
             Button("Duplicate Tab") { model?.duplicateSelectedTab() }
+                .shortcut(.duplicateTab, bindings: bindings)
                 .disabled(model?.selectedTab?.url == nil)
             Button("Close Other Tabs") {
                 model.flatMap { $0.tabs.selectedID.map($0.tabs.closeOthers(than:)) }
             }
-            .keyboardShortcut("w", modifiers: [.command, .option])
+            .shortcut(.closeOtherTabs, bindings: bindings)
             .disabled(model?.tabs.selectedID == nil)
+            Button("Tidy Unused Tabs…") { model?.execute(.tidyUnusedTabs) }
+                .disabled(model == nil)
             // ⌃M, as in Firefox: ⌘M belongs to Minimize in every Mac app.
             Button(muteTitle) { model?.toggleMute() }
-                .keyboardShortcut("m", modifiers: .control)
+                .shortcut(.muteTab, bindings: bindings)
                 .disabled(model?.selectedTab == nil)
         }
     }
@@ -35,19 +39,19 @@ struct BrowserTabCommands: Commands {
     @ViewBuilder
     private var stepItems: some View {
         Button("Next Tab") { model?.tabs.selectNext() }
-            .keyboardShortcut("j")
+            .shortcut(.nextTab, bindings: bindings)
             .disabled(model == nil)
         Button("Previous Tab") { model?.tabs.selectPrevious() }
-            .keyboardShortcut(.tab, modifiers: [.control, .shift])
+            .shortcut(.previousTab, bindings: bindings)
             .disabled(model == nil)
         Button("Last Active Tab") { model?.tabs.selectPreviouslyActiveTab() }
-            .keyboardShortcut(.tab, modifiers: .control)
+            .shortcut(.lastActiveTab, bindings: bindings)
             .disabled(model == nil)
         Button("Select Tab to the Right") { model?.tabs.selectNext() }
-            .keyboardShortcut("]", modifiers: [.command, .shift])
+            .shortcut(.selectTabRight, bindings: bindings)
             .disabled(model == nil)
         Button("Select Tab to the Left") { model?.tabs.selectPrevious() }
-            .keyboardShortcut("[", modifiers: [.command, .shift])
+            .shortcut(.selectTabLeft, bindings: bindings)
             .disabled(model == nil)
     }
 

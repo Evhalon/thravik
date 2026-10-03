@@ -30,6 +30,8 @@ struct PagePane: View {
             CertificateWarningPage(url: url, dismiss: { model.tabs.close(tab.id) }) {
                 tab.proceedThroughInvalidCertificate()
             }
+        } else if let tab, tab.pageTrustIssue == .organizationBlocked, let url = tab.url {
+            OrganizationBlockedPage(url: url, dismiss: { model.tabs.close(tab.id) })
         } else if let tab, tab.isVideoFloating {
             FloatingVideoPlaceholder(tab: tab)
         } else if let tab, tab.url != nil {

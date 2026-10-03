@@ -1,4 +1,5 @@
 import RedentDesign
+import RedentKit
 import SwiftUI
 
 struct CommandBarRow: View {
@@ -9,6 +10,7 @@ struct CommandBarRow: View {
     let isSelected: Bool
     /// 1…9 when ⌘-that-number runs this row.
     let shortcutNumber: Int?
+    @Environment(\.shortcutBindings) private var bindings
     @State private var isHovered = false
 
     var body: some View {
@@ -60,8 +62,8 @@ struct CommandBarRow: View {
     @ViewBuilder
     private var icon: some View {
         Group {
-            if row.faviconData != nil || row.faviconHost != nil {
-                FaviconView(data: row.faviconData, host: row.faviconHost, size: 20)
+            if row.customEmoji != nil || row.faviconData != nil || row.faviconHost != nil {
+                FaviconView(data: row.faviconData, host: row.faviconHost, size: 20, emoji: row.customEmoji)
             } else {
                 Image(systemName: row.symbol)
                     .font(.system(size: 15, weight: .medium))
@@ -73,6 +75,8 @@ struct CommandBarRow: View {
     }
 
     /// The lit row shows what return does: run it, or fill the field first.
+    /// Unlit rows show ⌘1–9 first — that is what runs them from here — and a
+    /// command's menu key only past the ninth row.
     @ViewBuilder
     private var trailing: some View {
         if isSelected {
@@ -85,7 +89,18 @@ struct CommandBarRow: View {
             Text("⌘\(shortcutNumber)")
                 .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(Palette.chromeSecondaryText.opacity(0.7))
+        } else if let glyph = commandShortcutGlyph {
+            Text(glyph)
+                .font(.system(size: 11).monospacedDigit())
+                .foregroundStyle(Palette.chromeSecondaryText.opacity(0.7))
         }
+    }
+
+    private var commandShortcutGlyph: String? {
+        guard row.source == .command, row.id.hasPrefix("command:") else { return nil }
+        let descriptorID = String(row.id.dropFirst("command:".count))
+        guard let id = ShortcutID(commandDescriptorID: descriptorID) else { return nil }
+        return bindings.chord(for: id)?.displayString
     }
 
     private var actionLabel: String {

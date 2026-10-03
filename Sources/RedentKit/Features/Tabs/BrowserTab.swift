@@ -1,7 +1,7 @@
 import Foundation
 
 @MainActor
-public protocol BrowserTab: FloatingVideoControlling {
+public protocol BrowserTab: FloatingVideoControlling, NowPlayingControlling {
     var id: UUID { get }
     var snapshot: TabSnapshot { get }
     var title: String { get }
@@ -45,6 +45,8 @@ public protocol BrowserTab: FloatingVideoControlling {
     /// Writes a remembered value into the field being typed in. Never submits.
     func fillFormField(_ value: String)
     func hibernate()
+    /// Nil clears a user-chosen emoji icon. Invalid values are ignored.
+    func setCustomEmoji(_ emoji: String?)
     /// Some frame in the page is playing sound, muted by Redent or not.
     var isPlayingAudio: Bool { get }
     var isMuted: Bool { get }
@@ -91,4 +93,5 @@ public extension BrowserTab {
     func showFormSuggestions(count: Int) {}
     func fillFormField(_ value: String) {}
     func announcePageSignals() async {}
+    func setCustomEmoji(_ emoji: String?) {}
 }

@@ -3,6 +3,15 @@ import RedentKit
 
 /// Actions on tabs, Spaces and groups — the window's own workspace.
 extension BrowserModel {
+    public func createSpaceForImport(named name: String) throws -> UUID {
+        let existingIDs = Set(tabs.session.spaces.map(\.id))
+        try tabs.perform(.createSpace(name: name, look: nil))
+        guard let created = tabs.session.spaces.first(where: { !existingIDs.contains($0.id) }) else {
+            throw CommandActionError.unavailable
+        }
+        return created.id
+    }
+
     /// - Returns: false when `action` is not a workspace action.
     func routeWorkspace(_ action: BrowserAction) throws -> Bool {
         switch action {
@@ -13,6 +22,7 @@ extension BrowserModel {
         case .closeTab(let id): tabs.close(id)
         case .closeTabs(let ids): tabs.closeTabs(ids)
         case .reopenLastClosed: tabs.reopenLastClosed()
+        case .reopenClosed(let id): tabs.reopenClosed(id)
         case .duplicateTab(let id): try duplicateTab(id)
         case .reloadAllTabs: reloadAllTabs()
         case .pinTab(let id, let pinned): try tabs.perform(.setPinned(id: id, isPinned: pinned))
@@ -24,6 +34,7 @@ extension BrowserModel {
         case .deleteSpace(let id): try tabs.perform(.deleteSpace(id: id))
         case .moveTab(let id, let space): try tabs.perform(.moveTab(id: id, toSpaceID: space, index: nil))
         case .moveTabToGroup(let id, let group): try moveTab(id, toGroup: group)
+        case .tidyUnusedTabs: tidyUnusedTabs(manual: true)
         default: return false
         }
         return true

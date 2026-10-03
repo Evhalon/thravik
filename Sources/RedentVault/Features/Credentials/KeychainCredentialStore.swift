@@ -3,14 +3,20 @@ import RedentKit
 
 /// Stores all logins in one Keychain item. Ad-hoc development signatures can
 /// therefore cause at most one ACL prompt after a rebuild, never one per login.
-public actor KeychainCredentialStore: CredentialStoring {
+public actor KeychainCredentialStore: CredentialSnapshotStoring {
     private static let vaultAccount = "redent-credential-vault-v1"
     private let vault: KeychainStore
     private let legacy: KeychainStore
+    private let preservesDistinctRecords: Bool
 
-    public init(service: String = "app.redent.browser.credentials") {
+    public init(service: String = "app.redent.browser.credentials", preservesDistinctRecords: Bool = false) {
+        self.preservesDistinctRecords = preservesDistinctRecords
         vault = KeychainStore(service: "\(service).vault")
         legacy = KeychainStore(service: service)
+    }
+
+    public func applySnapshot(_ credentials: [Credential]) async throws {
+        try await write(credentials)
     }
 
     public func credentials(for origin: Origin) async throws -> [Credential] {
@@ -59,7 +65,7 @@ public actor KeychainCredentialStore: CredentialStoring {
                 account: Self.vaultAccount,
                 label: "Thravik Password Vault"
             )
-            return Self.dedupe(try CredentialVaultCodec.decode(item.valueData))
+            return normalized(try CredentialVaultCodec.decode(item.valueData))
         } catch VaultError.itemNotFound {
             return try await migrateLegacy()
         }
@@ -69,7 +75,7 @@ public actor KeychainCredentialStore: CredentialStoring {
         try await vault.upsert(
             account: Self.vaultAccount,
             label: "Thravik Password Vault",
-            valueData: try CredentialVaultCodec.encode(Self.dedupe(credentials))
+            valueData: try CredentialVaultCodec.encode(normalized(credentials))
         )
     }
 
@@ -78,6 +84,10 @@ public actor KeychainCredentialStore: CredentialStoring {
             if $0.useCount != $1.useCount { return $0.useCount > $1.useCount }
             return ($0.lastUsedAt ?? .distantPast) > ($1.lastUsedAt ?? .distantPast)
         }
+    }
+
+    private func normalized(_ credentials: [Credential]) -> [Credential] {
+        preservesDistinctRecords ? credentials : Self.dedupe(credentials)
     }
 
     private static func dedupe(_ credentials: [Credential]) -> [Credential] {

@@ -5,7 +5,7 @@ import Testing
 import WebKit
 @testable import RedentEngine
 
-/// A real tab showing a small page, once the find script has reached it.
+/// A real tab showing a small page, once the isolated page bridge has reached it.
 @MainActor
 enum FindTestPage {
     /// Tabs are built with `inactiveSchedulingPolicy = .suspend`, and a view
@@ -51,7 +51,7 @@ enum FindTestPage {
         let deadline = ContinuousClock.now + limit
         while ContinuousClock.now < deadline {
             let ready = try? await view.callAsyncJavaScript(
-                "return typeof window.redentFind === 'function' && !!document.body",
+                "return typeof window.redentFindClear === 'function' && !!document.body",
                 in: nil,
                 contentWorld: PageScripts.contentWorld
             ) as? Bool

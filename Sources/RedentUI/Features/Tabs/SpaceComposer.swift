@@ -10,17 +10,20 @@ struct SpaceComposer: View {
     private let onCancel: () -> Void
     private let onCommit: (SpaceDraft) -> Void
     private let onChange: (SpaceDraft) -> Void
+    private let commitTitle: String?
 
     init(
         draft: SpaceDraft,
         onCancel: @escaping () -> Void,
         onCommit: @escaping (SpaceDraft) -> Void,
-        onChange: @escaping (SpaceDraft) -> Void
+        onChange: @escaping (SpaceDraft) -> Void,
+        commitTitle: String? = nil
     ) {
         _draft = State(initialValue: draft)
         self.onCancel = onCancel
         self.onCommit = onCommit
         self.onChange = onChange
+        self.commitTitle = commitTitle
     }
 
     var body: some View {
@@ -82,7 +85,7 @@ struct SpaceComposer: View {
 
     private var primaryTitle: String {
         guard draft.isLastStep else { return "Next" }
-        return draft.isEditing ? "Save" : "Create Space"
+        return commitTitle ?? (draft.isEditing ? "Save" : "Create Space")
     }
 
     private var stepTransition: AnyTransition {

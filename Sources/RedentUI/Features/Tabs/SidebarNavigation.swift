@@ -11,6 +11,7 @@ struct SidebarNavigation: View {
                 NavigationControls(model: model, showsTabToggle: false, showsReload: false)
                 if model.showsFloatVideoControl { FloatVideoButton(model: model) }
                 if let extensionToolbar { extensionToolbar }
+                DownloadsButton(model: model)
                 BrowserMenu(model: model, symbol: "ellipsis", showsPageActions: true)
             }
             .padding(.leading, Metric.windowButtonsWidth)

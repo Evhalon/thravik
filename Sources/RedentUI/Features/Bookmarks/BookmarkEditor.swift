@@ -9,11 +9,12 @@ struct BookmarkEditor: View {
         case folder(UUID)
         case rename(Bookmark)
         case address(Bookmark)
+        case edit(Bookmark)
 
         var id: UUID {
             switch self {
             case .create(let id), .folder(let id): id
-            case .rename(let bookmark), .address(let bookmark): bookmark.id
+            case .rename(let bookmark), .address(let bookmark), .edit(let bookmark): bookmark.id
             }
         }
 
@@ -23,26 +24,27 @@ struct BookmarkEditor: View {
             case .folder: "New Folder"
             case .rename: "Rename Bookmark"
             case .address: "Edit Address"
+            case .edit: "Edit Bookmark"
             }
         }
 
         var initialTitle: String {
             switch self {
             case .create, .folder, .address: ""
-            case .rename(let bookmark): bookmark.displayTitle
+            case .rename(let bookmark), .edit(let bookmark): bookmark.displayTitle
             }
         }
 
         var initialAddress: String {
             switch self {
             case .create, .folder, .rename: ""
-            case .address(let bookmark): bookmark.url.absoluteString
+            case .address(let bookmark), .edit(let bookmark): bookmark.url.absoluteString
             }
         }
 
         var validationMessage: String {
             switch self {
-            case .create: "Enter a name and a valid http or https address."
+            case .create, .edit: "Enter a name and a valid http or https address."
             case .folder: "Enter a folder name."
             case .rename: "Enter a bookmark name."
             case .address: "Enter a valid http or https address."

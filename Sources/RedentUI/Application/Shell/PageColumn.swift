@@ -15,6 +15,7 @@ struct PageColumn<Backdrop: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             if model.showsNavigationBar { chrome.zIndex(1) } else { windowButtonClearance }
+            if showsBarAbovePage { BookmarksBar(model: model).zIndex(1) }
             page
         }
     }
@@ -48,6 +49,7 @@ struct PageColumn<Backdrop: View>: View {
                     .padding(.leading, model.isSidebarVisible ? 0 : Metric.windowButtonsWidth)
             }
             ChromeBar(model: model)
+            if model.showsBookmarksBar { BookmarksBar(model: model) }
         }
         .background { TitlebarDragRegion() }
     }
@@ -75,4 +77,10 @@ struct PageColumn<Backdrop: View>: View {
     }
 
     private var isShowingNewTab: Bool { model.selectedTab?.url == nil }
+
+    /// With navigation docked in the visible sidebar there is no toolbar to hang
+    /// the bar from, so it takes its own row over the page.
+    private var showsBarAbovePage: Bool {
+        model.showsBookmarksBar && model.usesSidebarNavigation && !model.usesEdgeReveal
+    }
 }

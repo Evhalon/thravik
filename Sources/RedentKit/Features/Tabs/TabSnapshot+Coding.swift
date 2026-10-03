@@ -1,7 +1,7 @@
 import Foundation
 
 private enum TabSnapshotCodingKey: String, CodingKey {
-    case id, url, title, faviconData, isPinned, pinnedURL, customTitle, lastActiveAt
+    case id, url, title, faviconData, isPinned, pinnedURL, customTitle, customEmoji, lastActiveAt
     case spaceID, containerID, groupID, parentTabID, expiresAt, lifespan, timeline, zoom
     case standsApartFromSite
 }
@@ -31,6 +31,9 @@ extension TabSnapshot {
         self.parentTabID = try values.decodeIfPresent(UUID.self, forKey: .parentTabID)
         self.pinnedURL = try values.decodeIfPresent(URL.self, forKey: .pinnedURL)
         self.customTitle = try values.decodeIfPresent(String.self, forKey: .customTitle)
+        self.customEmoji = TabCustomEmoji.validated(
+            try values.decodeIfPresent(String.self, forKey: .customEmoji)
+        )
         self.standsApartFromSite = try values.decodeIfPresent(Bool.self, forKey: .standsApartFromSite) ?? false
     }
 
@@ -43,6 +46,7 @@ extension TabSnapshot {
         try values.encode(isPinned, forKey: .isPinned)
         try values.encodeIfPresent(pinnedURL, forKey: .pinnedURL)
         try values.encodeIfPresent(customTitle, forKey: .customTitle)
+        try values.encodeIfPresent(customEmoji, forKey: .customEmoji)
         try values.encode(lastActiveAt, forKey: .lastActiveAt)
         try values.encodeIfPresent(spaceID, forKey: .spaceID)
         try values.encodeIfPresent(containerID, forKey: .containerID)

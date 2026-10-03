@@ -16,6 +16,7 @@ public final class SitePrivacyModel {
     private let permissions: SitePermissionLedger
     private let siteData: any SiteDataManaging
     private let forgetting: ForgetSiteService
+    private let excludeFromHistory: (@MainActor () -> Void)?
 
     public struct Configuration {
         public var origin: Origin
@@ -23,14 +24,17 @@ public final class SitePrivacyModel {
         public var permissions: SitePermissionLedger
         public var siteData: any SiteDataManaging
         public var forgetting: ForgetSiteService
+        public var excludeFromHistory: (@MainActor () -> Void)?
 
         public init(origin: Origin, context: BrowsingContext, permissions: SitePermissionLedger,
-                    siteData: any SiteDataManaging, forgetting: ForgetSiteService) {
+                    siteData: any SiteDataManaging, forgetting: ForgetSiteService,
+                    excludeFromHistory: (@MainActor () -> Void)? = nil) {
             self.origin = origin
             self.context = context
             self.permissions = permissions
             self.siteData = siteData
             self.forgetting = forgetting
+            self.excludeFromHistory = excludeFromHistory
         }
     }
 
@@ -40,6 +44,7 @@ public final class SitePrivacyModel {
         permissions = configuration.permissions
         siteData = configuration.siteData
         forgetting = configuration.forgetting
+        excludeFromHistory = configuration.excludeFromHistory
         policy = SitePolicy(key: SiteKey(
             origin: configuration.origin,
             containerID: configuration.context.containerID ?? BrowserContainer.defaultID
@@ -69,5 +74,9 @@ public final class SitePrivacyModel {
         report = await forgetting.forget(origin)
         records = await siteData.records(in: context)
             .filter { $0.displayName.caseInsensitiveCompare(deletionScope) == .orderedSame }
+    }
+
+    public func neverRecordHistoryForThisSite() {
+        excludeFromHistory?()
     }
 }

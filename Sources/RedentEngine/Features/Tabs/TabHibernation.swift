@@ -16,6 +16,7 @@ extension WebTab {
         snapshot.timeline.dropLiveState()
         audibleFrames.removeAll()
         isPlayingAudio = false
+        clearMediaSession()
     }
 
     /// Swaps the rule lists on an already-live view when settings change,

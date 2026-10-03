@@ -21,6 +21,7 @@ struct BrowserMenu: View {
             }
             Button("New Window", action: model.newWindow)
             Button("New Private Window", action: model.newPrivateWindow)
+                .disabled(!model.canOpenPrivateWindow)
             Divider()
             Button("Downloads…") { model.sheet = .downloads }
             Button("Bookmarks…") { model.sheet = .bookmarks }

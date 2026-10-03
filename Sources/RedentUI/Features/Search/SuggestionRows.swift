@@ -12,15 +12,15 @@ struct KnownPage {
 /// unless it already leads — exactly one "search the web" row.
 struct SuggestionRows {
     private let query: String
-    private let searchEngine: SearchEngine
+    private let routing: SearchRouting
     private let limit: Int
     private var rows: [AddressSuggestion] = []
     private var seen = Set<String>()
     private var searchLeads = false
 
-    init(query: String, searchEngine: SearchEngine, limit: Int) {
+    init(query: String, routing: SearchRouting, limit: Int) {
         self.query = query
-        self.searchEngine = searchEngine
+        self.routing = routing
         self.limit = limit
     }
 
@@ -77,15 +77,18 @@ struct SuggestionRows {
     }
 
     private func directURL() -> URL? {
-        guard let url = AddressResolver.resolve(query, using: searchEngine),
-              url != searchEngine.searchURL(for: query)
-        else { return nil }
+        guard case .go(let url) = PasteAndGoDecision.action(for: query, using: routing) else { return nil }
         return url
     }
 
     private func searchRow() -> AddressSuggestion? {
-        searchEngine.searchURL(for: query).map {
-            AddressSuggestion(kind: .search, title: query, subtitle: "Search \(searchEngine.label)", url: $0)
+        if let match = SearchKeywordResolver.match(in: query, engines: routing.customEngines) {
+            return match.engine.searchURL(for: match.query).map {
+                AddressSuggestion(kind: .search, title: match.query, subtitle: "Search \(match.engine.name)", url: $0)
+            }
+        }
+        return routing.searchURL(for: query).map {
+            AddressSuggestion(kind: .search, title: query, subtitle: "Search \(routing.label)", url: $0)
         }
     }
 

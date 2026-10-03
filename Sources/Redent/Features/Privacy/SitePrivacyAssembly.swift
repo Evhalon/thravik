@@ -14,7 +14,14 @@ extension AppContainer {
             context: tab.snapshot.browsingContext,
             permissions: permissions,
             siteData: siteData,
-            forgetting: ForgetSiteService(siteData: siteData, history: history, tabs: model.tabs)
+            forgetting: ForgetSiteService(siteData: siteData, history: history, tabs: model.tabs),
+            excludeFromHistory: { [weak model] in model?.excludeSiteFromHistory(origin) }
         ))
+    }
+
+    func shareSensitiveHistory(of window: WindowContainer) {
+        window.model.onSensitiveHistoryChanged = { [weak self] settings in
+            self?.windows.values.forEach { $0.model.adoptSensitiveHistory(from: settings) }
+        }
     }
 }

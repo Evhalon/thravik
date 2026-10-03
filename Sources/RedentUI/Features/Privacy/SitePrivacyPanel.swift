@@ -27,6 +27,8 @@ public struct SitePrivacyPanel: View {
             HStack {
                 Button("Forget This Site", role: .destructive) { isConfirming = true }
                     .disabled(model.isWorking)
+                Button("Never Record History") { model.neverRecordHistoryForThisSite() }
+                    .disabled(model.isWorking)
                 Spacer()
                 Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
             }

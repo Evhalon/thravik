@@ -15,6 +15,8 @@ struct DownloadsButton: View {
     @State private var autoCloseToken = 0
     @State private var completionToken = 0
     @Environment(\.appearsActive) private var appearsActive
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulses = 0
 
     private static let autoCloseDelay: Duration = .seconds(4)
     private static let completionFlash: Duration = .seconds(1.6)
@@ -27,11 +29,30 @@ struct DownloadsButton: View {
                 button.transition(.scale(scale: 0.3).combined(with: .opacity))
             }
         }
+        .keyframeAnimator(initialValue: 1.0, trigger: pulses) { content, scale in
+            content.scaleEffect(scale)
+        } keyframes: { _ in
+            SpringKeyframe(1.16, duration: 0.14, spring: .bouncy)
+            SpringKeyframe(1.0, duration: 0.3, spring: .smooth)
+        }
         .animation(.spring(duration: 0.4, bounce: 0.35), value: downloads.isEmpty)
         .onChange(of: downloads.arrivals) { announceArrival() }
-        .onChange(of: downloads.completions) { completionToken += 1 }
+        .onChange(of: downloads.landingPulses) { if appearsActive { pulse() } }
+        .onChange(of: downloads.completions) {
+            completionToken += 1
+            pulse()
+        }
         .task(id: autoCloseToken) { await autoClose() }
         .task(id: completionToken) { await flashCompletion() }
+    }
+
+    private var frameAnchor: some View {
+        GeometryReader { geometry in
+            Color.clear.preference(
+                key: DownloadsButtonFrameKey.self,
+                value: geometry.frame(in: .named(DownloadsButtonFrameKey.space))
+            )
+        }
     }
 
     private var button: some View {
@@ -41,7 +62,7 @@ struct DownloadsButton: View {
                 isActive: !downloads.activeItems.isEmpty,
                 showsCompletion: showsCompletion,
                 hasUnseenCompletion: downloads.hasUnseenCompletion,
-                arrivals: downloads.arrivals
+                bounceToken: downloads.arrivals + downloads.landingPulses
             )
         }
         .buttonStyle(PressScaleStyle())
@@ -51,6 +72,7 @@ struct DownloadsButton: View {
             DownloadsPopover(downloads: downloads, onShowAll: showAll)
                 .onHover { isHoveringList = $0 }
         }
+        .background { frameAnchor }
     }
 
     private func toggleList() {
@@ -61,6 +83,11 @@ struct DownloadsButton: View {
     private func showAll() {
         isShowingList = false
         model.sheet = .downloads
+    }
+
+    private func pulse() {
+        guard !reduceMotion else { return }
+        pulses += 1
     }
 
     /// Only the key window opens its list: every window shares one download

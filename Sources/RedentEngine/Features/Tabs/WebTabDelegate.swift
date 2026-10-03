@@ -32,14 +32,14 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
         _ webView: WKWebView,
         decidePolicyFor navigationAction: WKNavigationAction
     ) async -> WKNavigationActionPolicy {
-        if navigationAction.shouldPerformDownload { return .download }
+        if navigationAction.shouldPerformDownload { return blocked(navigationAction, showingPage: false) ? .cancel : .download }
         if navigationAction.targetFrame?.isMainFrame == true,
            let url = navigationAction.request.url, ExternalURLRouting.leavesBrowser(url) {
             Task { await ExternalAppLauncher.offer(url, from: webView) }
             return .cancel
         }
         guard Self.tracksTab(targetFrameIsMain: navigationAction.targetFrame?.isMainFrame) else {
-            return .allow
+            return blocked(navigationAction, showingPage: false) ? .cancel : .allow
         }
         let target = LinkActivation.target(
             isUserLink: navigationAction.navigationType == .linkActivated,
@@ -61,10 +61,20 @@ final class WebTabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelega
             if let tab { Task { tab.load(clean) } }
             return .cancel
         }
+        if blocked(navigationAction, showingPage: true) { return .cancel }
         tab?.beginNavigation(to: navigationAction.request.url)
         BrowserUserAgent.applyBeforeNavigation(navigationAction, on: webView)
         tab?.willNavigate(navigationAction.navigationType)
         return .allow
+    }
+
+    /// Organization URL blocklist. Subframes and downloads just stop; a main-frame
+    /// load shows the block page, checked after the new-tab branch so a ⌘-clicked
+    /// blocked link opens its own blocked tab instead of replacing this page.
+    private func blocked(_ action: WKNavigationAction, showingPage: Bool) -> Bool {
+        guard let url = action.request.url, tab?.controller?.managedURLBlocker?(url) == true else { return false }
+        if showingPage { tab?.blockOrganizationPolicy(for: url) }
+        return true
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

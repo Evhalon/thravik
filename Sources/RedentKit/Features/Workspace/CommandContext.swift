@@ -8,6 +8,7 @@ public struct CommandTabContext: Identifiable, Hashable, Sendable {
     public let spaceID: UUID?
     public let spaceName: String?
     public let faviconData: Data?
+    public let customEmoji: String?
     public let groupID: UUID?
 
     public struct Values: Hashable, Sendable {
@@ -16,6 +17,7 @@ public struct CommandTabContext: Identifiable, Hashable, Sendable {
         public var spaceID: UUID?
         public var spaceName: String?
         public var faviconData: Data?
+        public var customEmoji: String?
         public var groupID: UUID?
 
         public init(url: URL? = nil, isPinned: Bool = false, spaceID: UUID? = nil, spaceName: String? = nil) {
@@ -34,6 +36,7 @@ public struct CommandTabContext: Identifiable, Hashable, Sendable {
         self.spaceID = values.spaceID
         self.spaceName = values.spaceName
         self.faviconData = values.faviconData
+        self.customEmoji = values.customEmoji
         self.groupID = values.groupID
     }
 }
@@ -58,12 +61,15 @@ public struct CommandBarContext: Hashable, Sendable {
     public var selectedTabID: UUID?
     public var selectedSpaceID: UUID?
     public var canReopenLastClosed: Bool
+    public var recentlyClosed: [RecentlyClosedEntry] = []
     /// Every open browser window, this one included.
     public var windows: [CommandWindowContext] = []
     public var groups: [CommandGroupContext] = []
     public var webApps: [WebApp] = []
     /// The window the bar is open in is private.
     public var isPrivate = false
+    /// What Paste and Go would do with the clipboard when the bar opened.
+    public var clipboardPaste: PasteAndGoDecision.Action?
 
     public var selectedTab: CommandTabContext? {
         selectedTabID.flatMap { id in tabs.first { $0.id == id } }

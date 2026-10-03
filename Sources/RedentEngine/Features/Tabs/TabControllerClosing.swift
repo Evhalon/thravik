@@ -24,10 +24,18 @@ extension TabController {
         changed()
     }
 
-    func pushClosed(_ snapshot: TabSnapshot) {
-        closedStack.append(snapshot)
-        if closedStack.count > Self.closedStackLimit {
-            closedStack.removeFirst()
-        }
+    func pushClosed(_ snapshot: TabSnapshot, insertIndex: Int) {
+        guard !isPrivate else { return }
+        closedStack.pushTab(snapshot, insertIndex: insertIndex, limit: Self.closedStackLimit)
+    }
+
+    func pushClosedGroup(group: BrowserGroup, tabs: [TabSnapshot], insertIndex: Int) {
+        guard !isPrivate else { return }
+        closedStack.pushGroup(
+            group: group,
+            tabs: tabs,
+            insertIndex: insertIndex,
+            limit: Self.closedStackLimit
+        )
     }
 }

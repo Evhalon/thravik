@@ -9,9 +9,9 @@ struct KeychainItemAccess {
     let service: String
     private let dataProtection: Bool
 
-    init(service: String) {
+    init(service: String, dataProtection: Bool? = nil) {
         self.service = service
-        dataProtection = KeychainCodeIdentity.usesDataProtection
+        self.dataProtection = dataProtection ?? KeychainCodeIdentity.usesDataProtection
     }
 
     func fetch(account: String, allowingInteraction: Bool = false) throws -> KeychainStore.Item {
@@ -57,9 +57,12 @@ struct KeychainItemAccess {
         try KeychainStatus.check(SecItemUpdate(query as CFDictionary, attributes as CFDictionary))
     }
 
-    func delete(account: String) throws {
-        try remove(account, dataProtection: true)
-        try remove(account, dataProtection: false)
+    func delete(
+        account: String,
+        deleteItem: ([String: Any]) -> OSStatus = { SecItemDelete($0 as CFDictionary) }
+    ) throws {
+        try remove(account, dataProtection: true, deleteItem: deleteItem)
+        try remove(account, dataProtection: false, deleteItem: deleteItem)
     }
 
     private func hasAccount(_ account: String, dataProtection: Bool) -> Bool {
@@ -101,10 +104,15 @@ struct KeychainItemAccess {
         try KeychainStatus.check(SecItemAdd(query as CFDictionary, nil))
     }
 
-    private func remove(_ account: String, dataProtection: Bool) throws {
+    private func remove(
+        _ account: String,
+        dataProtection: Bool,
+        deleteItem: ([String: Any]) -> OSStatus
+    ) throws {
         let query = KeychainQuery.base(service: service, account: account, dataProtection: dataProtection)
-        let status = SecItemDelete(query as CFDictionary)
+        let status = deleteItem(query)
         if status == errSecItemNotFound { return }
+        if dataProtection, status == errSecMissingEntitlement { return }
         try KeychainStatus.check(status)
     }
 }

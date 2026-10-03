@@ -7,9 +7,12 @@ struct PinnedTileMenu: View {
     let tab: any BrowserTab
     let actions: PinnedTileActions
     let onRename: () -> Void
+    let onSetEmojiIcon: () -> Void
+    @Environment(\.shortcutBindings) private var bindings
 
     var body: some View {
         Button("Unpin", action: actions.row.onTogglePin)
+            .shortcut(.pinTab, bindings: bindings)
         if let onReturn = actions.onReturn {
             Button("Return to \(pinnedPageName)", action: onReturn)
         }
@@ -18,25 +21,29 @@ struct PinnedTileMenu: View {
         moving
         Divider()
         Button("Rename…", action: onRename)
+        TabEmojiMenuItems(tab: tab, onPick: onSetEmojiIcon)
         Menu("Edit Pinned Page") { pinnedPage }
         if tab.isPlayingAudio || tab.isMuted {
             Button(tab.isMuted ? "Unmute Tab" : "Mute Tab") { tab.setMuted(!tab.isMuted) }
+                .shortcut(.muteTab, bindings: bindings)
         }
         Divider()
         Button("Close", action: actions.row.onClose)
-            .keyboardShortcut("w")
+            .shortcut(.closeTab, bindings: bindings)
     }
 
     @ViewBuilder
     private var viewing: some View {
         if let onSplit = actions.row.onSplit {
             Button("Open as Split", action: onSplit)
+                .shortcut(.splitView, bindings: bindings)
         }
         if let onUnsplit = actions.row.onUnsplit {
             Button("Remove from Split View", action: onUnsplit)
         }
         if let onDuplicate = actions.row.onDuplicate {
             Button("Duplicate", action: onDuplicate)
+                .shortcut(.duplicateTab, bindings: bindings)
         }
     }
 
@@ -51,6 +58,7 @@ struct PinnedTileMenu: View {
         }
         if let onCopyLink = actions.onCopyLink {
             Button("Copy Link", action: onCopyLink)
+                .shortcut(.copyURL, bindings: bindings)
         }
     }
 

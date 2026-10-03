@@ -16,7 +16,11 @@ public final class CommandBarModel {
     private let history: any HistoryStoring
     private let bookmarks: any BookmarkStoring
     /// Follows Settings, so a query searches wherever the user last chose.
-    public var searchEngine: SearchEngine
+    public var searchRouting: SearchRouting
+    public var searchEngine: SearchEngine {
+        get { searchRouting.engine }
+        set { searchRouting.engine = newValue }
+    }
     private let descriptors: [CommandDescriptor]
     @ObservationIgnored private var pending: Task<Void, Never>?
     private var generation = 0
@@ -28,7 +32,7 @@ public final class CommandBarModel {
         history = configuration.history
         bookmarks = configuration.bookmarks
         context = configuration.context
-        searchEngine = configuration.searchEngine
+        searchRouting = configuration.searchRouting
         descriptors = configuration.descriptors
         onExecute = configuration.onExecute
     }
@@ -108,7 +112,7 @@ public final class CommandBarModel {
         let history = history
         let bookmarks = bookmarks
         let descriptors = descriptors
-        let searchEngine = searchEngine
+        let routing = searchRouting
         let initialSelectionRevision = selectionRevision
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             rows = CommandHome.rows(context: context, descriptors: descriptors)
@@ -119,7 +123,7 @@ public final class CommandBarModel {
             try? await Task.sleep(for: .milliseconds(30))
             guard !Task.isCancelled else { return }
             let source = CommandSearch.Source(descriptors: descriptors, history: history,
-                bookmarks: bookmarks, searchEngine: searchEngine)
+                bookmarks: bookmarks, routing: routing)
             let found = await CommandSearch.results(query: query, context: context, source: source, limit: 30)
             guard !Task.isCancelled, let self, self.generation == request,
                   self.query == query else { return }

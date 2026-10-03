@@ -17,6 +17,8 @@ public struct BrowserServices {
     public var webAppInstaller: (any WebAppInstalling)?
     /// Names automatic tab groups on the device. Nil keeps site names.
     public var groupNaming: (any TabGroupNaming)?
+    /// Calendar events when the user turns meetings on. Nil in tests unless injected.
+    public var calendar: (any CalendarEventsProviding)?
 
     public init(history: any HistoryStoring, bookmarks: any BookmarkStoring,
                 settings: any SettingsStoring, session: any SessionStoring,

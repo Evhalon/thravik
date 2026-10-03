@@ -8,8 +8,10 @@ extension AutofillCoordinator {
     /// unless we already hold exactly that entry.
     public func credentialSubmitted(_ candidate: CredentialCandidate) async {
         guard isEnabled else { return }
+        let generation = saveGeneration
         captureIdentity(candidate.username)
         let stored = (try? await store.credentials(for: candidate.origin)) ?? []
+        guard isEnabled, saveGeneration == generation else { return }
         let outcome = CredentialSaveDecider.outcome(
             for: candidate, stored: stored, identityHint: lastUsername
         )
@@ -30,15 +32,27 @@ extension AutofillCoordinator {
     }
 
     public func confirmPendingSave() async {
-        guard let request = pendingSave else { return }
-        pendingSave = nil
-        let credential = request.resolvedCredential
+        guard let request = pendingSave, !isSavingPassword else { return }
+        isSavingPassword = true
+        saveErrorMessage = nil
+        defer { isSavingPassword = false }
+        let generation = saveGeneration
+        let credential = resolvedSaveCredential ?? request.resolvedCredential
+        resolvedSaveCredential = credential
         do {
             try await store.save(credential)
-            logger.notice("autofill: saved \(credential.redactedDescription)")
+            guard saveGeneration == generation, pendingSave?.id == request.id else { return }
+            pendingSave = nil
+            logger.notice("autofill: password saved")
             await refreshSuggestions(for: credential.origin)
         } catch {
-            logger.error("autofill: save failed — \(String(describing: error))")
+            guard saveGeneration == generation, pendingSave?.id == request.id else { return }
+            if error as? PasswordStorageError == .providerChanged {
+                pendingSave = nil
+                return
+            }
+            saveErrorMessage = "Password could not be saved. Unlock your vault and try again."
+            logger.error("autofill: password save failed")
         }
     }
 

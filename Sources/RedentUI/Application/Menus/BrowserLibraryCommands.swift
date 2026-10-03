@@ -1,29 +1,31 @@
+import RedentKit
 import SwiftUI
 
 /// Everything the browser has saved: bookmarks, downloads, logins, and the
 /// screens that manage them.
 struct BrowserLibraryCommands: Commands {
     let model: BrowserModel?
+    let bindings: ShortcutBindings
 
     var body: some Commands {
         CommandMenu("Library") {
             Button(bookmarkTitle, action: toggleBookmark)
-                .keyboardShortcut("d")
+                .shortcut(.bookmarkPage, bindings: bindings)
                 .disabled(!(model?.hasPage ?? false))
             Button("Bookmarks…") { model?.sheet = .bookmarks }
-                .keyboardShortcut("b", modifiers: [.command, .option])
+                .shortcut(.showBookmarks, bindings: bindings)
                 .disabled(model == nil)
             Divider()
             Button("Downloads…") { model?.sheet = .downloads }
-                .keyboardShortcut("j", modifiers: [.command, .shift])
+                .shortcut(.showDownloads, bindings: bindings)
                 .disabled(model == nil)
             Divider()
             Button("Passwords…") { model?.sheet = .passwords }
             Button("Authenticator…") { model?.sheet = .authenticator }
             Button("Tab Timeline…") { model?.sheet = .timeline }
-                .keyboardShortcut("y", modifiers: [.command, .shift])
+                .shortcut(.showTimeline, bindings: bindings)
             Button("Site Privacy…") { model?.sheet = .sitePrivacy }
-                .keyboardShortcut("i", modifiers: [.command, .shift])
+                .shortcut(.showSitePrivacy, bindings: bindings)
             Divider()
             Button("Import from Another Browser…") { model?.sheet = .importBrowser }
         }

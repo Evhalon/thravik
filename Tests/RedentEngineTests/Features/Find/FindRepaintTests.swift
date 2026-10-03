@@ -1,28 +1,37 @@
-import Foundation
-import RedentKit
 import Testing
 @testable import RedentEngine
 
-/// WebKit repaints what leaves a Highlight, not what leaves the registry, so a
-/// longer query once left the shorter one's paint on screen ("ge" still lit
-/// after typing "gemini").
-@Suite("Find repaint")
+@Suite("Find query changes", .serialized)
 @MainActor
 struct FindRepaintTests {
-    @Test("A new query empties the previous highlight so its paint is cleared")
-    func previousQueryHighlightIsEmptied() async throws {
+    @Test("Typing a longer query replaces the selected short substring")
+    func refinedQuerySelectsOnlyCurrentText() async throws {
         let tab = try await FindTestPage.saying("<p>Gemini usage over the time range</p>")
-        let view = try #require(tab.webView)
         _ = await tab.findInPage("ge", forward: true)
-        _ = try await view.callAsyncJavaScript(
-            "window.previousFind = CSS.highlights.get('redent-find-all')",
-            in: nil, contentWorld: PageScripts.contentWorld
-        )
+        #expect(await tab.selectedPageText() == "Ge")
+        _ = await tab.findInPage("gemini", forward: true)
+        #expect(await tab.selectedPageText() == "Gemini")
+        _ = await tab.findInPage("usage", forward: true)
+        #expect(await tab.selectedPageText() == "usage")
+    }
 
-        #expect(await tab.findInPage("gemini", forward: true) == FindMatches(total: 1, current: 1))
-        let leftover = try await view.callAsyncJavaScript(
-            "return window.previousFind.size", in: nil, contentWorld: PageScripts.contentWorld
-        ) as? Int
-        #expect(leftover == 0)
+    @Test("Deleting the query clears native text selection")
+    func emptyQueryClearsSelection() async throws {
+        let tab = try await FindTestPage.saying("<p>needle</p>")
+        _ = await tab.findInPage("needle", forward: true)
+        #expect(await tab.findInPage("", forward: true) == .empty)
+        let clearedBy = ContinuousClock.now + .seconds(5)
+        while await tab.selectedPageText() != nil, ContinuousClock.now < clearedBy {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(await tab.selectedPageText() == nil)
+        _ = await tab.findInPage("needle", forward: true)
+        #expect(await tab.selectedPageText() == "needle")
+        tab.clearFindHighlight()
+        let deadline = ContinuousClock.now + .seconds(5)
+        while await tab.selectedPageText() != nil, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(await tab.selectedPageText() == nil)
     }
 }

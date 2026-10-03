@@ -6,23 +6,26 @@ extension BrowserModel {
     public func queryChanged(
         _ text: String, from source: AddressSuggestionsModel.Source, includeOpenTabs: Bool = true
     ) {
-        let context = SuggestionContext(
+        var context = SuggestionContext(
             searchEngine: settings.searchEngine, spaceID: currentSpaceID,
             openTabs: includeOpenTabs ? switchableTabs : []
         )
+        context.customSearchEngines = settings.customSearchEngines
+        context.activeCustomSearchEngineID = settings.activeCustomSearchEngineID
         suggestions.update(query: text, from: source, context: context) { [weak self] result in
             self?.suggestionsSettled(result)
         }
         // Whatever return would open right now — the search engine for a
         // query, the site for an address — gets its handshake started early.
-        let likely = AddressResolver.resolve(text, using: settings.searchEngine)
+        let routing = settings.searchRouting
+        let likely = AddressResolver.resolve(text, using: routing)
         if let likely { tabs.preconnect(to: likely) }
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
         // The field echoing a completion back is the site it completed to.
         if let completion = suggestions.completion, completion.text == query {
             return prerenderSchedule.schedule(completion.url, on: tabs)
         }
-        let search = settings.searchEngine.searchURL(for: query)
+        let search = routing.searchURL(for: query)
         prerenderSchedule.queryChanged(query, search: likely == search ? likely : nil, on: tabs)
     }
 
@@ -41,7 +44,7 @@ extension BrowserModel {
             return open(row, inNewTab: inNewTab)
         }
         suggestions.close()
-        guard let url = address.commit(using: settings.searchEngine) else { return }
+        guard let url = address.commit(using: settings.searchRouting) else { return }
         open(url, inNewTab: inNewTab)
     }
 
@@ -53,7 +56,7 @@ extension BrowserModel {
             return true
         }
         suggestions.close()
-        guard let url = AddressResolver.resolve(text, using: settings.searchEngine) else { return false }
+        guard let url = AddressResolver.resolve(text, using: settings.searchRouting) else { return false }
         navigate(to: url)
         return true
     }

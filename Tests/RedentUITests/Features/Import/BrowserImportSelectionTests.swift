@@ -17,13 +17,15 @@ struct BrowserImportSelectionTests {
         bookmarks: RecordingBookmarkStore = RecordingBookmarkStore(),
         into spaceID: UUID = BrowserSpace.travelID
     ) -> BrowserImportModel {
-        BrowserImportModel(
+        let model = BrowserImportModel(
             importer: importer,
             history: RecordingHistoryStore(),
             bookmarks: bookmarks,
             credentials: FakeCredentialStore(),
             destination: ImportDestination(spaces: BrowserSpace.starterSpaces, spaceID: spaceID)
         )
+        model.createsSpacePerProfile = false
+        return model
     }
 
     private func importer(_ seed: [String: FakeBrowserImporter.Profile]) -> FakeBrowserImporter {
@@ -114,6 +116,7 @@ struct BrowserImportSelectionTests {
             bookmarks: bookmarks,
             into: BrowserSpace.researchID
         )
+        model.createsSpacePerProfile = false
         model.discover()
         model.selectAll()
         model.kinds = [.bookmarks]

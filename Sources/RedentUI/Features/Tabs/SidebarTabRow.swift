@@ -16,6 +16,7 @@ struct SidebarTabRow: View {
     var indent: CGFloat = 0
 
     @State private var isHovering = false
+    @State private var showsEmojiPicker = false
 
     var body: some View {
         HStack(spacing: Metric.tightGutter + 2) {
@@ -33,7 +34,8 @@ struct SidebarTabRow: View {
             withAnimation(.easeOut(duration: 0.14)) { isHovering = hovering }
         }
         .tabDragging(tab: tab, actions: actions, drag: drag, space: SidebarTabList.dragSpace)
-        .contextMenu { TabRowMenu(tab: tab, actions: actions) }
+        .contextMenu { TabRowMenu(tab: tab, actions: actions, onSetEmojiIcon: { showsEmojiPicker = true }) }
+        .tabEmojiPicker(for: tab, isPresented: $showsEmojiPicker)
     }
 
     @ViewBuilder

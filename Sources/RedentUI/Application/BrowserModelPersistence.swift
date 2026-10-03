@@ -7,7 +7,9 @@ extension BrowserModel {
         findPageContextChanged()
         if split.isSplit { split.validate(against: Set(tabs.tabs.map(\.id))) }
         hasUnsavedChanges = true
+        publishWorkspace?(durableSession())
         refreshCommandContext()
+        refreshTidyTabs()
         let tabCount = tabs.tabs.count
         let closedTab = tabCount < lastTabCount
         lastTabCount = tabCount
@@ -32,6 +34,7 @@ extension BrowserModel {
         saveTask = nil
         do { try sessionStore.saveRecoverable(durableSession()) }
         catch { actionError = "Workspace could not be saved. Existing saved data was preserved." }
+        publishWorkspace?(durableSession())
     }
 
     /// The periodic flush. Encoding a large workspace costs milliseconds, and
@@ -45,6 +48,7 @@ extension BrowserModel {
         lastSave = now
 
         let session = durableSession()
+        publishWorkspace?(session)
         let previous = saveTask
         let task: Task<Bool?, Never> = Task.detached(priority: .utility) { [sessionStore] in
             _ = await previous?.value

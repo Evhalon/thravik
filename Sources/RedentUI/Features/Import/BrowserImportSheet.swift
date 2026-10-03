@@ -2,39 +2,50 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// Brings history, bookmarks and saved logins across from another browser.
 public struct BrowserImportSheet: View {
     @State private var model: BrowserImportModel
+    @State private var showsOptionsAfterImport = false
     @Environment(\.dismiss) private var dismiss
-
     public init(model: BrowserImportModel) {
         _model = State(initialValue: model)
     }
 
     public var body: some View {
+        Group {
+            if let summary = model.summary, !model.isRunning, !showsOptionsAfterImport {
+                ImportSummaryBanner(summary: summary, problem: model.problem,
+                                    onBack: { showsOptionsAfterImport = true }, onDone: { dismiss() })
+            } else {
+                importOptions
+            }
+        }
+        .padding(22)
+        .sheetCanvas(width: 520, height: 560)
+        .onAppear(perform: model.discover)
+        .onChange(of: model.isRunning) { _, running in
+            if running { showsOptionsAfterImport = false }
+        }
+    }
+
+    private var importOptions: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header
-                .padding(.bottom, Metric.gutter + 4)
+            header.padding(.bottom, Metric.gutter + 4)
             ScrollView {
                 VStack(alignment: .leading, spacing: Metric.gutter + 4) {
                     if model.browsers.isEmpty {
                         noBrowsersFound
                     } else {
                         browserPicker
-                        ImportDestinationPicker(destination: $model.destination)
+                        destinationOptions
                         kindToggles
                     }
-                    outcome
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: .infinity)
-            footer
-                .padding(.top, Metric.gutter)
+            .disabled(model.isRunning)
+            footer.padding(.top, Metric.gutter)
         }
-        .padding(22)
-        .sheetCanvas(width: 520, height: 560)
-        .onAppear(perform: model.discover)
     }
 
     private var header: some View {
@@ -102,12 +113,17 @@ public struct BrowserImportSheet: View {
         }
     }
 
-    @ViewBuilder
-    private var outcome: some View {
-        if let summary = model.summary {
-            ImportSummaryBanner(summary: summary, problem: model.problem)
-        } else if let problem = model.problem {
-            Text(problem).font(.system(size: 11.5)).foregroundStyle(Palette.danger)
+    private var destinationOptions: some View {
+        VStack(alignment: .leading, spacing: Metric.tightGutter) {
+            Toggle("Create a Space for each selected profile", isOn: $model.createsSpacePerProfile)
+                .toggleStyle(.checkbox)
+            if !model.createsSpacePerProfile {
+                ImportDestinationPicker(destination: $model.destination)
+            } else {
+                Text("Each imported profile gets its own Space. History and passwords stay shared.")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Palette.chromeSecondaryText)
+            }
         }
     }
 

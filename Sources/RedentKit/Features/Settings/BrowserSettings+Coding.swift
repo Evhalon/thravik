@@ -1,10 +1,16 @@
 import Foundation
 
 private enum BrowserSettingsCodingKey: String, CodingKey {
-    case tabLayout, isTabStripVisible, opensFloatingNewTab, hidesNavigationBar, sidebarWidth, hibernation
+    case tabLayout, isTabStripVisible, opensFloatingNewTab, hidesNavigationBar, showsBookmarksBar, sidebarWidth, hibernation
     case customHibernationMinutes, blocksTrackers, stripsTrackingParameters, quietsPages
     case offersPasswordSave, showsTOTPButton, searchEngine, homepage, reopensTabsOnLaunch
     case namesGroupsOnDevice, remembersFormEntries
+    case excludeBankingAndHealthFromHistory, sensitiveSiteHistoryDomains
+    case customSearchEngines, activeCustomSearchEngineID
+    case floatsPlayingVideoOnTabSwitch
+    case tidyTabsThreshold
+    case showsUpcomingMeetings
+    case shortcutBindings
 }
 
 /// Decoding is explicit so adding a preference never resets saved settings.
@@ -28,8 +34,34 @@ extension BrowserSettings {
             reopensTabsOnLaunch: try values.decodeIfPresent(Bool.self, forKey: .reopensTabsOnLaunch) ?? defaults.reopensTabsOnLaunch
         )
         hidesNavigationBar = try values.decodeIfPresent(Bool.self, forKey: .hidesNavigationBar) ?? false
+        showsBookmarksBar = try values.decodeIfPresent(Bool.self, forKey: .showsBookmarksBar) ?? false
         opensFloatingNewTab = try values.decodeIfPresent(Bool.self, forKey: .opensFloatingNewTab) ?? true
         namesGroupsOnDevice = try values.decodeIfPresent(Bool.self, forKey: .namesGroupsOnDevice) ?? true
         remembersFormEntries = try values.decodeIfPresent(Bool.self, forKey: .remembersFormEntries) ?? true
+        excludeBankingAndHealthFromHistory = try values.decodeIfPresent(
+            Bool.self, forKey: .excludeBankingAndHealthFromHistory
+        ) ?? false
+        sensitiveSiteHistoryDomains = try values.decodeIfPresent(
+            [String].self, forKey: .sensitiveSiteHistoryDomains
+        ) ?? []
+        customSearchEngines = try values.decodeIfPresent(
+            [CustomSearchEngine].self, forKey: .customSearchEngines
+        ) ?? []
+        activeCustomSearchEngineID = try values.decodeIfPresent(
+            UUID.self, forKey: .activeCustomSearchEngineID
+        )
+        floatsPlayingVideoOnTabSwitch = try values.decodeIfPresent(
+            Bool.self, forKey: .floatsPlayingVideoOnTabSwitch
+        ) ?? false
+        tidyTabsThreshold = try values.decodeIfPresent(
+            TidyTabsThreshold.self, forKey: .tidyTabsThreshold
+        ) ?? .off
+        showsUpcomingMeetings = try values.decodeIfPresent(
+            Bool.self, forKey: .showsUpcomingMeetings
+        ) ?? false
+        // A damaged key map must not reset every other setting with it.
+        shortcutBindings = (try? values.decodeIfPresent(
+            ShortcutBindings.self, forKey: .shortcutBindings
+        )) ?? ShortcutBindings()
     }
 }

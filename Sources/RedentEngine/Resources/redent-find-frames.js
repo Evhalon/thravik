@@ -1,6 +1,5 @@
 (function () {
   'use strict';
-  var documentID = crypto.randomUUID();
   var pending = new Map();
 
   function path() {
@@ -19,7 +18,7 @@
   async function announce(session) {
     try {
       return await window.webkit.messageHandlers.redentFindFrames.postMessage({
-        type: 'findFrameReady', path: path(), documentID: documentID, session: session
+        type: 'findFrameReady', path: path(), session: session
       });
     } catch (_) { return false; }
   }
@@ -64,12 +63,4 @@
   });
 
   window.redentFindRegister = register;
-  window.redentFindRevealFrame = function (index) {
-    var nodes = document.querySelectorAll('iframe,frame');
-    for (var offset = 0; offset < nodes.length; offset++) {
-      if (nodes[offset].contentWindow !== window.frames[index]) continue;
-      if (window.redentFindRevealElement) window.redentFindRevealElement(nodes[offset]);
-      return;
-    }
-  };
 })();

@@ -8,8 +8,8 @@ struct DownloadsGlyph: View {
     let isActive: Bool
     let showsCompletion: Bool
     let hasUnseenCompletion: Bool
-    /// Changes once per new download; each change drops the arrow in.
-    let arrivals: Int
+    /// Arrivals plus landings; each bump drops the arrow in.
+    let bounceToken: Int
 
     var body: some View {
         ZStack {
@@ -21,7 +21,7 @@ struct DownloadsGlyph: View {
                 .font(.system(size: isActive && !showsCompletion ? 8 : 12.5, weight: .bold))
                 .foregroundStyle(tint)
                 .contentTransition(.symbolEffect(.replace.downUp))
-                .symbolEffect(.bounce.down, value: arrivals)
+                .symbolEffect(.bounce.down, value: bounceToken)
         }
         .frame(width: 17, height: 17)
         .overlay(alignment: .topTrailing) { badge }

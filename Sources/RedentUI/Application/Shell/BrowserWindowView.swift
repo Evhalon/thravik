@@ -12,31 +12,23 @@ import SwiftUI
 public struct BrowserWindowView<Sheets: View>: View {
     @Bindable private var model: BrowserModel
     private let settingsServices: SettingsServices
+    private let isWorkspaceDisabled: Bool
     private let sheetContent: (SheetRoute) -> Sheets
 
     public init(
         model: BrowserModel,
         settingsServices: SettingsServices,
+        isWorkspaceDisabled: Bool = false,
         @ViewBuilder sheetContent: @escaping (SheetRoute) -> Sheets
     ) {
         self.model = model
         self.settingsServices = settingsServices
+        self.isWorkspaceDisabled = isWorkspaceDisabled
         self.sheetContent = sheetContent
     }
 
     public var body: some View {
-        ZStack {
-            windowBackdrop
-            BrowserWorkspace(model: model, backdrop: windowBackdrop)
-        }
-        .coordinateSpace(WindowBackdrop.space)
-        .clipped()
-        .environment(\.ambientTint, ambientTint)
-        .environment(\.settingsServices, settingsServices)
-        .modifier(AddressSuggestionsPresenter(model: model))
-        .overlay { floatingInput }
-        .overlay(alignment: .bottom) { expiryBar }
-        .overlay(alignment: .bottomLeading) { updateToast }
+        workspace
         .onChange(of: model.selectedTab?.url) { _, _ in
             model.pageContextChanged()
             model.address.sync(with: model.selectedTab)
@@ -57,6 +49,26 @@ public struct BrowserWindowView<Sheets: View>: View {
         .focusedSceneValue(\.browserModel, model)
         .task(runClock)
         .onDisappear(perform: model.persistSession)
+    }
+
+    private var workspace: some View {
+        ZStack {
+            windowBackdrop
+            BrowserWorkspace(model: model, backdrop: windowBackdrop)
+        }
+        .coordinateSpace(WindowBackdrop.space)
+        .clipped()
+        .environment(\.ambientTint, ambientTint)
+        .environment(\.settingsServices, settingsServices)
+        .modifier(AddressSuggestionsPresenter(model: model))
+        .modifier(DownloadArrivalPresenter(downloads: model.downloads))
+        .overlay { floatingInput }
+        .overlay(alignment: .bottom) { expiryBar }
+        .overlay(alignment: .bottomLeading) { updateToast }
+        // Below the overlays so the Command Bar, drawn in one, reads it too.
+        .environment(\.shortcutBindings, model.settings.shortcutBindings)
+        // Modal sheets must stay interactive while onboarding covers the workspace.
+        .disabled(isWorkspaceDisabled)
     }
 
     @ViewBuilder

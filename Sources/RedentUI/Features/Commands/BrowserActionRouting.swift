@@ -55,6 +55,7 @@ extension BrowserModel {
         case .toggleReader: toggleReader()
         case .toggleMute: toggleMute()
         case .showScreen(let screen): show(screen)
+        case .pasteAndGo: pasteAndGo()
         default: return
         }
     }

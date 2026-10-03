@@ -16,15 +16,31 @@ public final class DownloadsModel: DownloadObserving {
     /// Set once a fetch finishes while the panel is closed, so the chrome can
     /// draw the badge that says something arrived.
     public private(set) var hasUnseenCompletion = false
-    /// Bumped once per new download, so the chrome can animate the arrival.
+    /// Bumped once per coalesced burst of new downloads.
     public private(set) var arrivals = 0
-    /// Bumped once per download that finishes, for the completion flourish.
+    /// Bumped once per coalesced burst of finished downloads.
     public private(set) var completions = 0
+    /// The latest flight for the key window to play.
+    public private(set) var arrivalCue: DownloadArrivalCue?
+    public private(set) var landingPulses = 0
 
     /// Weak: the engine coordinator and this list are both owned by the app.
     @ObservationIgnored public weak var commands: (any DownloadCommanding)?
+    @ObservationIgnored private var planner: DownloadArrivalPlanner
+    /// Owned here, not by a window: a held burst must land even with no window open.
+    @ObservationIgnored private(set) var drainTask: Task<Void, Never>?
+    @ObservationIgnored private let now: @MainActor () -> Date
+    @ObservationIgnored private let sleep: @Sendable (Duration) async -> Void
 
-    public init() {}
+    public init(
+        sessionStartedAt: Date = Date(),
+        now: @escaping @MainActor () -> Date = { .now },
+        sleep: @escaping @Sendable (Duration) async -> Void = { try? await Task.sleep(for: $0) }
+    ) {
+        planner = DownloadArrivalPlanner(sessionStartedAt: sessionStartedAt)
+        self.now = now
+        self.sleep = sleep
+    }
 
     public var activeItems: [DownloadItem] { items.filter(\.isActive) }
     public var isEmpty: Bool { items.isEmpty }
@@ -40,24 +56,21 @@ public final class DownloadsModel: DownloadObserving {
     }
 
     public func downloadChanged(_ item: DownloadItem) {
-        let previous = items.firstIndex { $0.id == item.id }
-        let wasActive = previous.map { items[$0].isActive } ?? true
-        if let previous {
+        if let previous = items.firstIndex(where: { $0.id == item.id }) {
             items[previous] = item
         } else {
             items.insert(item, at: 0)
-            arrivals += 1
         }
-        guard item.state == .finished, wasActive else { return }
-        hasUnseenCompletion = true
-        completions += 1
+        apply(planner.ingest([item], at: now()))
     }
 
+    public func drainArrivals(at now: Date = .now) {
+        apply(planner.drain(at: now))
+    }
+
+    public func noteArrivalLanded() { landingPulses += 1 }
     public func markSeen() { hasUnseenCompletion = false }
-
-    public func cancel(_ id: UUID) {
-        commands?.cancelDownload(id)
-    }
+    public func cancel(_ id: UUID) { commands?.cancelDownload(id) }
 
     /// Drops the row, and the fetch behind it if it is still running. The file
     /// already on disk is never touched.
@@ -86,5 +99,36 @@ public final class DownloadsModel: DownloadObserving {
     public func openFile(_ item: DownloadItem) {
         guard item.state == .finished, let destination = item.destination else { return }
         NSWorkspace.shared.open(destination)
+    }
+
+    private func apply(_ cues: [DownloadArrivalCue]) {
+        for cue in cues { accept(cue) }
+        scheduleDrain()
+    }
+
+    private func accept(_ cue: DownloadArrivalCue) {
+        switch cue.kind {
+        case .flight:
+            arrivals += 1
+            arrivalCue = cue
+        case .pulse:
+            hasUnseenCompletion = true
+            completions += 1
+        }
+    }
+
+    /// One pending wake at most; progress ticks while a burst is held must not
+    /// spawn a task each.
+    private func scheduleDrain() {
+        guard drainTask == nil, let when = planner.nextDrainAt else { return }
+        let interval = DownloadArrivalPlanner.coalesceInterval
+        let delay = min(max(when.timeIntervalSince(now()), 0), interval)
+        let sleep = sleep
+        drainTask = Task { [weak self] in
+            await sleep(.seconds(delay))
+            guard let self else { return }
+            drainTask = nil
+            drainArrivals(at: now())
+        }
     }
 }

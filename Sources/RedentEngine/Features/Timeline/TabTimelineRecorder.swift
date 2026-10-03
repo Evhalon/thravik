@@ -10,6 +10,11 @@ import WebKit
 final class TabTimelineRecorder {
     private var pending: NavigationTransition?
     private var currentEntryID: UUID?
+    private var policy = SensitiveSitePolicy()
+
+    func apply(policy: SensitiveSitePolicy) {
+        self.policy = policy
+    }
 
     func willNavigate(_ type: WKNavigationType) {
         pending = Self.transition(for: type)
@@ -23,14 +28,20 @@ final class TabTimelineRecorder {
         guard let url = webView.url, Origin(url: url) != nil else { return }
         let transition = tab.snapshot.timeline.entries.isEmpty ? .opened : (pending ?? .link)
         pending = nil
-        record(tab, url: url, title: webView.title ?? "", transition: transition, webView: webView)
+        record(
+            tab, url: url, title: webView.title ?? "", transition: transition,
+            item: webView.backForwardList.currentItem
+        )
     }
 
     /// A same-document move (a router change, an anchor) never fires a load, so
     /// it arrives through URL observation instead.
     func movedWithinDocument(_ tab: WebTab, webView: WKWebView) {
         guard let url = webView.url, Origin(url: url) != nil else { return }
-        record(tab, url: url, title: webView.title ?? "", transition: .sameDocument, webView: webView)
+        record(
+            tab, url: url, title: webView.title ?? "", transition: .sameDocument,
+            item: webView.backForwardList.currentItem
+        )
     }
 
     func titleChanged(_ title: String, on tab: WebTab) {
@@ -38,18 +49,18 @@ final class TabTimelineRecorder {
         tab.snapshot.timeline.updateTitle(title, for: id)
     }
 
-    private func record(
+    func record(
         _ tab: WebTab, url: URL, title: String,
-        transition: NavigationTransition, webView: WKWebView
+        transition: NavigationTransition, item: WKBackForwardListItem?
     ) {
+        // Forgetting the previous entry keeps the excluded page's title off it.
+        guard !policy.excludes(url: url) else { currentEntryID = nil; return }
         guard let entry = tab.snapshot.timeline.record(url: url, title: title, transition: transition)
         else { return }
         currentEntryID = entry.id
         // The live item is what makes a real restore possible; without it the
         // entry can only be reloaded by URL, and it already says so.
-        if let item = webView.backForwardList.currentItem {
-            tab.liveItems[entry.id] = item
-        }
+        if let item { tab.liveItems[entry.id] = item }
     }
 
     private static func transition(for type: WKNavigationType) -> NavigationTransition {

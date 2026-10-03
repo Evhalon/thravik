@@ -72,16 +72,7 @@ struct SheetRouter: View {
                 }
 
             case .importBrowser:
-                BrowserImportSheet(model: BrowserImportModel(
-                    importer: app.browserImporter,
-                    history: app.history,
-                    bookmarks: app.bookmarks,
-                    credentials: app.credentials,
-                    destination: ImportDestination(
-                        spaces: model.tabs.session.spaces,
-                        spaceID: model.currentSpaceID
-                    )
-                ))
+                BrowserImportSheet(model: importModel(for: model))
 
             case .downloads:
                 DownloadsPanel(model: app.downloads)
@@ -93,5 +84,21 @@ struct SheetRouter: View {
                 AuthenticatorImportView(importer: app.importer, store: app.authenticator)
             }
         }
+    }
+
+    private func importModel(for browser: BrowserModel) -> BrowserImportModel {
+        let importModel = BrowserImportModel(
+            importer: app.browserImporter,
+            history: app.history,
+            bookmarks: app.bookmarks,
+            credentials: app.credentials,
+            destination: ImportDestination(
+                spaces: browser.tabs.session.spaces,
+                spaceID: browser.currentSpaceID
+            )
+        )
+        importModel.createSpace = { try browser.createSpaceForImport(named: $0) }
+        importModel.onComplete = { app.onboarding.recordImport($0) }
+        return importModel
     }
 }

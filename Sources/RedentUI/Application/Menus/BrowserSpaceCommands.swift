@@ -5,6 +5,7 @@ import SwiftUI
 /// screens that manage them.
 struct BrowserSpaceCommands: Commands {
     let model: BrowserModel?
+    let bindings: ShortcutBindings
 
     var body: some Commands {
         CommandMenu("Spaces") {
@@ -19,7 +20,7 @@ struct BrowserSpaceCommands: Commands {
             Button("Manage Spaces…") { model?.sheet = .spaces }
                 .disabled(model == nil)
             Button("Tab Groups…") { model?.sheet = .groups }
-                .keyboardShortcut("g", modifiers: [.control, .option])
+                .shortcut(.showTabGroups, bindings: bindings)
                 .disabled(model == nil)
         }
     }

@@ -5,6 +5,7 @@ struct PasskeySigningFixture {
     let directory: URL
     let app: URL
     let profile: URL
+    let certificate: URL
     var embeddedProfile: URL { app.appendingPathComponent("Contents/embedded.provisionprofile") }
     var capturedEntitlements: URL { directory.appendingPathComponent("signed.plist") }
     var log: URL { directory.appendingPathComponent("codesign.log") }
@@ -13,6 +14,7 @@ struct PasskeySigningFixture {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         app = directory.appendingPathComponent("Thravik.app")
         profile = directory.appendingPathComponent("browser.provisionprofile")
+        certificate = directory.appendingPathComponent("leaf.der")
         try FileManager.default.createDirectory(
             at: app.appendingPathComponent("Contents/Helpers"), withIntermediateDirectories: true
         )
@@ -20,6 +22,11 @@ struct PasskeySigningFixture {
         try writeTool("codesign", script: """
         #!/bin/sh
         echo "$*" >> "$PASSKEY_TEST_LOG"
+        if [ "$1" = "--display" ]; then
+            shift; shift
+            cp "$PASSKEY_TEST_CERTIFICATE" "$1"0
+            exit 0
+        fi
         [ "${SIGNING_FAIL:-0}" = "1" ] && exit 1
         [ "$1" = "--verify" ] && exit "${VERIFY_FAIL:-0}"
         while [ "$#" -gt 0 ]; do
@@ -31,6 +38,7 @@ struct PasskeySigningFixture {
         done
         exit 0
         """)
+        try Data("synthetic passkey leaf".utf8).write(to: certificate)
     }
 
     func writeProfile(problem: String = "none") throws {
@@ -44,6 +52,7 @@ struct PasskeySigningFixture {
         if problem == "wildcard" { entitlements["com.apple.application-identifier"] = "TESTTEAM1.*" }
         let profile: [String: Any] = [
             "Entitlements": entitlements,
+            "DeveloperCertificates": [Data("synthetic passkey leaf".utf8)],
             "Platform": problem == "iOS" ? ["iOS"] : ["OSX"],
             "TeamIdentifier": problem == "wrongTeam" ? ["OTHERTEAM"] : ["TESTTEAM1"],
             "ApplicationIdentifierPrefix": ["TESTTEAM1"],
@@ -65,6 +74,7 @@ struct PasskeySigningFixture {
             "CODESIGN_IDENTITY": "Apple Development: Passkey Tests",
             "PROVISIONING_PROFILE": profile.path, "REQUIRE_PASSKEYS": "1", "REQUIRE_SIGNING": "0",
             "PASSKEY_TEST_PROFILE": profile.path, "PASSKEY_TEST_LOG": log.path,
+            "PASSKEY_TEST_CERTIFICATE": certificate.path,
             "PASSKEY_TEST_ENTITLEMENTS": capturedEntitlements.path,
             "SIGNING_FAIL": "0", "VERIFY_FAIL": "0"
         ]) { _, new in new }

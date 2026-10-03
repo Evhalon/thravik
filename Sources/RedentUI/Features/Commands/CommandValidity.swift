@@ -37,6 +37,8 @@ enum CommandValidity {
             hasTab(tabID, context) && (windowID.map { id in context.windows.contains { $0.id == id } } ?? true)
         case .openWebApp(let id), .removeWebApp(let id):
             context.webApps.contains { $0.id == id }
+        case .reopenClosed(let id):
+            context.recentlyClosed.contains { $0.id == id }
         default:
             nil
         }

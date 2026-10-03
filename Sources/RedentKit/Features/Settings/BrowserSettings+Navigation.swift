@@ -7,4 +7,9 @@ extension BrowserSettings {
         tabLayout = .sidebar
         isTabStripVisible = true
     }
+
+    public var hibernationIdleThreshold: TimeInterval? {
+        guard hibernation == .custom else { return hibernation.idleThreshold }
+        return TimeInterval(max(customHibernationMinutes ?? 15, 1) * 60)
+    }
 }

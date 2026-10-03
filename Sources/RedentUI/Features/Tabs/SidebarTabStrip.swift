@@ -20,6 +20,8 @@ struct SidebarTabStrip: View {
                 page: spacePage
             )
             VStack(alignment: .leading, spacing: Metric.tightGutter + 2) {
+                SidebarMeetingPill(model: model)
+                SidebarNowPlayingCard(model: model)
                 SidebarFooter(model: model)
                 SpacePageDots(
                     spaces: model.tabs.session.spaces,
@@ -44,11 +46,22 @@ struct SidebarTabStrip: View {
         VStack(alignment: .leading, spacing: Metric.gutter) {
             SpaceSwitcher(model: model, current: space)
             PinnedTileGrid(model: model, spaceID: space.id, pinDrop: pinDrop)
-            SidebarTabList(model: model, namespace: selection, spaceID: space.id)
+            if space.id == model.tabs.session.selectedSpaceID {
+                TidyTabsBanner(model: model)
+            }
+            if hasTabs(in: space.id) {
+                SidebarTabList(model: model, namespace: selection, spaceID: space.id)
+            } else {
+                SidebarEmptySpace(openNewTab: model.openNewTab)
+            }
         }
         .padding(.horizontal, Metric.gutter - 2)
         .environment(pinDrop)
         // Clears the window buttons, which now sit over the top of this rail.
         .padding(.top, model.usesSidebarNavigation ? 0 : Metric.toolbarHeight)
+    }
+
+    private func hasTabs(in spaceID: UUID) -> Bool {
+        model.tabs.session.tabs.contains { $0.spaceID == spaceID }
     }
 }

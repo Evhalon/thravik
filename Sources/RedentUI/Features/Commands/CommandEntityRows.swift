@@ -21,6 +21,7 @@ enum CommandEntityRows {
                                    subtitle: subtitle, source: .tab, action: .focusTab(tab.id))
         row.faviconData = tab.faviconData
         row.faviconHost = tab.url?.host()
+        row.customEmoji = tab.customEmoji
         return row
     }
 

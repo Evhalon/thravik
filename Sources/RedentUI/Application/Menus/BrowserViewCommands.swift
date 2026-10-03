@@ -5,22 +5,26 @@ import SwiftUI
 /// panes are arranged.
 struct BrowserViewCommands: Commands {
     let model: BrowserModel?
+    let bindings: ShortcutBindings
 
     var body: some Commands {
         CommandMenu("View") {
             Button(tabStripTitle) { model?.toggleTabStrip() }
-                .keyboardShortcut("\\", modifiers: .command)
+                .shortcut(.toggleTabStrip, bindings: bindings)
+                .disabled(model == nil)
+            Button(bookmarksBarTitle) { model?.toggleBookmarksBar() }
+                .shortcut(.showBookmarksBar, bindings: bindings)
                 .disabled(model == nil)
             Button(sidebarTitle) { model?.toggleSidebar() }
                 .disabled(model == nil)
             Button(focusTitle) { model?.toggleFocusMode() }
-                .keyboardShortcut("f", modifiers: [.command, .shift])
+                .shortcut(.focusMode, bindings: bindings)
                 .disabled(model == nil)
             Button(readerTitle) { model?.toggleReader() }
-                .keyboardShortcut("r", modifiers: [.command, .control])
+                .shortcut(.toggleReader, bindings: bindings)
                 .disabled(!(model?.hasPage ?? false))
             Button(videoTitle) { model?.toggleFloatingVideo() }
-                .keyboardShortcut("v", modifiers: [.command, .control])
+                .shortcut(.floatVideo, bindings: bindings)
                 .disabled(!(model?.canFloatVideo ?? false))
             Divider()
             Picker("Tab Layout", selection: layoutBinding) {
@@ -37,28 +41,28 @@ struct BrowserViewCommands: Commands {
     @ViewBuilder
     private var zoomItems: some View {
         Button("Zoom In") { model?.zoomIn() }
-            .keyboardShortcut("+", modifiers: .command)
+            .shortcut(.zoomIn, bindings: bindings)
             .disabled(!(model?.canZoomIn ?? false))
         Button("Zoom Out") { model?.zoomOut() }
-            .keyboardShortcut("-", modifiers: .command)
+            .shortcut(.zoomOut, bindings: bindings)
             .disabled(!(model?.canZoomOut ?? false))
         Button("Actual Size (\(model?.zoomLabel ?? "100%"))") { model?.resetZoom() }
-            .keyboardShortcut("0", modifiers: .command)
+            .shortcut(.zoomReset, bindings: bindings)
             .disabled(!(model?.canResetZoom ?? false))
     }
 
     @ViewBuilder
     private var splitItems: some View {
         Button(splitTitle, action: toggleSplit)
-            .keyboardShortcut("d", modifiers: [.command, .shift])
+            .shortcut(.splitView, bindings: bindings)
             .disabled(model == nil)
         Button("Add Pane") { model?.splitWithNextTab() }
-            .keyboardShortcut("d", modifiers: [.command, .option])
+            .shortcut(.addPane, bindings: bindings)
             .disabled(!(model.map { $0.isShowingSplit && $0.split.canAddPane } ?? false))
         Button("Close Pane") { model?.closeActivePane() }
             .disabled(!(model?.isShowingSplit ?? false))
         Button("Switch Pane") { model?.toggleActivePane() }
-            .keyboardShortcut("]", modifiers: [.command, .option])
+            .shortcut(.switchPane, bindings: bindings)
             .disabled(!(model?.isShowingSplit ?? false))
         Button("Flip Split") { model?.toggleSplitOrientation() }
             .disabled(!(model?.isShowingSplit ?? false))
@@ -70,6 +74,9 @@ struct BrowserViewCommands: Commands {
     }
 
     private var tabStripTitle: String { (model?.showsTabStrip ?? false) ? "Hide Tabs" : "Show Tabs" }
+    private var bookmarksBarTitle: String {
+        (model?.settings.showsBookmarksBar ?? false) ? "Hide Bookmarks Bar" : "Show Bookmarks Bar"
+    }
     private var sidebarTitle: String { (model?.isSidebarVisible ?? false) ? "Hide Sidebar" : "Show Sidebar" }
     private var focusTitle: String { (model?.isFocusMode ?? false) ? "Exit Focus Mode" : "Focus Mode" }
     private var readerTitle: String { (model?.isReaderActive ?? false) ? "Hide Reader" : "Show Reader" }

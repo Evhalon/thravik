@@ -6,6 +6,32 @@ import Testing
 
 @Suite("Reading both Chromium login databases")
 struct ChromiumPasswordReaderTests {
+    @Test("Profiles without password databases do not request a decryption key")
+    func skipsProfilesWithoutPasswordDatabases() throws {
+        let profile = try makeProfile()
+        defer { try? FileManager.default.removeItem(at: profile) }
+        var requestedKey = false
+
+        let credentials = try ChromiumPasswordReader.read(from: profile) {
+            requestedKey = true
+            return []
+        }
+
+        #expect(credentials.isEmpty)
+        #expect(!requestedKey)
+    }
+
+    @Test("A present unreadable password database still reports failure")
+    func preservesUnreadableDatabaseFailure() throws {
+        let profile = try makeProfile()
+        defer { try? FileManager.default.removeItem(at: profile) }
+        try Data("not a database".utf8).write(to: profile.appending(path: "Login Data"))
+
+        #expect(throws: ImportError.self) {
+            _ = try ChromiumPasswordReader.read(from: profile) { [1, 2, 3] }
+        }
+    }
+
     @Test("Local and account-synced logins are merged")
     func mergesBothFiles() throws {
         let profile = FileManager.default.temporaryDirectory
@@ -35,6 +61,13 @@ struct ChromiumPasswordReaderTests {
         let credentials = try ChromiumPasswordReader.read(from: profile, key: key)
         #expect(credentials.map(\.username) == ["me"])
     }
+}
+
+private func makeProfile() throws -> URL {
+    let profile = FileManager.default.temporaryDirectory
+        .appending(path: "redent-login-profile-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: profile, withIntermediateDirectories: true)
+    return profile
 }
 
 private func writeLogins(named fileName: String, in profile: URL, key: [UInt8], host: String, user: String) throws {

@@ -93,6 +93,8 @@ final class PageSignalRouter: NSObject, WKScriptMessageHandler {
             guard let frame = dict["frame"] as? String, frame.count <= 64,
                   let audible = dict["audible"] as? Bool else { return true }
             tab?.mediaFrame(frame, isAudible: audible)
+        case "mediaSession":
+            tab?.receiveMediaSession(dict)
         default:
             return false
         }

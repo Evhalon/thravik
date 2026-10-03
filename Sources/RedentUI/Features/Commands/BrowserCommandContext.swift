@@ -11,6 +11,7 @@ extension BrowserModel {
             var values = CommandTabContext.Values(url: tab.url, isPinned: tab.isPinned, spaceID: tab.snapshot.spaceID,
                                                   spaceName: tab.snapshot.spaceID.flatMap { names[$0] })
             values.faviconData = tab.snapshot.faviconData
+            values.customEmoji = tab.snapshot.customEmoji
             values.groupID = tab.snapshot.groupID
             return CommandTabContext(id: tab.id, title: tab.snapshot.displayTitle, values: values)
         }
@@ -21,6 +22,7 @@ extension BrowserModel {
         var context = CommandBarContext(tabs: tabContexts, spaces: spaces,
             selectedTabID: tabs.selectedID, selectedSpaceID: session.selectedSpaceID,
             canReopenLastClosed: tabs.canReopen)
+        context.recentlyClosed = isPrivate ? [] : tabs.recentlyClosed
         context.groups = session.groups.map { group in
             CommandGroupContext(id: group.id, name: group.name, spaceID: group.spaceID,
                                 spaceName: names[group.spaceID], tabIDs: group.tabIDs)
@@ -28,6 +30,7 @@ extension BrowserModel {
         context.windows = windowDirectory?.windows ?? []
         context.webApps = isPrivate ? [] : webApps
         context.isPrivate = isPrivate
+        context.clipboardPaste = pasteAndGoAction
         commandBar.updateContext(context)
     }
 }

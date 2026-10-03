@@ -14,6 +14,7 @@ extension TabController {
     /// Space's membership and comparing it back is a lot of work to move one id.
     public func select(_ id: UUID) {
         guard selectedID != id, let tab = webTabs.first(where: { $0.id == id }) else { return }
+        let leavingID = selectedID
         touchActivity(of: selectedID)
         updateSelectedID(id)
         if let spaceID = tab.snapshot.spaceID, workspace.selectedSpaceID != spaceID {
@@ -21,6 +22,15 @@ extension TabController {
         }
         touchActivity(of: id)
         selectionChanged()
+        mediaSelectionMoved(from: leavingID, to: id)
+    }
+
+    /// Runs after a selection the user asked for, not after closes or restores.
+    func mediaSelectionMoved(from previousID: UUID?, to selectedID: UUID) {
+        for id in [previousID, selectedID].compactMap({ $0 }) {
+            webTabs.first { $0.id == id }?.acknowledgeMedia()
+        }
+        applyAutoFloatVideo(from: previousID, to: selectedID)
     }
 
     /// Selecting this tab swaps the two most recently active tabs, which is

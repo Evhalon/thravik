@@ -7,6 +7,13 @@ import RedentKit
 enum ChromiumPasswordReader {
     private static let files = ["Login Data", "Login Data For Account"]
 
+    static func read(from profileURL: URL, keyProvider: () throws -> [UInt8]) throws -> [Credential] {
+        guard files.contains(where: { fileExists($0, in: profileURL) }) else { return [] }
+        var key = try keyProvider()
+        defer { key.zeroize() }
+        return try read(from: profileURL, key: key)
+    }
+
     static func read(from profileURL: URL, key: [UInt8]) throws -> [Credential] {
         var combined: [Credential] = []
         var sawDatabase = false
@@ -36,5 +43,9 @@ enum ChromiumPasswordReader {
             let key = "\(credential.origin.scheme)|\(credential.origin.host)|\(credential.username)"
             return seen.insert(key).inserted
         }
+    }
+
+    private static func fileExists(_ name: String, in profileURL: URL) -> Bool {
+        FileManager.default.fileExists(atPath: profileURL.appending(path: name).path)
     }
 }

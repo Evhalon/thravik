@@ -15,6 +15,8 @@ public final class TabController: BrowserControlling {
     public var tabs: [any BrowserTab] { webTabs }
     @ObservationIgnored public var onChange: (@MainActor () -> Void)?
     @ObservationIgnored public var onNavigation: (@MainActor (TabSnapshot, UUID) -> Void)?
+    /// Every tab shown after a selection change, split panes included.
+    @ObservationIgnored public var onScreenTabIDs: (@MainActor () -> Set<UUID>)?
 
     /// Weak: the app's own view model owns this controller's lifetime, not
     /// the other way around.
@@ -28,6 +30,8 @@ public final class TabController: BrowserControlling {
     public var invalidCertificateAllowed: (@MainActor (SiteKey) -> Bool)?
     @ObservationIgnored
     public var trustInvalidCertificate: (@MainActor (SiteKey) -> Void)?
+    @ObservationIgnored
+    public var managedURLBlocker: (@MainActor (URL) -> Bool)?
 
     /// Where a file the page hands over goes. Shared with every other window,
     /// and set by the composition root; nil in tests, where a download is
@@ -48,13 +52,14 @@ public final class TabController: BrowserControlling {
     @ObservationIgnored private(set) var settings: BrowserSettings
     @ObservationIgnored let logger: any EventLogging
     @ObservationIgnored let videoPresentation = FloatingVideoPresentation()
-    @ObservationIgnored var closedStack: [TabSnapshot] = []
+    /// Observed so menus listing it drop entries the moment a site is forgotten.
+    var closedStack = RecentlyClosedStack()
     @ObservationIgnored var previouslySelectedID: UUID?
     static let closedStackLimit = 10
     var workspace: BrowserSession
     let undoHistory = BrowserUndoHistory()
     public var isPrivate: Bool { privateSessionID != nil }
-    public var canReopen: Bool { !closedStack.isEmpty }
+    public var canReopen: Bool { !isPrivate && !closedStack.records.isEmpty }
     public var canUndo: Bool { undoHistory.canUndo }
     public var canUndoSpaces: Bool { undoHistory.canUndoSpaces }
     /// Filters `webTabs` rather than `tabs`: the latter boxes every tab into an
@@ -81,6 +86,7 @@ public final class TabController: BrowserControlling {
         self.selectedID = normalized.selectedTabID
         self.webTabs = normalized.tabs.map { WebTab(snapshot: $0, controller: nil) }
         for tab in webTabs { tab.controller = self }
+        applySensitiveSitePolicy(to: webTabs)
         contexts.sync(webTabs.map(\.snapshot.browsingContext), owner: ObjectIdentifier(self))
         contentBlocker.onCompiled = { [weak self] in self?.installCompiledBlockList() }
         contentBlocker.startCompilingIfNeeded()
@@ -93,6 +99,7 @@ public final class TabController: BrowserControlling {
     public func apply(settings: BrowserSettings) {
         let contentChanged = PageContentOptions(settings) != PageContentOptions(self.settings)
         self.settings = settings
+        applySensitiveSitePolicy(to: webTabs)
         // Every settings write lands here, including the one a live sidebar drag
         // makes each frame. Swapping a rule list on a running web view forces the
         // content process to re-evaluate the page, so it happens only on a real
@@ -113,6 +120,7 @@ public final class TabController: BrowserControlling {
             snapshot.lifespan = .temporary(sessionID: privateSessionID, expiresAt: nil, cleanupOnClose: true)
         }
         let tab = WebTab(snapshot: snapshot, controller: self)
+        applySensitiveSitePolicy(to: [tab])
         webTabs.insert(tab, at: insertIndex(opening: url, in: snapshot.spaceID))
         updateSelectedID(tab.id)
         // A tab with no address shows Redent's own new-tab page, which is not a
@@ -132,17 +140,8 @@ public final class TabController: BrowserControlling {
         tab.hibernate()
         webTabs.remove(at: index)
         pruneRelatedAfterRemoval()
-        if !tab.snapshot.isTemporary { pushClosed(tab.snapshot) }
+        if !tab.snapshot.isTemporary { pushClosed(tab.snapshot, insertIndex: index) }
         changed()
     }
 
-    /// The window closed. Releasing the hold here rather than in `deinit` keeps
-    /// the ephemeral store's lifetime tied to the window the user closed, not to
-    /// whenever the last view referencing this controller happens to go away.
-    public func retire() {
-        extensions?.detach(self)
-        for tab in webTabs { tab.hibernate() }
-        contexts.release(owner: ObjectIdentifier(self))
-        warmer.discard()
-    }
 }

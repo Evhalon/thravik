@@ -33,12 +33,13 @@ struct FloatingNewTabItem: Identifiable {
              section: .search, target: .suggestion(row))
     }
 
-    static func preview(_ text: String, searchEngine: SearchEngine) -> Self? {
-        guard let url = AddressResolver.resolve(text, using: searchEngine) else { return nil }
-        let isSearch = url == searchEngine.searchURL(for: text)
-        return Self(id: "preview", title: isSearch ? "Search for \(text)" : "Open \(text)",
-            detail: isSearch ? searchEngine.label : url.host() ?? url.absoluteString,
+    static func preview(_ text: String, routing: SearchRouting) -> Self? {
+        guard let action = PasteAndGoDecision.action(for: text, using: routing) else { return nil }
+        let isSearch = if case .search = action { true } else { false }
+        let match = SearchKeywordResolver.match(in: text, engines: routing.customEngines)
+        return Self(id: "preview", title: isSearch ? "Search for \(match?.query ?? text)" : "Open \(text)",
+            detail: isSearch ? (match?.engine.name ?? routing.label) : action.url.host() ?? action.url.absoluteString,
             symbol: isSearch ? "magnifyingglass" : "arrow.up.right",
-            faviconData: nil, url: nil, section: .search, target: .page(url))
+            faviconData: nil, url: nil, section: .search, target: .page(action.url))
     }
 }

@@ -6,7 +6,7 @@ extension TabController {
     /// new tab in this Space browses in. `nil` drops it: nothing typed any more
     /// could use it.
     public func prerender(_ url: URL?) {
-        guard let url else { return warmer.prerenderer.discard() }
+        guard let url, managedURLBlocker?(url) != true else { return warmer.prerenderer.discard() }
         // A private window's searches must not run through the persistent profile.
         guard privateSessionID == nil else { return }
         let context = spaceContext

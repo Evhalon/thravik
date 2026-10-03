@@ -62,9 +62,11 @@ public enum ExtensionInstallError: Error, Equatable, Sendable {
     case alreadyInstalled(String)
     case notUpdatable
     case loadFailed(String)
+    case blockedByOrganization
 
     public var message: String {
         switch self {
+        case .blockedByOrganization: "Your organization does not allow installing this extension."
         case .downloadFailed: "The Chrome Web Store did not send the extension. Check the link and your connection."
         case .notAnExtensionPackage: "That file is not a Chrome extension package (.crx or .zip)."
         case .unpackFailed: "The extension package could not be unpacked."

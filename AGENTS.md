@@ -53,6 +53,8 @@ Dependencies point **inward only**. An inner layer never imports an outer one.
 - **RedentOTPAuth** — `otpauth://` and `otpauth-migration://` parsing. Pure.
 - **RedentVault** — Keychain adapters that *implement* RedentKit ports.
 - **RedentEngine** — WKWebView adapters. The only target allowed to `import WebKit`.
+- **RedentSync** — account/cloud adapters and authenticated encryption. Depends on
+  RedentKit only; secret storage is injected through ports. No WebKit, UI or direct Keychain I/O.
 - **RedentDesign** — tokens, materials, reusable primitives. No feature logic.
 - **RedentUI** — feature views + view models. Talks to ports, never to concrete adapters.
 - **Redent** — the only place that constructs concrete types and wires them together.
@@ -126,3 +128,24 @@ A change is done when **all** of these hold:
 5. No force unwraps, no dead code, no stray print statements.
 
 Run `make verify` before declaring completion. If it fails, you are not done.
+
+## 8. Account/password storage decisions
+
+- Swift/macOS + backend work explicitly authorized for account/sync.
+- Password providers: local Keychain, Redent E2EE cloud, iCloud synchronizable
+  Keychain. One selected provider; copying is explicit and retains source.
+- Cloud root keys/token/local vault/outbox are isolated by bundle and account.
+  Login alone cannot recover secrets: random recovery code unlocks root key.
+- Cloud password Keychain snapshots preserve distinct record IDs; never dedupe
+  different remote records by login and silently discard a password.
+- iCloud availability requires signed Keychain access group; no local fallback.
+- See docs/ACCOUNT_SYNC_ARCHITECTURE.md for implemented scope and production gates.
+
+## 9. Find on page
+
+- Cmd+F uses the public `WKWebView.find` API for all documents. WebKit owns
+  substring selection, navigation, and scrolling; no custom CSS highlights.
+- Native results expose match presence, not an exact count. Never fabricate
+  a total from a partial DOM scan. Isolated scripts register frames, preserve
+  clipped containers while native find scrolls, and clear native selections.
+  Pending native work must finish before cleanup.

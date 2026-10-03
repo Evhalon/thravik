@@ -7,6 +7,7 @@ public struct BrowserSession: Sendable, Codable, Equatable {
     public var spaces: [BrowserSpace]
     public var selectedSpaceID: UUID?
     public var groups: [BrowserGroup]
+    public var profile: BrowserProfile?
     /// Which tabs the window was showing side by side. Validated against the
     /// restored tabs, so a pane whose tab is gone does not come back empty.
     public var splitLayout = SplitLayout()
@@ -15,13 +16,15 @@ public struct BrowserSession: Sendable, Codable, Equatable {
         tabs: [TabSnapshot] = [],
         selectedTabID: UUID? = nil,
         spaces: [BrowserSpace] = BrowserSpace.starterSpaces,
-        selectedSpaceID: UUID? = BrowserSpace.workID
+        selectedSpaceID: UUID? = BrowserSpace.workID,
+        profile: BrowserProfile? = nil
     ) {
         let usableSpaces = spaces.isEmpty ? BrowserSpace.starterSpaces : spaces
         let activeSpace = selectedSpaceID.flatMap { id in usableSpaces.contains { $0.id == id } ? id : nil }
             ?? usableSpaces[0].id
         self.spaces = usableSpaces
         self.selectedSpaceID = activeSpace
+        self.profile = profile
         self.groups = []
         let spaceIDs = Set(usableSpaces.map(\.id))
         self.tabs = Self.droppingOrphanParents(tabs.map { tab in
@@ -40,7 +43,7 @@ public struct BrowserSession: Sendable, Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case tabs, selectedTabID, spaces, selectedSpaceID, groups, splitLayout
+        case tabs, selectedTabID, spaces, selectedSpaceID, groups, splitLayout, profile
     }
 
     public init(from decoder: Decoder) throws {
@@ -49,7 +52,8 @@ public struct BrowserSession: Sendable, Codable, Equatable {
             tabs: try values.decodeIfPresent([TabSnapshot].self, forKey: .tabs) ?? [],
             selectedTabID: try values.decodeIfPresent(UUID.self, forKey: .selectedTabID),
             spaces: try values.decodeIfPresent([BrowserSpace].self, forKey: .spaces) ?? BrowserSpace.starterSpaces,
-            selectedSpaceID: try values.decodeIfPresent(UUID.self, forKey: .selectedSpaceID)
+            selectedSpaceID: try values.decodeIfPresent(UUID.self, forKey: .selectedSpaceID),
+            profile: try values.decodeIfPresent(BrowserProfile.self, forKey: .profile)
         )
         self.groups = (try values.decodeIfPresent([BrowserGroup].self, forKey: .groups) ?? []).filter { group in
             self.spaces.contains { space in space.id == group.spaceID }

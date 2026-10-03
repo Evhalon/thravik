@@ -18,4 +18,12 @@ struct BrowserImportModelMessageTests {
         #expect(text.contains("Allow"))
         #expect(!text.contains("running"))
     }
+
+    @Test("Unreadable password archives suggest a safe retry")
+    func passwordArchiveFailure() {
+        let text = BrowserImportModel.message(for: ["passwords-locked"])
+        #expect(text.contains("password archives could not be read"))
+        #expect(text.contains("Close the source browser and retry"))
+        #expect(text.contains("import passwords separately"))
+    }
 }

@@ -16,6 +16,7 @@ public enum SessionRewind {
     private static func tabs(_ current: BrowserSession, to previous: BrowserSession) -> BrowserSession {
         let live = Set(current.spaces.map(\.id))
         var next = previous
+        next.profile = current.profile
         next.spaces = current.spaces
         next.tabs.removeAll { !isIn(live, $0.spaceID) }
         next.tabs += current.tabs.filter { $0.isTemporary && isIn(live, $0.spaceID) }

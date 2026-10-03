@@ -13,8 +13,20 @@ extension WorkspaceState {
             let index = try tabIndex(id)
             guard session.tabs[index].isPinned else { return }
             session.tabs[index].pinnedURL = url
+        case let .setCustomEmoji(id, emoji):
+            try applyCustomEmoji(id, emoji)
         default:
             return
+        }
+    }
+
+    private mutating func applyCustomEmoji(_ id: UUID, _ emoji: String?) throws {
+        let index = try tabIndex(id)
+        if let emoji {
+            guard let valid = TabCustomEmoji.validated(emoji) else { return }
+            session.tabs[index].customEmoji = valid
+        } else {
+            session.tabs[index].customEmoji = nil
         }
     }
 

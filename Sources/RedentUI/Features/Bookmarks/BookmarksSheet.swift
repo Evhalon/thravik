@@ -124,6 +124,8 @@ public struct BookmarksSheet: View {
             return await model.rename(bookmark, to: title)
         case .address(let bookmark):
             return await model.changeAddress(bookmark, to: address)
+        case .edit(let bookmark):
+            return await model.update(bookmark, title: title, address: address)
         }
     }
 

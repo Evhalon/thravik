@@ -29,7 +29,10 @@ extension TabController {
         let closingIDs = Set(closing.map(\.id))
         for tab in closing {
             tab.hibernate()
-            if !tab.snapshot.isTemporary { pushClosed(tab.snapshot) }
+            if !tab.snapshot.isTemporary {
+                let insertIndex = webTabs.firstIndex(where: { $0.id == tab.id }) ?? webTabs.count
+                pushClosed(tab.snapshot, insertIndex: insertIndex)
+            }
         }
         webTabs.removeAll { closingIDs.contains($0.id) }
         pruneRelatedAfterRemoval()
@@ -38,6 +41,10 @@ extension TabController {
     }
 
     public func closeTabs(_ ids: Set<UUID>) {
+        if let group = matchingBrowserGroup(forClosing: ids) {
+            closeTabsAsGroup(ids, group: group)
+            return
+        }
         let closing = webTabs.filter { ids.contains($0.id) }
         guard !closing.isEmpty else { return }
         if closing.contains(where: { !$0.snapshot.isTemporary }) {
@@ -47,7 +54,10 @@ extension TabController {
         let selectedWasClosed = selectedID.map(closingIDs.contains) ?? false
         for tab in closing {
             tab.hibernate()
-            if !tab.snapshot.isTemporary { pushClosed(tab.snapshot) }
+            if !tab.snapshot.isTemporary {
+                let insertIndex = webTabs.firstIndex(where: { $0.id == tab.id }) ?? webTabs.count
+                pushClosed(tab.snapshot, insertIndex: insertIndex)
+            }
         }
         webTabs.removeAll { closingIDs.contains($0.id) }
         pruneRelatedAfterRemoval()
@@ -112,31 +122,14 @@ extension TabController {
         try? perform(.setPinned(id: id, isPinned: !tab.isPinned))
     }
 
-    public func reopenLastClosed() {
-        while let last = closedStack.last, webTabs.contains(where: { $0.id == last.id }) { closedStack.removeLast() }
-        guard var snapshot = closedStack.popLast() else { return }
-        if !workspace.spaces.contains(where: { $0.id == snapshot.spaceID }) {
-            snapshot.spaceID = workspace.selectedSpaceID
-            snapshot.groupID = nil
-        }
-        undoHistory.record(session)
-        let tab = WebTab(snapshot: snapshot, controller: self)
-        webTabs.insert(tab, at: insertIndexAfterCurrent())
-        updateSelectedID(tab.id)
-        workspace.selectedSpaceID = snapshot.spaceID
-        tab.wake(loading: nil)
-        changed()
-    }
-
     /// Forgetting a site has to reach the records that could bring it back.
     /// An undo record carries a whole session, so there is no partial rewind
     /// that keeps the promise — the history goes, and the report says so.
     @discardableResult
     public func forgetClosedTabs(matching domain: String) -> Int {
-        let before = closedStack.count
-        closedStack.removeAll { $0.origin?.registrableDomain == domain }
+        let removed = closedStack.forget(domain: domain)
         undoHistory.clear()
-        return before - closedStack.count
+        return removed
     }
 
     private func currentIndex() -> Int? {

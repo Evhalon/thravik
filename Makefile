@@ -35,6 +35,7 @@ app: build
 	@plutil -replace CFBundleIdentifier -string "$(BUNDLE_ID)" "$(PLIST)"
 	@plutil -replace CFBundleName -string "$(DISPLAY_NAME)" "$(PLIST)"
 	@plutil -replace CFBundleDisplayName -string "$(DISPLAY_NAME)" "$(PLIST)"
+	@sh scripts/configure-account.sh "$(PLIST)"
 	@if [ -f Resources/AppIcon.icns ]; then cp Resources/AppIcon.icns "$(STAGING_APP_DIR)/Contents/Resources/"; fi
 	@copied=0; \
 	for b in $(BUILD_DIR)/*.bundle; do \
@@ -83,14 +84,16 @@ check-lines:
 
 check-arch:
 	@fail=0; \
-	if grep -rlE '^import (SwiftUI|WebKit|AppKit|Security)' Sources/RedentKit >/dev/null 2>&1; then \
+	if grep -rlE '^import (SwiftUI|WebKit|AppKit|Security|CryptoKit|AuthenticationServices)' Sources/RedentKit >/dev/null 2>&1; then \
 		echo "FAIL: RedentKit must not import platform frameworks"; \
-		grep -rlE '^import (SwiftUI|WebKit|AppKit|Security)' Sources/RedentKit; fail=1; fi; \
+		grep -rlE '^import (SwiftUI|WebKit|AppKit|Security|CryptoKit|AuthenticationServices)' Sources/RedentKit; fail=1; fi; \
 	if grep -rl '^import WebKit' Sources --include='*.swift' | grep -v '^Sources/RedentEngine' >/dev/null 2>&1; then \
 		echo "FAIL: only RedentEngine may import WebKit"; \
 		grep -rl '^import WebKit' Sources --include='*.swift' | grep -v '^Sources/RedentEngine'; fail=1; fi; \
 	if grep -rlE '^import (Security|LocalAuthentication)' Sources --include='*.swift' | grep -vE '^Sources/(RedentVault|RedentImport|Redent)/' >/dev/null 2>&1; then \
 		echo "FAIL: Keychain access belongs in RedentVault"; fail=1; fi; \
+	if grep -rlE '^import (RedentUI|RedentEngine|RedentVault|RedentDesign|Security|AppKit|SwiftUI)' Sources/RedentSync --include='*.swift' >/dev/null 2>&1; then \
+		echo "FAIL: RedentSync must depend inward and access secrets through ports"; fail=1; fi; \
 	[ $$fail -eq 0 ] && echo "OK: dependency rule holds"
 
 check-layout:

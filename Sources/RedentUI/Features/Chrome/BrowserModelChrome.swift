@@ -52,10 +52,14 @@ extension BrowserModel {
 
     /// A private window: ephemeral storage, no history, no session restore.
     public var isPrivate: Bool { tabs.isPrivate }
+    public var canOpenPrivateWindow: Bool { privateWindowsAllowed?() ?? true }
 
     public func newWindow() { windowOpener?(false) }
 
-    public func newPrivateWindow() { windowOpener?(true) }
+    public func newPrivateWindow() {
+        guard privateWindowsAllowed?() ?? true else { return }
+        windowOpener?(true)
+    }
 
     public func openNewTab() {
         guard !settings.opensFloatingNewTab else {

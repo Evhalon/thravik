@@ -4,4 +4,5 @@
 /// WebKit's transport error without leaking its error objects into the UI.
 public enum PageTrustIssue: Sendable, Equatable {
     case invalidCertificate
+    case organizationBlocked
 }

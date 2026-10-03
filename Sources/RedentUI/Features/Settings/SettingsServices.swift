@@ -1,6 +1,12 @@
 import SwiftUI
 
 public struct SettingsServices: Sendable {
+    public var passwordStorage: PasswordStorageModel?
+    public var account: AccountModel?
+    public var devices: DeviceMembershipModel?
+    public var workspace: WorkspaceSyncModel?
+    public var restartOnboarding: (@MainActor @Sendable () -> Void)?
+    public var restartRealOnboarding: (@MainActor @Sendable () -> Void)?
     let updates: UpdateModel
     let defaultBrowser: DefaultBrowserModel
     let passkeys: PasskeyAccessModel?

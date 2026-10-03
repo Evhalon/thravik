@@ -21,6 +21,8 @@ public final class ExtensionsModel {
     public var wantsReveal = false
 
     private let host: any ExtensionHosting
+    @ObservationIgnored public var allowsExtensionInstall: (@MainActor (ChromeWebStoreID) -> Bool)?
+    @ObservationIgnored public var restrictsExtensionInstalls: (@MainActor () -> Bool)?
 
     public init(host: any ExtensionHosting) {
         self.host = host
@@ -50,6 +52,10 @@ public final class ExtensionsModel {
     @discardableResult
     public func review(_ source: ExtensionInstallSource) async -> Bool {
         guard !isWorking else { return false }
+        if let denial = organizationInstallDenial(for: source) {
+            errorMessage = denial
+            return false
+        }
         isWorking = true
         defer { isWorking = false }
         do {
@@ -109,5 +115,16 @@ public final class ExtensionsModel {
 
     private func refresh() {
         installed = host.installed
+    }
+
+    private func organizationInstallDenial(for source: ExtensionInstallSource) -> String? {
+        guard restrictsExtensionInstalls?() == true else { return nil }
+        switch source {
+        case .chromeWebStore(let id):
+            if allowsExtensionInstall?(id) == true { return nil }
+            return ExtensionInstallError.blockedByOrganization.message
+        case .folder, .archive:
+            return ExtensionInstallError.blockedByOrganization.message
+        }
     }
 }

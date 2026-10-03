@@ -15,6 +15,8 @@ public struct TabSnapshot: Identifiable, Hashable, Sendable, Codable {
     public var pinnedURL: URL?
     /// The user's own name for the tab, shown instead of the page title.
     public var customTitle: String?
+    /// A user-chosen emoji drawn instead of the site favicon.
+    public var customEmoji: String?
     public var lastActiveAt: Date
     public var spaceID: UUID?
     public var containerID: UUID?

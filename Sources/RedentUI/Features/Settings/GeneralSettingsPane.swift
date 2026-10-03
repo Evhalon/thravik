@@ -5,27 +5,24 @@ import SwiftUI
 /// Search engine and homepage — the two settings people reach for first.
 struct GeneralSettingsPane: View {
     @Binding var settings: BrowserSettings
+    let locks: Set<ManagedPolicyLockKey>
     let defaultBrowser: DefaultBrowserModel
     let onResetWorkspace: () -> Void
     @State private var isConfirmingReset = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SettingsSection("SEARCH") {
-                HStack {
-                    Text("Engine")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Palette.chromeText)
-                    Spacer(minLength: Metric.gutter)
-                    Picker("Search engine", selection: engineSelection) {
-                        ForEach(SearchEngine.allCases) { engine in
-                            Text(engine.label).tag(engine)
-                        }
+            SearchSettingsSection(settings: $settings, locks: locks)
+            SettingsSection("TIDY TABS") {
+                Picker("Archive unused tabs after", selection: $settings.tidyTabsThreshold) {
+                    ForEach(TidyTabsThreshold.allCases) { threshold in
+                        Text(threshold.label).tag(threshold)
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .fixedSize()
                 }
+                .pickerStyle(.menu)
+                Text("Suggests archiving loose tabs you have not opened in a while. Off by default.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Palette.chromeSecondaryText)
             }
             SettingsSection("HOMEPAGE") {
                 TextField("https://…", text: $settings.homepage)
@@ -35,6 +32,14 @@ struct GeneralSettingsPane: View {
                     .padding(.horizontal, 12)
                     .frame(height: Metric.controlHeight)
                     .background { fieldChrome }
+                    .managedPolicyLocked(locks.contains(.homepage))
+            }
+            SettingsSection("VIDEO") {
+                SettingsToggleRow(
+                    "Automatically float playing videos when switching tabs",
+                    caption: "Keeps a playing video visible in a floating window until you return to its tab.",
+                    isOn: $settings.floatsPlayingVideoOnTabSwitch
+                )
             }
             SettingsSection("STARTUP") {
                 SettingsToggleRow(
@@ -43,6 +48,7 @@ struct GeneralSettingsPane: View {
                     isOn: $settings.reopensTabsOnLaunch
                 )
             }
+            CalendarSettingsSection(settings: $settings)
             SettingsSection("DEFAULT BROWSER") {
                 DefaultBrowserRow(model: defaultBrowser)
             }
@@ -56,11 +62,6 @@ struct GeneralSettingsPane: View {
         } message: {
             Text("This closes every tab and removes custom Spaces and tab groups. History, bookmarks, and passwords are kept.")
         }
-    }
-
-    /// Routed through the model so the homepage follows the engine.
-    private var engineSelection: Binding<SearchEngine> {
-        Binding(get: { settings.searchEngine }, set: { settings.selectSearchEngine($0) })
     }
 
     private var fieldChrome: some View {

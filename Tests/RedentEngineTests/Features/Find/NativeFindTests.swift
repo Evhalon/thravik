@@ -18,7 +18,7 @@ struct NativeFindTests {
         #expect(await WebNativeFind.search("", forward: true, in: view) == .empty)
     }
 
-    @Test("Native fallback reaches rendered text inside a closed shadow root")
+    @Test("Native search reaches rendered text inside a closed shadow root")
     func findsClosedShadowText() async throws {
         let tab = try await FindTestPage.saying("""
         <x-card></x-card>

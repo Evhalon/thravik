@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import RedentKit
 @testable import RedentUI
@@ -34,6 +35,17 @@ struct DefaultBrowserModelTests {
         #expect(await manager.requests == 1)
     }
 
+    @Test("An onboarding choice suppresses the duplicate release offer")
+    func onboardingChoiceRecordsTheReleaseWithoutRequestingDefault() async {
+        let manager = PendingManager()
+        let store = PromptStoreProbe()
+        let model = DefaultBrowserModel(manager: manager, store: store, installedVersion: "1.0")
+        model.recordOnboardingPrompt()
+        #expect(!(await model.claimOffer()))
+        #expect(store.lastPromptedVersion == "1.0")
+        #expect(await manager.requests == 0)
+    }
+
     private func makeModel(manager: PendingManager) -> DefaultBrowserModel {
         DefaultBrowserModel(
             manager: manager,
@@ -41,6 +53,18 @@ struct DefaultBrowserModelTests {
             installedVersion: "1.0"
         )
     }
+}
+
+/// NSLock protects mutable state shared by sync Sendable prompt-store methods.
+private final class PromptStoreProbe: DefaultBrowserPromptStoring, @unchecked Sendable {
+    private let lock = NSLock()
+    private var version: String?
+    private var silenced = false
+
+    var lastPromptedVersion: String? { lock.withLock { version } }
+    var isSilenced: Bool { lock.withLock { silenced } }
+    func recordPrompt(for version: String?) { lock.withLock { self.version = version } }
+    func silence() { lock.withLock { silenced = true } }
 }
 
 /// Holds each switch open until the test hands it an answer, the way the

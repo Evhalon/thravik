@@ -22,10 +22,10 @@ public struct ChromiumImporter: BrowserImporting {
     }
 
     public func readPasswords(from browser: ImportableBrowser) async throws -> [Credential] {
-        let secret = try SafeStorageKeychain.secret(service: browser.safeStorageService)
-        var key = ChromiumCrypto.deriveKey(fromSecret: secret)
-        defer { key.zeroize() }
-        return try ChromiumPasswordReader.read(from: browser.profileURL, key: key)
+        try ChromiumPasswordReader.read(from: browser.profileURL) {
+            let secret = try SafeStorageKeychain.secret(service: browser.safeStorageService)
+            return ChromiumCrypto.deriveKey(fromSecret: secret)
+        }
     }
 }
 

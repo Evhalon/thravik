@@ -35,15 +35,18 @@ struct EdgeChromeOverlay<Backdrop: View>: View {
     }
 
     private var navigation: some View {
-        ChromeBar(model: model)
-            .background { surfaceBackground }
-            .clipped()
-            .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
-            .contentShape(.rect)
-            .onGeometryChange(for: CGFloat.self, of: \.size.height) { reveal.navigationHeight = $0 }
-            .onHover { reveal.hover(.navigation, isInside: $0) }
-            .onDisappear { reveal.hover(.navigation, isInside: false) }
-            .transition(reduceMotion ? .identity : .move(edge: .top).combined(with: .opacity))
+        VStack(spacing: 0) {
+            ChromeBar(model: model)
+            if model.showsBookmarksBar { BookmarksBar(model: model) }
+        }
+        .background { surfaceBackground }
+        .clipped()
+        .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
+        .contentShape(.rect)
+        .onGeometryChange(for: CGFloat.self, of: \.size.height) { reveal.navigationHeight = $0 }
+        .onHover { reveal.hover(.navigation, isInside: $0) }
+        .onDisappear { reveal.hover(.navigation, isInside: false) }
+        .transition(reduceMotion ? .identity : .move(edge: .top).combined(with: .opacity))
     }
 
     private func edge(_ region: ChromeRevealModel.Region) -> some View {

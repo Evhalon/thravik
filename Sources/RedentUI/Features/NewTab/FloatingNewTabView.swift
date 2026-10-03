@@ -55,7 +55,7 @@ struct FloatingNewTabView: View {
            model.suggestions.query == text || model.suggestions.completion?.text == text {
             return model.suggestions.rows.map(FloatingNewTabItem.suggestion)
         }
-        return FloatingNewTabItem.preview(text, searchEngine: model.settings.searchEngine).map { [$0] } ?? []
+        return FloatingNewTabItem.preview(text, routing: model.settings.searchRouting).map { [$0] } ?? []
     }
 
     private var searchField: some View {

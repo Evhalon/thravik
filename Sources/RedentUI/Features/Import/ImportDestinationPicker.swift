@@ -18,7 +18,7 @@ struct ImportDestinationPicker: View {
             .labelsHidden()
             .pickerStyle(.menu)
             .fixedSize()
-            Text("Bookmarks and logins join this Space. History is shared across all of them.")
+            Text("Bookmarks join this Space. History and passwords are shared across Spaces.")
                 .font(.system(size: 10.5))
                 .foregroundStyle(Palette.chromeSecondaryText)
         }

@@ -6,7 +6,7 @@ enum CommandSearch {
         let descriptors: [CommandDescriptor]
         let history: any HistoryStoring
         let bookmarks: any BookmarkStoring
-        let searchEngine: SearchEngine
+        let routing: SearchRouting
     }
 
     static func results(
@@ -19,7 +19,7 @@ enum CommandSearch {
         guard !text.isEmpty else { return Array(CommandHome.rows(context: context, descriptors: source.descriptors).prefix(limit)) }
         // A plain command reads before any page does, and a reading of the
         // whole sentence before a command that only shares its first words.
-        let intents = CommandIntentParser.intents(for: text, in: context, searchEngine: source.searchEngine)
+        let intents = CommandIntentParser.intents(for: text, in: context, routing: source.routing)
         let intentActions = Set(intents.compactMap(\.action))
         let entities = CommandEntityRows.rows(matching: text, in: context)
         var rows = commandRows(source.descriptors, context: context, query: text)
@@ -45,8 +45,8 @@ enum CommandSearch {
                                     subtitle: entry.url.absoluteString, source: .history,
                                     action: .navigate(entry.url))
         }
-        let ordered = CommandRanking.order(rows, direct: directRow(for: text, searchEngine: source.searchEngine),
-                                           search: searchRow(for: text, searchEngine: source.searchEngine), query: text)
+        let ordered = CommandRanking.order(rows, direct: directRow(for: text, routing: source.routing),
+                                           search: searchRow(for: text, routing: source.routing), query: text)
         return Array((intents + ordered).prefix(limit))
     }
 
@@ -59,24 +59,23 @@ enum CommandSearch {
         descriptors.filter { $0.matches(query) }.compactMap { $0.row(in: context, query: query) }
     }
 
-    private static func directRow(for query: String, searchEngine: SearchEngine) -> CommandBarResult? {
-        directURL(for: query, searchEngine: searchEngine).map {
-            CommandBarResult(id: "direct:\($0.absoluteString)", title: $0.absoluteString,
-                             subtitle: "Open address", source: .directURL, action: .navigate($0))
-        }
+    private static func directRow(for query: String, routing: SearchRouting) -> CommandBarResult? {
+        guard case .go(let url) = PasteAndGoDecision.action(for: query, using: routing) else { return nil }
+        return CommandBarResult(id: "direct:\(url.absoluteString)", title: url.absoluteString,
+                                subtitle: "Open address", source: .directURL, action: .navigate(url))
     }
 
-    private static func searchRow(for query: String, searchEngine: SearchEngine) -> CommandBarResult? {
-        searchEngine.searchURL(for: query).map {
+    private static func searchRow(for query: String, routing: SearchRouting) -> CommandBarResult? {
+        if let match = SearchKeywordResolver.match(in: query, engines: routing.customEngines) {
+            return match.engine.searchURL(for: match.query).map {
+                CommandBarResult(id: "search:\(match.query)", title: match.query,
+                                 subtitle: "Search \(match.engine.name)", source: .search, action: .navigate($0))
+            }
+        }
+        return routing.searchURL(for: query).map {
             CommandBarResult(id: "search:\(query)", title: query,
-                             subtitle: "Search \(searchEngine.label)", source: .search, action: .navigate($0))
+                             subtitle: "Search \(routing.label)", source: .search, action: .navigate($0))
         }
-    }
-
-    private static func directURL(for query: String, searchEngine: SearchEngine) -> URL? {
-        guard let url = AddressResolver.resolve(query, using: searchEngine),
-              url != searchEngine.searchURL(for: query) else { return nil }
-        return url
     }
 
     private static func normalizedURL(_ url: URL) -> String {

@@ -45,6 +45,7 @@ extension WebTab {
         stopFloatingVideo()
         canFloatVideo = false
         isVideoPlaying = false
+        clearMediaSession()
         closeDevTools()
         pageFinder.clear(in: view)
         pageFinder.frames.reset()

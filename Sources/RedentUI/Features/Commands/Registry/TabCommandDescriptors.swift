@@ -17,6 +17,9 @@ enum TabCommandDescriptors {
         CommandDescriptor(id: "pin-tab", title: "Pin Current Tab", keywords: ["unpin", "favorite"], symbol: "pin") { context, _ in
             context.selectedTab.map { .pinTab($0.id, isPinned: !$0.isPinned) }
         },
+        CommandDescriptor(id: "tidy-tabs", title: "Tidy Tabs", keywords: ["archive", "unused", "stale", "clean"], symbol: "archivebox") { _, _ in
+            .tidyUnusedTabs
+        },
         CommandDescriptor(id: "close-other-tabs", title: "Close Other Tabs", keywords: ["others", "clean"], symbol: "xmark.square") { context, _ in
             let others = context.tabs.filter {
                 $0.id != context.selectedTabID && !$0.isPinned && $0.spaceID == context.selectedSpaceID

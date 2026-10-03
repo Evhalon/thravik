@@ -70,6 +70,8 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
     /// Command-T starts with a floating search instead of a blank tab.
     public var opensFloatingNewTab = true
     public var hidesNavigationBar = false
+    /// Off so existing profiles keep a clean chrome.
+    public var showsBookmarksBar = false
     public var sidebarWidth: Double
     public var hibernation: HibernationPolicy
     public var customHibernationMinutes: Int?
@@ -83,6 +85,8 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
     public var offersPasswordSave: Bool
     public var showsTOTPButton: Bool
     public var searchEngine: SearchEngine
+    public var customSearchEngines: [CustomSearchEngine] = []
+    public var activeCustomSearchEngineID: UUID?
     public var homepage: String
     /// Restores the primary workspace when the app opens.
     public var reopensTabsOnLaunch: Bool
@@ -90,6 +94,14 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
     public var namesGroupsOnDevice = true
     /// Offers values sent in earlier forms under the field being typed in.
     public var remembersFormEntries = true
+    /// Built-in banking and health registrable domains skip history when on.
+    public var excludeBankingAndHealthFromHistory = false
+    /// User-listed registrable domains that never appear in history or frecency.
+    public var sensitiveSiteHistoryDomains: [String] = []
+    public var floatsPlayingVideoOnTabSwitch = false
+    public var tidyTabsThreshold: TidyTabsThreshold = .off
+    public var showsUpcomingMeetings = false
+    public var shortcutBindings = ShortcutBindings()
 
     public static let sidebarWidthRange: ClosedRange<Double> = 180...380
 
@@ -121,20 +133,6 @@ public struct BrowserSettings: Codable, Sendable, Equatable {
         self.searchEngine = searchEngine
         self.homepage = homepage
         self.reopensTabsOnLaunch = reopensTabsOnLaunch
-    }
-
-    public var hibernationIdleThreshold: TimeInterval? {
-        guard hibernation == .custom else { return hibernation.idleThreshold }
-        return TimeInterval(max(customHibernationMinutes ?? 15, 1) * 60)
-    }
-
-    /// Picking an engine moves the homepage with it, so the two do not disagree.
-    /// A homepage the user typed themselves is left alone.
-    public mutating func selectSearchEngine(_ engine: SearchEngine) {
-        let trimmed = homepage.trimmingCharacters(in: .whitespacesAndNewlines)
-        let followsEngine = trimmed.isEmpty || SearchEngine.allCases.contains { $0.homepage == trimmed }
-        searchEngine = engine
-        if followsEngine { homepage = engine.homepage }
     }
 }
 

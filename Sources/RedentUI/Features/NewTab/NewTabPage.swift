@@ -71,6 +71,9 @@ struct NewTabPage: View {
 
     @ViewBuilder
     private var content: some View {
+        if model.settings.showsUpcomingMeetings {
+            MorningBriefSection(events: model.meetings.brief, onJoin: model.joinMeeting)
+        }
         if newTab.isBare {
             NewTabEmptyState(
                 onImport: { model.sheet = .importBrowser },

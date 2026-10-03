@@ -8,13 +8,11 @@ import RedentUI
 import RedentUpdate
 import RedentVault
 
-/// The composition root. This is the ONLY type that names concrete adapters —
-/// everything above it depends on the ports in RedentKit (AGENTS.md §2).
-///
-/// It owns what the whole app shares; a window's own tabs and chrome live in
-/// the `WindowContainer` it hands out.
 @MainActor @Observable
 final class AppContainer {
+    let account = AppAccount()
+    let onboarding = AppOnboarding()
+    let passwords: AppPasswordStorage
     let credentials: any CredentialStoring
     let authenticator: any TOTPAccountStoring
     let generator: any TOTPGenerating
@@ -40,9 +38,12 @@ final class AppContainer {
     ))
     var siteData: any SiteDataManaging { contexts }
 
+    let managedPolicy: AppManagedPolicy
     let settingsStore: any SettingsStoring
     let sessionStore: any SessionStoring
     let logger: any EventLogging
+    let workspace = AppWorkspaceSync()
+    let calendar: any CalendarEventsProviding = EventKitCalendarStore()
 
     /// Links from another app that arrived before a window existed to show
     /// them. Drained by the first window that appears.
@@ -64,26 +65,29 @@ final class AppContainer {
     init() {
         let logger = OSLogEventLogger(category: "browser")
         self.logger = logger
-        let settingsStore = UserDefaultsSettingsStore()
-        self.settingsStore = settingsStore
+        self.managedPolicy = AppManagedPolicy()
+        self.settingsStore = PolicyAwareSettingsStore(inner: UserDefaultsSettingsStore(), policy: managedPolicy.applied)
         let sessionStore = UserDefaultsSessionStore()
         self.sessionStore = sessionStore
         if settingsStore.load().reopensTabsOnLaunch {
             self.primaryWorkspace = PrimaryWorkspace(restored: Result { try sessionStore.loadRecoverable() })
         } else {
-            self.primaryWorkspace = PrimaryWorkspace(restored: .success(BrowserSession()))
+            let profile = (try? sessionStore.loadRecoverable())?.profile
+            self.primaryWorkspace = PrimaryWorkspace(restored: .success(BrowserSession(profile: profile)))
         }
 
         self.webAppInstaller = WebAppBundleInstaller(host: .current(), logger: logger)
         let credentials = KeychainCredentialStore(
             service: KeychainNamespace.service("app.redent.browser.credentials")
         )
-        self.credentials = credentials
+        let passwords = AppPasswordStorage(local: credentials, account: account)
+        self.passwords = passwords
+        self.credentials = passwords.router
         self.authenticator = KeychainTOTPStore(service: KeychainNamespace.service("app.redent.browser.totp"))
         self.generator = SystemTOTPGenerator()
         self.importer = OTPAuthImporter()
         self.history = SQLiteHistoryStore()
-        self.bookmarks = JSONBookmarkStore()
+        self.bookmarks = BroadcastingBookmarkStore(JSONBookmarkStore())
         self.browserImporter = ChromiumImporter()
 
         let permissions = SitePermissionLedger(store: JSONSitePolicyStore())
@@ -97,11 +101,17 @@ final class AppContainer {
         )
         coordinator.observer = downloads
         downloads.commands = coordinator
+        passwords.model.onProviderChanged = { [weak self] in
+            self?.windows.values.forEach { $0.model.autofill.pendingSave = nil; $0.model.pageContextChanged(); $0.model.sheet = nil }
+        }
         Task { await permissions.load() }
         Task { [extensions] in await extensions.host.start() }
         KeychainMigration.run(credentials: credentials, authenticator: authenticator)
         observeWebAppLaunchers()
         startUpdatePolling()
+        passwords.connect(workspace)
+        workspace.apply = { [weak self] snapshot in self?.applyWorkspace(snapshot) }
+        wireManagedPolicy()
     }
 
     /// Memoised: SwiftUI re-evaluates a scene's body freely, and rebuilding a
@@ -110,6 +120,8 @@ final class AppContainer {
         if let existing = windows[spec] { return existing }
         let created = WindowContainer(spec: spec, app: self)
         windows[spec] = created
+        shareSensitiveHistory(of: created)
+        applyManagedPolicy(to: created)
         return created
     }
 
@@ -134,15 +146,5 @@ final class AppContainer {
     func restoreFailureMessage(for spec: BrowserWindowSpec) -> String? {
         guard spec.isPrimary, primaryWorkspace.restoreFailed else { return nil }
         return "Saved workspace could not be restored. Original data was preserved."
-    }
-
-    /// The window a link from another app lands in: the primary one, or
-    /// whichever is open if that one is not.
-    var primaryWindow: WindowContainer? {
-        windows[.primary] ?? windows.values.first
-    }
-
-    func persist() {
-        windows[.primary]?.model.persistSession()
     }
 }

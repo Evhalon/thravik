@@ -23,7 +23,7 @@ public struct WorkspaceState: Codable, Sendable, Equatable {
         case let .selectTab(id): try selectTab(id: id)
         case let .moveTab(id, toSpaceID, index): try moveTab(id: id, to: toSpaceID, index: index)
         case let .setPinned(id, isPinned): try setPinned(id: id, isPinned: isPinned)
-        case .renameTab, .setPinnedURL: try applyTabLabel(action)
+        case .renameTab, .setPinnedURL, .setCustomEmoji: try applyTabLabel(action)
         case .createGroup, .createGroupWithTabs, .renameGroup,
              .deleteGroup, .moveTabToGroup, .groupTabs, .setApartFromSite:
             try applyGroup(action)

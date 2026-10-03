@@ -21,6 +21,19 @@ enum FieldEditor {
         focusedEditor?.selectAll(nil)
     }
 
+    private static let pasteAndGoMenu = AddressFieldMenu()
+
+    static func attachPasteAndGo(title: @escaping () -> String, isEnabled: @escaping () -> Bool, perform: @escaping () -> Void) {
+        pasteAndGoMenu.install(on: focusedEditor)
+        pasteAndGoMenu.titleProvider = title
+        pasteAndGoMenu.isEnabledProvider = isEnabled
+        pasteAndGoMenu.onPasteAndGo = perform
+    }
+
+    static func detachPasteAndGo() {
+        pasteAndGoMenu.uninstall()
+    }
+
     private static var focusedEditor: NSTextView? {
         NSApp.keyWindow?.firstResponder as? NSTextView
     }

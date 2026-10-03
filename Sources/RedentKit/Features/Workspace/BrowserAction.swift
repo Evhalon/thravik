@@ -20,6 +20,7 @@ public enum BrowserAction: Hashable, Sendable {
     case focusTab(UUID)
     case closeTab(UUID)
     case reopenLastClosed
+    case reopenClosed(UUID)
     case pinTab(UUID, isPinned: Bool)
     case focusSpace(UUID)
     /// Nil look derives one from the new Space's id.
@@ -63,4 +64,7 @@ public enum BrowserAction: Hashable, Sendable {
     case saveWebApp
     case openWebApp(UUID)
     case removeWebApp(UUID)
+    case pasteAndGo
+    /// Archives unused tabs in the current Space into a recoverable group.
+    case tidyUnusedTabs
 }

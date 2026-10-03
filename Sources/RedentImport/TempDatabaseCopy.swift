@@ -22,7 +22,12 @@ struct TempDatabaseCopy {
         directory = scratch
 
         let destination = scratch.appending(path: fileName)
-        try FileManager.default.copyItem(at: source, to: destination)
+        do {
+            try FileManager.default.copyItem(at: source, to: destination)
+        } catch {
+            try? FileManager.default.removeItem(at: scratch)
+            throw ImportError.databaseUnreadable(fileName)
+        }
         databaseURL = destination
 
         for suffix in ["-wal", "-shm"] {

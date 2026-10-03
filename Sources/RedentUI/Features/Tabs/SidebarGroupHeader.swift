@@ -18,6 +18,7 @@ struct SidebarGroupHeader: View {
     struct Actions {
         let onToggle: () -> Void
         let onClose: () -> Void
+        var onRestore: (() -> Void)?
     }
 
     var body: some View {
@@ -37,12 +38,21 @@ struct SidebarGroupHeader: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(title ?? siteName)
         .accessibilityAddTraits(.isButton)
-        .accessibilityAction(named: "Close Group", actions.onClose)
+        .accessibilityAction(named: closeAccessibilityTitle, actions.onClose)
         .contextMenu {
-            Button("Close Group", role: .destructive, action: actions.onClose)
+            if let onRestore = actions.onRestore {
+                Button("Restore", action: onRestore)
+            }
+            Button(closeMenuTitle, role: .destructive, action: actions.onClose)
         }
         .animation(.easeOut(duration: 0.16), value: isCollapsed)
     }
+
+    private var closeMenuTitle: String {
+        actions.onRestore == nil ? "Close Group" : "Close Archived"
+    }
+
+    private var closeAccessibilityTitle: String { closeMenuTitle }
 
     private var label: some View {
         HStack(spacing: Metric.tightGutter + 2) {

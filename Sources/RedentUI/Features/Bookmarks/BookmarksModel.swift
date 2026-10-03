@@ -65,7 +65,7 @@ public final class BookmarksModel {
     @discardableResult
     public func create(title: String, address: String) async -> Bool {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty, let url = validWebURL(address) else { return false }
+        guard !title.isEmpty, let url = Self.validWebURL(address) else { return false }
         await store.save(Bookmark(
             url: url, title: title, folderPath: selectedFolderPath, spaceID: spaceID, isFavorite: true
         ))
@@ -95,7 +95,7 @@ public final class BookmarksModel {
 
     @discardableResult
     public func changeAddress(_ bookmark: Bookmark, to address: String) async -> Bool {
-        guard let url = validWebURL(address) else { return false }
+        guard let url = Self.validWebURL(address) else { return false }
         var updated = bookmark
         updated.url = url
         await store.save(updated)
@@ -118,7 +118,19 @@ public final class BookmarksModel {
         await load()
     }
 
-    private func validWebURL(_ address: String) -> URL? {
+    @discardableResult
+    public func update(_ bookmark: Bookmark, title: String, address: String) async -> Bool {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, let url = Self.validWebURL(address) else { return false }
+        var updated = bookmark
+        updated.title = title
+        updated.url = url
+        await store.save(updated)
+        await load()
+        return true
+    }
+
+    static func validWebURL(_ address: String) -> URL? {
         let address = address.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: address),
               let scheme = url.scheme?.lowercased(),

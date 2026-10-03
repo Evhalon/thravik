@@ -60,6 +60,11 @@ public final class DefaultBrowserModel {
         }
     }
 
+    /// Counts onboarding's final choice as this release's one offer.
+    public func recordOnboardingPrompt() {
+        store.recordPrompt(for: installedVersion)
+    }
+
     /// "Don't ask again" — the offer never comes back, on any release.
     public func silence() {
         store.silence()

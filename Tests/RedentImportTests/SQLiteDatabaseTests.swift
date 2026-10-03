@@ -53,4 +53,22 @@ struct SQLiteDatabaseTests {
             _ = try SQLiteDatabase(readOnlyAt: url)
         }
     }
+
+    @Test("reports a SQLite error raised after earlier rows were read")
+    func reportsStepFailureAfterPartialRows() throws {
+        let url = try makeFixtureDatabase()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let db = try SQLiteDatabase(readOnlyAt: url)
+        var labels: [String] = []
+
+        #expect(throws: ImportError.self) {
+            try db.query("""
+                SELECT CASE WHEN id = 1 THEN label ELSE abs(-9223372036854775807 - 1) END
+                FROM rows ORDER BY id
+                """) { row in
+                    labels.append(row.text(0) ?? "")
+                }
+        }
+        #expect(labels == ["alpha"])
+    }
 }

@@ -15,6 +15,7 @@ let package = Package(
         .target(name: "RedentCrypto", swiftSettings: strict),
         .target(name: "RedentOTPAuth", dependencies: ["RedentKit", "RedentCrypto"], swiftSettings: strict),
         .target(name: "RedentVault", dependencies: ["RedentKit"], swiftSettings: strict),
+        .target(name: "RedentSync", dependencies: ["RedentKit"], swiftSettings: strict),
         .target(name: "RedentImport", dependencies: ["RedentKit"], swiftSettings: strict),
         .target(
             name: "RedentEngine", dependencies: ["RedentKit"],
@@ -33,10 +34,11 @@ let package = Package(
             name: "Redent",
             dependencies: [
                 "RedentKit", "RedentUI", "RedentEngine", "RedentVault",
-                "RedentOTPAuth", "RedentDesign", "RedentImport", "RedentUpdate", "RedentIntelligence"
+                "RedentOTPAuth", "RedentDesign", "RedentImport", "RedentUpdate", "RedentIntelligence", "RedentSync"
             ],
             swiftSettings: strict
         ),
+        .testTarget(name: "RedentSyncTests", dependencies: ["RedentSync", "RedentKit"], swiftSettings: strict),
         .testTarget(name: "RedentCryptoTests", dependencies: ["RedentCrypto"], swiftSettings: strict),
         .testTarget(name: "RedentOTPAuthTests", dependencies: ["RedentOTPAuth", "RedentKit"], swiftSettings: strict),
         .testTarget(

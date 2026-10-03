@@ -19,6 +19,7 @@ public final class BrowserModel {
     public let updates: UpdateModel?
 
     public var settings: BrowserSettings { didSet { settingsChanged(from: oldValue) } }
+    public var managedPolicyLocks: Set<ManagedPolicyLockKey> = []
     public var sheet: SheetRoute?
     /// Settings replace the page in this window until the user leaves them.
     public var showsSettings = false
@@ -28,8 +29,6 @@ public final class BrowserModel {
     /// The temporary tab whose deadline passed while the user was reading it.
     public var expiredTabID: UUID?
     public let commandBar: CommandBarModel
-    /// Find bar, bookmark star, and caret requests — everything the chrome
-    /// shows about the page in front of the user.
     public let chrome = PageChromeModel()
     let groupNames: GroupNameModel
     /// Chrome hidden entirely — "widen the screen and hide the tabs".
@@ -39,6 +38,16 @@ public final class BrowserModel {
     /// Bumped so the new-tab search field can steal first responder from the
     /// sidebar address field after AppKit reassigns it.
     public var centerSearchFocusEpoch: UInt = 0
+    public private(set) var tidyTabsCandidateIDs: [UUID] = []
+    public private(set) var showTidyTabsSuggestion = false
+    @ObservationIgnored var tidyTabsDismissal = TidyTabsDismissal()
+    public let meetings: CalendarMeetingsModel
+
+    /// Runs on every clock tick; unchanged values must not invalidate the sidebar.
+    func updateTidyTabsPresentation(candidates: [UUID], showSuggestion: Bool) {
+        if tidyTabsCandidateIDs != candidates { tidyTabsCandidateIDs = candidates }
+        if showTidyTabsSuggestion != showSuggestion { showTidyTabsSuggestion = showSuggestion }
+    }
 
     /// Opens another browser window. Set by the composition root, which is the
     /// only layer that knows what a window is; nil in previews and tests.
@@ -47,12 +56,19 @@ public final class BrowserModel {
     @ObservationIgnored public var windowDirectory: (any BrowserWindowDirectory)?
     /// Takes a Chrome Web Store extension to its review. Set by the composition root.
     @ObservationIgnored public var extensionInstaller: (@MainActor (ChromeWebStoreID) -> Void)?
+    @ObservationIgnored public var privateWindowsAllowed: (@MainActor () -> Bool)?
+    @ObservationIgnored public var accountSyncAllowed: (@MainActor () -> Bool)?
     /// Sites kept as apps, newest list from `webAppStore`.
     public internal(set) var webApps: [WebApp] = []
     let webAppStore: (any WebAppStoring)?
     let webAppInstaller: (any WebAppInstalling)?
     /// The last queued write to `webAppStore`; reads wait for it.
     @ObservationIgnored var webAppWrite: Task<Void, Never>?
+    /// Set by the composition root on the primary window. Nil in tests.
+    @ObservationIgnored public var publishWorkspace: ((BrowserSession) -> Void)?
+    /// Set by the composition root so every window shares one exclusion list.
+    @ObservationIgnored public var onSensitiveHistoryChanged: ((BrowserSettings) -> Void)?
+    public internal(set) var remoteTabs: [RemoteSyncedTab] = []
 
     @ObservationIgnored private let visits: VisitRecorder
     @ObservationIgnored let prerenderSchedule = SearchPrerenderSchedule()
@@ -87,17 +103,23 @@ public final class BrowserModel {
         self.groupNames = GroupNameModel(naming: services.groupNaming)
         self.visits = VisitRecorder(history: services.history)
         self.settings = settings
+        self.meetings = CalendarMeetingsModel(
+            provider: services.calendar, isEnabled: settings.showsUpcomingMeetings
+        )
         self.settingsStore = services.settings
         self.sessionStore = services.session
         self.logger = services.logger
         self.content = content
         self.lastTabCount = tabs.tabs.count
         var commands = CommandBarModel.Configuration(history: services.history, bookmarks: services.bookmarks)
-        commands.searchEngine = settings.searchEngine
+        commands.searchRouting = settings.searchRouting
         self.commandBar = CommandBarModel(configuration: commands)
         tabs.signalHandler = self
         tabs.onChange = { [weak self] in self?.tabsChanged() }
-        tabs.onNavigation = { [weak self] snapshot, id in self?.visits.record(snapshot, navigationID: id) }
+        tabs.onNavigation = { [weak self] snapshot, id in
+            guard let self else { return }
+            visits.record(snapshot, navigationID: id, policy: SensitiveSitePolicy(settings: settings))
+        }
         commandBar.onExecute = { [weak self] action in self?.execute(action) }
         split = tabs.session.splitLayout
         split.validate(against: Set(tabs.tabs.map(\.id)))
@@ -116,36 +138,5 @@ public final class BrowserModel {
         twoFactor.pageChanged()
         dismissFormSuggestions()
         Task { [weak self] in await self?.selectedTab?.announcePageSignals() }
-    }
-
-    /// One timer for the whole window, per AGENTS.md §4 — not one per code.
-    public func tick(_ date: Date) {
-        otp.tick(date)
-        otp.dismissIfPageChanged(selectedTab?.url)
-        tabs.sweepHibernation(now: date, keeping: split.visibleTabIDs(primary: tabs.selectedID))
-        if let expired = tabs.sweepExpiredTabs(now: date) { expiredTabID = expired }
-        let origin = selectedTab?.pageTrustIssue == nil ? selectedTab?.origin : nil
-        autofill.observe(origin)
-        persistIfNeeded(date)
-    }
-
-    private func settingsChanged(from old: BrowserSettings) {
-        // A sidebar drag writes this on every frame. Encoding and storing the
-        // settings that often is what made the drag feel heavy, so the write is
-        // coalesced onto the window clock like the workspace itself.
-        hasUnsavedSettings = true
-        tabs.apply(settings: settings)
-        commandBar.searchEngine = settings.searchEngine
-        if old.opensFloatingNewTab && !settings.opensFloatingNewTab { dismissFloatingNewTab() }
-        if old.offersPasswordSave != settings.offersPasswordSave {
-            autofill.setEnabled(settings.offersPasswordSave)
-        }
-        if old.remembersFormEntries != settings.remembersFormEntries {
-            formHistory.setEnabled(settings.remembersFormEntries)
-        }
-        if !settings.showsTOTPButton {
-            otp.fieldDisappeared()
-            twoFactor.pageChanged()
-        }
     }
 }

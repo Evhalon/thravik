@@ -21,11 +21,21 @@ public struct SuggestionContext: Sendable {
     public var searchEngine: SearchEngine
     public var spaceID: UUID?
     public var openTabs: [OpenTabCandidate]
+    public var customSearchEngines: [CustomSearchEngine] = []
+    public var activeCustomSearchEngineID: UUID?
 
     public init(searchEngine: SearchEngine, spaceID: UUID? = nil, openTabs: [OpenTabCandidate] = []) {
         self.searchEngine = searchEngine
         self.spaceID = spaceID
         self.openTabs = openTabs
+    }
+
+    public var routing: SearchRouting {
+        SearchRouting(
+            engine: searchEngine,
+            customEngines: customSearchEngines,
+            activeCustomID: activeCustomSearchEngineID
+        )
     }
 }
 

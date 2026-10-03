@@ -5,6 +5,7 @@ import SwiftUI
 /// Hibernation, ad/tracker blocking, autofill offers, and vault entry points.
 struct PrivacySettingsPane: View {
     @Binding var settings: BrowserSettings
+    let locks: Set<ManagedPolicyLockKey>
     let passkeys: PasskeyAccessModel?
     let onOpenPasswords: () -> Void
     let onOpenAuthenticatorImport: () -> Void
@@ -60,6 +61,7 @@ struct PrivacySettingsPane: View {
                 caption: "On by default, like Brave Shields. YouTube stays unblocked so the player does not die.",
                 isOn: $settings.blocksTrackers
             )
+            .managedPolicyLocked(locks.contains(.blocksTrackers))
             SettingsToggleRow(
                 "Quiet the web",
                 caption: "Declines cookie banners, stops videos that start playing sound on their own, and keeps \"allow notifications\" pitches off the page.",
@@ -71,11 +73,13 @@ struct PrivacySettingsPane: View {
                 isOn: $settings.stripsTrackingParameters
             )
             SettingsToggleRow("Offer to save passwords", isOn: $settings.offersPasswordSave)
+                .managedPolicyLocked(locks.contains(.offersPasswordSave))
             SettingsToggleRow(
                 "Suggest earlier form entries",
                 caption: "Remembers what you send in ordinary fields, such as an email or an address, on this Mac. Never passwords, card numbers or codes.",
                 isOn: $settings.remembersFormEntries
             )
+            PrivacySensitiveSitesSection(settings: $settings)
             SettingsToggleRow("Show one-time code button", isOn: $settings.showsTOTPButton)
         }
     }

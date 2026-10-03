@@ -25,6 +25,16 @@ struct TabDuplicateTests {
         #expect(browser.selectedID == copy.id)
     }
 
+    @Test("The copy keeps its source's emoji icon")
+    func copyKeepsEmoji() throws {
+        let browser = controller()
+        let source = browser.newTab(url: URL(string: "https://example.com"))
+        source.setCustomEmoji("🔥")
+        let copy = try #require(browser.duplicateTab(source.id))
+        #expect(copy.snapshot.customEmoji == "🔥")
+        #expect(copy.id != source.id)
+    }
+
     @Test("The copy keeps its source's Space and group")
     func copyKeepsPlacement() throws {
         let browser = controller()

@@ -2,13 +2,14 @@ import RedentDesign
 import RedentKit
 import SwiftUI
 
-/// Arc-style Space orbs under the sidebar. Click or swipe to switch.
+/// Space orbs under the sidebar. Scroll or select to switch.
 struct SpacePageDots: View {
     let spaces: [BrowserSpace]
     let selectedID: UUID?
     let onSelect: (UUID) -> Void
     var onManage: (() -> Void)?
     var updates: UpdateModel?
+    @State private var position = SpaceScrollPosition()
 
     var body: some View {
         VStack(spacing: 8) {
@@ -17,48 +18,45 @@ struct SpacePageDots: View {
                 .frame(height: Metric.hairWidth)
                 .padding(.horizontal, 8)
             HStack(spacing: 8) {
-                ForEach(spaces) { space in
-                    Button {
-                        onSelect(space.id)
-                    } label: {
-                        SpaceOrb(space: space, isSelected: space.id == selectedID, size: 24)
-                    }
-                    .buttonStyle(PressScaleStyle())
-                    .help(space.name)
-                    .accessibilityLabel(space.name)
-                }
+                SpaceOrbScroller(
+                    spaces: spaces, selectedID: selectedID, onSelect: onSelect, position: $position
+                )
                 if let onManage {
-                    Button(action: onManage) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Palette.chromeSecondaryText)
-                            .frame(width: 22, height: 22)
-                            .background {
-                                Circle().strokeBorder(Palette.hairline, lineWidth: Metric.hairWidth)
-                            }
-                            .contentShape(.circle)
-                    }
-                    .buttonStyle(PressScaleStyle())
-                    .help("Manage Spaces")
+                    manageButton(action: onManage)
                 }
                 if let updates { SpaceUpdateButton(updates: updates) }
             }
-            .frame(maxWidth: .infinity)
+            if position.hasOverflow { pageIndicator }
         }
         .padding(.top, 4)
         .contentShape(.rect)
-        .gesture(swipe)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Spaces")
     }
 
-    private var swipe: some Gesture {
-        DragGesture(minimumDistance: 24).onEnded { value in
-            guard abs(value.translation.width) > abs(value.translation.height) else { return }
-            let step = value.translation.width < 0 ? 1 : -1
-            if let next = SpacePaging.neighbor(of: selectedID, in: spaces.map(\.id), step: step) {
-                onSelect(next)
-            }
+    private var pageIndicator: some View {
+        HStack(spacing: 7) {
+            ProgressView(value: position.progress)
+                .progressViewStyle(.linear)
+                .frame(width: 52)
+            Text("\(position.page) of \(position.pageCount)")
+                .font(.system(size: 9, weight: .medium).monospacedDigit())
+                .foregroundStyle(Palette.chromeSecondaryText)
         }
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel("Spaces page \(position.page) of \(position.pageCount)")
+    }
+
+    private func manageButton(action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Palette.chromeSecondaryText)
+                .frame(width: 22, height: 22)
+                .background { Circle().strokeBorder(Palette.hairline, lineWidth: Metric.hairWidth) }
+                .contentShape(.circle)
+        }
+        .buttonStyle(PressScaleStyle())
+        .help("Manage Spaces")
     }
 }

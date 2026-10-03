@@ -29,6 +29,19 @@ struct BookmarksModelTests {
         #expect(saved.url == bookmark.url)
     }
 
+    @Test("Edit writes title and address together")
+    @MainActor
+    func update() async throws {
+        let bookmark = Bookmark(url: try #require(URL(string: "https://old.example")), title: "Old")
+        let store = BookmarkStoreFake(bookmarks: [bookmark])
+        let model = BookmarksModel(store: store, spaces: [], spaceID: nil)
+
+        #expect(await model.update(bookmark, title: "New", address: "https://new.example"))
+        let saved = try #require(await store.bookmarks.first)
+        #expect(saved.title == "New")
+        #expect(saved.url.absoluteString == "https://new.example")
+    }
+
     @Test("Changing the address only accepts web URLs") @MainActor
     func changeAddress() async throws {
         let bookmark = Bookmark(url: try #require(URL(string: "https://old.example")))

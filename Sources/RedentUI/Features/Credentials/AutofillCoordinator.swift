@@ -12,7 +12,17 @@ public final class AutofillCoordinator {
     public private(set) var origin: Origin?
     public private(set) var isLoginFormPresent = false
     public private(set) var lastUsername = ""
-    public var pendingSave: CredentialSaveRequest?
+    public var pendingSave: CredentialSaveRequest? {
+        didSet {
+            saveGeneration &+= 1
+            saveErrorMessage = nil
+            resolvedSaveCredential = nil
+        }
+    }
+    public internal(set) var isSavingPassword = false
+    public internal(set) var saveErrorMessage: String?
+    var saveGeneration: UInt64 = 0
+    var resolvedSaveCredential: Credential?
 
     /// `internal` rather than `private`: the save-decision half lives in a
     /// sibling file to stay under the line limit, and reads these.
@@ -115,7 +125,7 @@ public final class AutofillCoordinator {
         } catch {
             guard self.lookupID == lookupID else { return }
             suggestions = []
-            logger.error("autofill: lookup failed — \(String(describing: error))")
+            logger.error("autofill: lookup failed")
         }
     }
 }

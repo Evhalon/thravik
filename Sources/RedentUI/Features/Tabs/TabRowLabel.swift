@@ -32,7 +32,12 @@ struct TabRowLabel: View {
 
     private var icon: some View {
         ZStack {
-            FaviconView(data: tab.snapshot.faviconData, host: tab.origin?.displayHost, size: iconSize)
+            FaviconView(
+                data: tab.snapshot.faviconData,
+                host: tab.origin?.displayHost,
+                size: iconSize,
+                emoji: tab.snapshot.customEmoji
+            )
                 .saturation(tab.isHibernated ? 0.25 : 1)
             if tab.isLoading {
                 CountdownRing(fraction: max(0.06, tab.progress), lineWidth: 1.6, tint: Palette.accent)

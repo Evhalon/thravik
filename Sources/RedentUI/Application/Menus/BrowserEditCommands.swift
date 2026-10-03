@@ -1,40 +1,47 @@
+import RedentKit
 import SwiftUI
 
 /// Find and the address bar, added to the menus macOS already puts them in
 /// rather than invented as a menu of their own.
 struct BrowserEditCommands: Commands {
     let model: BrowserModel?
+    let bindings: ShortcutBindings
 
     var body: some Commands {
         CommandGroup(after: .pasteboard) {
             Divider()
             Button("Find on Page…") { model?.showFindBar() }
-                .keyboardShortcut("f")
+                .shortcut(.findOnPage, bindings: bindings)
                 .disabled(!(model?.hasPage ?? false))
             Button("Find Next") { model?.findNext(forward: true) }
-                .keyboardShortcut("g")
+                .shortcut(.findNext, bindings: bindings)
                 .disabled(!(model?.canFindNext ?? false))
             Button("Find Previous") { model?.findNext(forward: false) }
-                .keyboardShortcut("g", modifiers: [.command, .shift])
+                .shortcut(.findPrevious, bindings: bindings)
                 .disabled(!(model?.canFindNext ?? false))
             Button("Close Find on Page") { model?.closeFindBar() }
-                .keyboardShortcut(.escape, modifiers: [])
+                .shortcut(.closeFind, bindings: bindings)
                 .disabled(!canCloseFind)
             Divider()
             Button("Fill Login") { model?.fillLogin() }
-                .keyboardShortcut("\\", modifiers: .command)
+                .shortcut(.fillLogin, bindings: bindings)
                 .disabled(!(model?.canFillLogin ?? false))
             Divider()
             Button("Open Location…") { model?.focusAddressBar() }
-                .keyboardShortcut("l")
+                .shortcut(.openLocation, bindings: bindings)
                 .disabled(model == nil)
             Button("Copy Address") { model?.copyAddress() }
-                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .shortcut(.copyURL, bindings: bindings)
                 .disabled(!(model?.hasPage ?? false))
+            // Web apps bind ⌘⇧V to plain-text paste; outside the address bar the
+            // key must reach the page instead of navigating away from it.
+            Button(model?.pasteAndGoTitle ?? "Paste and Go") { model?.pasteAndGo() }
+                .shortcut(.pasteAndGo, bindings: bindings)
+                .disabled(!(model?.address.isEditing ?? false))
         }
         CommandGroup(replacing: .printItem) {
             Button("Print…") { model?.printPage() }
-                .keyboardShortcut("p")
+                .shortcut(.print, bindings: bindings)
                 .disabled(!(model?.hasPage ?? false))
         }
     }

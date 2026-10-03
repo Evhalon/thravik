@@ -33,6 +33,20 @@ struct TabHibernationTests {
         #expect(work.webView == nil)
     }
 
+    @Test("A floating video tab stays awake past the idle threshold")
+    func floatingVideoTabSkipsHibernation() throws {
+        let browser = twoSpaceController(hibernation: .aggressive)
+        let work = try #require(browser.webTabs.first)
+        work.wake(loading: URL(string: "https://example.com"))
+        try browser.perform(.selectSpace(id: BrowserSpace.researchID))
+        work.isVideoFloating = true
+        work.snapshot.lastActiveAt = Date(timeIntervalSinceNow: -200)
+
+        browser.sweepHibernation(now: .now, keeping: Set([browser.selectedID].compactMap { $0 }))
+        #expect(!work.isHibernated)
+        #expect(work.webView != nil)
+    }
+
     @Test("A visible tab with a stale timestamp stays awake")
     func onScreenStaleTabStaysAwake() throws {
         let browser = twoSpaceController(hibernation: .aggressive)

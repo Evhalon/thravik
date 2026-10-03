@@ -19,6 +19,7 @@ HELPERS_DIR="$APP_DIR/Contents/Helpers"
 PROFILE_PATH="$APP_DIR/Contents/embedded.provisionprofile"
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 managed_passkeys=0
+managed_icloud=0
 
 adhoc_sign() {
 	for helper in "$HELPERS_DIR"/*; do
@@ -56,19 +57,50 @@ local_identity() {
 # Under set -e a failed lookup would end the script silently; ad-hoc is the fallback.
 identity="${CODESIGN_IDENTITY:-$(local_identity || true)}"
 identity="${identity:--}"
-if [ -n "${PROVISIONING_PROFILE:-}" ]; then
+passkey_profile="${PROVISIONING_PROFILE:-}"
+icloud_profile="${ICLOUD_PROVISIONING_PROFILE:-}"
+if [ "${REQUIRE_ICLOUD_PASSWORDS:-0}" = "1" ] && [ -z "$icloud_profile" ]; then
+	echo "error: REQUIRE_ICLOUD_PASSWORDS=1 needs ICLOUD_PROVISIONING_PROFILE" >&2
+	exit 1
+fi
+if [ "${REQUIRE_PASSKEYS:-0}" = "1" ] && [ -z "$passkey_profile" ]; then
+	echo "error: REQUIRE_PASSKEYS=1 needs PROVISIONING_PROFILE with Apple's browser passkey approval" >&2
+	exit 1
+fi
+if [ -n "$passkey_profile" ] && [ -n "$icloud_profile" ] && ! cmp -s "$passkey_profile" "$icloud_profile"; then
+	echo "error: passkeys and iCloud passwords must use the same provisioning profile" >&2
+	exit 1
+fi
+selected_profile="$passkey_profile"
+[ -n "$selected_profile" ] || selected_profile="$icloud_profile"
+
+if [ -n "$selected_profile" ]; then
 	if [ "$identity" = "-" ]; then
-		echo "error: browser passkeys require an Apple signing identity and approved profile" >&2
+		echo "error: managed browser capabilities require an Apple signing identity and approved profile" >&2
 		exit 1
 	fi
 	signing_work=$(mktemp -d)
 	trap 'rm -rf "$signing_work"' EXIT
-	security cms -D -i "$PROVISIONING_PROFILE" > "$signing_work/profile.plist"
-	python3 "$SCRIPT_DIR/prepare-passkey-entitlements.py" \
-		"$ENTITLEMENTS" "$signing_work/profile.plist" "$BUNDLE_ID" "$signing_work/entitlements.plist"
+	security cms -D -i "$selected_profile" > "$signing_work/profile.plist"
+	current_entitlements="$ENTITLEMENTS"
+	if [ -n "$passkey_profile" ]; then
+		python3 "$SCRIPT_DIR/prepare-passkey-entitlements.py" \
+			"$current_entitlements" "$signing_work/profile.plist" "$BUNDLE_ID" "$signing_work/passkey-entitlements.plist"
+		current_entitlements="$signing_work/passkey-entitlements.plist"
+		managed_passkeys=1
+	fi
+	if [ -n "$icloud_profile" ]; then
+		python3 "$SCRIPT_DIR/prepare-keychain-entitlements.py" \
+			"$current_entitlements" "$signing_work/profile.plist" "$BUNDLE_ID" \
+			"${REDENT_ICLOUD_ACCESS_GROUP:-}" "$signing_work/entitlements.plist"
+		current_entitlements="$signing_work/entitlements.plist"
+		managed_icloud=1
+	fi
+	if [ "$current_entitlements" != "$signing_work/entitlements.plist" ]; then
+		cp "$current_entitlements" "$signing_work/entitlements.plist"
+	fi
 	ENTITLEMENTS="$signing_work/entitlements.plist"
-	cp "$PROVISIONING_PROFILE" "$PROFILE_PATH"
-	managed_passkeys=1
+	cp "$selected_profile" "$PROFILE_PATH"
 else
 	if [ "${REQUIRE_PASSKEYS:-0}" = "1" ]; then
 		echo "error: REQUIRE_PASSKEYS=1 needs PROVISIONING_PROFILE with Apple's browser passkey approval" >&2
@@ -94,13 +126,24 @@ if [ "${REQUIRE_SIGNING:-0}" = "1" ]; then
 	timestamp="--timestamp"
 fi
 if identity_sign; then
-	if [ "$managed_passkeys" = "1" ]; then
+	if [ "$managed_passkeys" = "1" ] || [ "$managed_icloud" = "1" ]; then
+		certificate_prefix="$signing_work/signer-"
+		if ! codesign --display --extract-certificates "$certificate_prefix" "$APP_DIR"; then
+			rm -f "$PROFILE_PATH"
+			echo "error: cannot extract the signing certificate for profile validation" >&2
+			exit 1
+		fi
+		if ! python3 "$SCRIPT_DIR/validate-profile-certificate.py" \
+			"$signing_work/profile.plist" "${certificate_prefix}0"; then
+			rm -f "$PROFILE_PATH"
+			exit 1
+		fi
 		codesign --verify --strict "$APP_DIR" || { rm -f "$PROFILE_PATH"; exit 1; }
 	fi
 	exit 0
 fi
 
-if [ "$managed_passkeys" = "1" ] || [ "${REQUIRE_SIGNING:-0}" = "1" ]; then
+if [ "$managed_passkeys" = "1" ] || [ "$managed_icloud" = "1" ] || [ "${REQUIRE_SIGNING:-0}" = "1" ]; then
 	rm -f "$PROFILE_PATH"
 	echo "error: signing failed; the required capabilities cannot be preserved" >&2
 	exit 1

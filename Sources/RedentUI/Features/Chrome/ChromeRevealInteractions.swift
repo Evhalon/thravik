@@ -6,9 +6,11 @@ struct ChromeRevealInteractions: ViewModifier {
     let model: BrowserModel
     let reveal: ChromeRevealModel
     @State private var trackedPresentations = 0
+    @State private var hasChildPresentation = false
 
     func body(content: Content) -> some View {
         content
+            .onPreferenceChange(ChromePresentationLockKey.self) { hasChildPresentation = $0 }
             .onChange(of: isLocked, initial: true) { _, locked in reveal.setLocked(locked) }
             .onReceive(NotificationCenter.default.publisher(for: NSMenu.didBeginTrackingNotification)) { _ in
                 trackedPresentations += 1
@@ -26,6 +28,6 @@ struct ChromeRevealInteractions: ViewModifier {
 
     private var isLocked: Bool {
         model.address.isEditing || model.sheet != nil || model.showsCommandBar
-            || model.showsFloatingNewTab || trackedPresentations > 0
+            || model.showsFloatingNewTab || trackedPresentations > 0 || hasChildPresentation
     }
 }
